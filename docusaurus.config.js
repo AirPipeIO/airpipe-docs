@@ -65,6 +65,11 @@ const config = {
     ({
       // Replace with your project's social card
       image: 'img/docusaurus-social-card.jpg',
+      colorMode: {
+        defaultMode: 'light',
+        disableSwitch: false,
+        respectPrefersColorScheme: false,
+      },
       navbar: {
         title: 'My Site',
         logo: {
@@ -133,7 +138,7 @@ const config = {
         copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
       },
       prism: {
-        // theme: prismThemes.github,
+        theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
       },
     }),
