@@ -25,7 +25,7 @@ const config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
 
-  onBrokenLinks: 'warn',
+  onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
 
   // Even if you don't use internationalization, you can use this field to set
@@ -107,7 +107,7 @@ const config = {
             items: [
               {
                 label: 'Tutorials',
-                to: '/docs/documentation/tutorials',
+                to: '/docs/tutorials/diff',
               },
             ],
           },
