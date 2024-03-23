@@ -59,16 +59,6 @@ const config = {
       }),
     ],
   ],
-  // plugins: [
-  //   [
-  //     '@docusaurus/plugin-content-docs',
-  //     {
-  //       id: 'tutorials',
-  //       path: 'tutorials',
-  //       routeBasePath: 'tutorials',
-  //     },
-  //   ],
-  // ],
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
