@@ -3,7 +3,7 @@ sidebar_position: 1
 displayed_sidebar: tutorialSidebar
 ---
 
-# DIFFFF
+# About AP
 
 Let's discover **Docusaurus in less than 5 minutes**.
 

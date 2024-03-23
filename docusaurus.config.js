@@ -89,6 +89,12 @@ const config = {
             position: 'left',
             label: 'Documentation',
           },
+          {
+            type: 'docSidebar',
+            sidebarId: 'exampleSidebar',
+            position: 'left',
+            label: 'Examples',
+          },
 
           { to: '/blog', label: 'Blog', position: 'left' },
           {
