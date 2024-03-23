@@ -59,6 +59,16 @@ const config = {
       }),
     ],
   ],
+  // plugins: [
+  //   [
+  //     '@docusaurus/plugin-content-docs',
+  //     {
+  //       id: 'tutorials',
+  //       path: 'tutorials',
+  //       routeBasePath: 'tutorials',
+  //     },
+  //   ],
+  // ],
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
@@ -78,10 +88,10 @@ const config = {
         },
         items: [
           {
-            type: 'docSidebar',
-            sidebarId: 'tutorialSidebar',
             position: 'left',
             label: 'Tutorials',
+            sidebarId: 'tutorialSidebar',
+            type: 'docSidebar',
           },
           {
             type: 'docSidebar',
@@ -96,7 +106,7 @@ const config = {
             label: 'GitHub',
             position: 'right',
           },
-          { type: 'docsVersionDropdown' },
+          // { type: 'docsVersionDropdown' },
         ],
       },
       footer: {
@@ -107,7 +117,7 @@ const config = {
             items: [
               {
                 label: 'Tutorials',
-                to: '/tutorials/intro',
+                to: '/docs/tutorials',
               },
             ],
           },
