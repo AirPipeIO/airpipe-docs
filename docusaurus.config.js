@@ -71,7 +71,7 @@ const config = {
         respectPrefersColorScheme: false,
       },
       navbar: {
-        title: 'My Site',
+        title: 'AP Docs',
         logo: {
           alt: 'My Site Logo',
           src: 'img/logo.svg',
@@ -79,10 +79,17 @@ const config = {
         items: [
           {
             type: 'docSidebar',
-            sidebarId: 'tutorialSidebar',
+            sidebarId: 'tutorialsSidebar',
             position: 'left',
-            label: 'Tutorial',
+            label: 'Tutorials',
           },
+          {
+            type: 'docSidebar',
+            sidebarId: 'documentationSidebar',
+            position: 'left',
+            label: 'Documentation',
+          },
+
           { to: '/blog', label: 'Blog', position: 'left' },
           {
             href: 'https://github.com/facebook/docusaurus',
@@ -96,10 +103,19 @@ const config = {
         style: 'dark',
         links: [
           {
+            title: 'Tutorials',
+            items: [
+              {
+                label: 'Tutorials',
+                to: '/tutorials/intro',
+              },
+            ],
+          },
+          {
             title: 'Docs',
             items: [
               {
-                label: 'Tutorial',
+                label: 'Documentation',
                 to: '/docs/intro',
               },
             ],
