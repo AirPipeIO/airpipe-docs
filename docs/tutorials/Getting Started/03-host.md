@@ -1,9 +1,9 @@
 ---
-sidebar_position: 1
+sidebar_position: 3
 displayed_sidebar: tutorialSidebar
 ---
 
-# Tutorial Intro
+# Host
 
 Let's discover **Docusaurus in less than 5 minutes**.
 
@@ -45,4 +45,4 @@ The `cd` command changes the directory you're working with. In order to work wit
 
 The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
 
-Open `tutorials/Getting Started/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.
+Open `tutorials/tuts/intro3.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.

@@ -121,7 +121,7 @@ const config = {
             items: [
               {
                 label: 'Documentation',
-                to: '/docs/documentation/intro',
+                to: '/docs/',
               },
             ],
           },
