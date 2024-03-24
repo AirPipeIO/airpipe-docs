@@ -59,7 +59,6 @@ const config = {
       }),
     ],
   ],
-
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
@@ -164,6 +163,14 @@ const config = {
         darkTheme: prismThemes.dracula,
       },
     }),
+  themes: [
+    [
+      require.resolve('@easyops-cn/docusaurus-search-local'),
+      {
+        hashed: true,
+      },
+    ],
+  ],
 };
 
 export default config;
