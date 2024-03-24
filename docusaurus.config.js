@@ -49,6 +49,11 @@ const config = {
         },
         blog: {
           showReadingTime: true,
+          postsPerPage: 1,
+          blogListComponent: '@theme/BlogListPage',
+          blogPostComponent: '@theme/BlogPostPage',
+          blogTagsListComponent: '@theme/BlogTagsListPage',
+          blogTagsPostsComponent: '@theme/BlogTagsPostsPage',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl: `https://github.com/${organizationName}/${projectName}/tree/main/`,
@@ -162,8 +167,15 @@ const config = {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
       },
+      codeblock: {
+        showGithubLink: true,
+        githubLinkLabel: 'View on GitHub',
+        showRunmeLink: false,
+        runmeLinkLabel: 'Checkout via Runme',
+      },
     }),
   themes: [
+    'docusaurus-theme-github-codeblock',
     [
       require.resolve('@easyops-cn/docusaurus-search-local'),
       {
