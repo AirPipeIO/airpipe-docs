@@ -1,6 +1,7 @@
 ---
 sidebar_position: 3
 displayed_sidebar: tutorialSidebar
+slug: /tutorials/getting-started/host
 ---
 
 # Host

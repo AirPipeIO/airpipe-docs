@@ -1,6 +1,7 @@
 ---
 sidebar_position: 2
 displayed_sidebar: tutorialSidebar
+slug: /tutorials/getting-started/saas
 ---
 
 # SaaS
