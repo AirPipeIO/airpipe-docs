@@ -11,8 +11,8 @@ const baseUrl = `/${projectName}/`;
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'My Site',
-  tagline: 'Dinosaurs are cool',
+  title: 'AirPipe Docs',
+  tagline: '',
   favicon: 'img/favicon.ico',
   organizationName,
   projectName,
@@ -75,10 +75,10 @@ const config = {
         respectPrefersColorScheme: false,
       },
       navbar: {
-        title: 'AP Docs',
+        title: 'Docs',
         logo: {
           alt: 'My Site Logo',
-          src: 'img/logo.svg',
+          src: 'img/ap-logo-white.png',
         },
         items: [
           {
