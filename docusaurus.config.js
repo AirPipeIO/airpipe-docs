@@ -76,7 +76,7 @@ const config = {
         respectPrefersColorScheme: false,
       },
       navbar: {
-        title: 'Docs',
+        title: '',
         logo: {
           alt: 'My Site Logo',
           src: 'img/ap-logo-white.png',
