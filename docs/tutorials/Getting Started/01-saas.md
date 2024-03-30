@@ -1,10 +1,10 @@
 ---
-sidebar_position: 2
+sidebar_position: 1
 displayed_sidebar: tutorialSidebar
 slug: /tutorials/getting-started/saas
 ---
 
-# SaaS
+# Hosted (SaaS)
 
 Let's discover **Docusaurus in less than 5 minutes**.
 
