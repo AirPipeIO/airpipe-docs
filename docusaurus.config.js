@@ -84,15 +84,15 @@ const config = {
         items: [
           {
             position: 'left',
-            label: 'Tutorials',
-            sidebarId: 'tutorialSidebar',
+            label: 'Docs',
+            sidebarId: 'documentationSidebar',
             type: 'docSidebar',
           },
           {
             type: 'docSidebar',
-            sidebarId: 'documentationSidebar',
+            sidebarId: 'configurationSidebar',
             position: 'left',
-            label: 'Documentation',
+            label: 'Configuration',
           },
           {
             type: 'docSidebar',
@@ -114,11 +114,11 @@ const config = {
         style: 'dark',
         links: [
           {
-            title: 'Tutorials',
+            title: 'Configuration',
             items: [
               {
-                label: 'Tutorials',
-                to: '/docs/tutorials/',
+                label: 'Configuration',
+                to: '/docs/configuration/',
               },
             ],
           },

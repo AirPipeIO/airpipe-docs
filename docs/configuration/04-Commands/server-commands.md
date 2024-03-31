@@ -1,6 +1,7 @@
 ---
 sidebar_position: 2
-slug: /commands/server
+slug: /configuration/server
+displayed_sidebar: configurationSidebar
 ---
 
 # Command: server
