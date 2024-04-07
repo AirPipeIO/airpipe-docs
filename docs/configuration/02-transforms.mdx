@@ -458,7 +458,14 @@ interfaces:
 
 ## Extract Value
 
-This function is used to extract values from your input. Usage `extract_value`
+This function is used to extract values from your input. <br />
+`extract_value` uses javascript like notation:
+
+- `.body`
+- `[0].name`
+- `body.some.value`
+- `data[2].value`
+- `data.value[1]`
 
 <h3>Usage</h3>
 
@@ -521,7 +528,7 @@ This will result in the below output when the API is called.
 
 This function will group your data by a particular field(s)
 
-<h2>Usage</h2>
+<h3>Usage</h3>
 
 ```yml
 post_transforms:
