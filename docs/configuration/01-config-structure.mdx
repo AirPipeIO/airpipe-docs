@@ -6,17 +6,157 @@ displayed_sidebar: configurationSidebar
 
 # Configuration Structure
 
-Air Pipe configuration files are built with yml and follow a logical flow.
+Air Pipe configuration files are built with **YAML** and follow a logical flow.
 
-<br />
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
 
-The start of a configuration file contains:
+global: "<database, variables, secrets>"
 
-- `name`: the configuration name i.e. login-api, register-api
-- `metrics-enabled:`
+interfaces:
+  api-interface:
+    output: "<http>"
+    method: "<GET, POST, PUT>"
+    route?: "</user/login>"
+
+    actions:
+      - action1:
+          name: "<validate user>"
+          input: "<payload>"
+          assert: "<tests>"
+          post_transforms: "<transform/manipulate data>"
+      - action2: ......
+```
+
+## Starters
+
+The start of a configuration file contains 3 fields:
+
+
+> `name:`             the configuration name i.e. login-api, register-api     
+> `metrics-enabled:`  enables metrics to be displayed in the payload returned\
+> `docs:`             generates open api specification docs                   
 
 ```yml
 name: login-api
 metrics_enabled: true
 docs: true
 ```
+
+## [Globals](./configurations/globals) | Optional
+
+<p>
+  Defines the **database** | **variables** | **secrets** to be used across an
+  API Interface and its subsequent actions. 
+</p>
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
+
+global:
+  variables:
+    SOME_SECRET: MY_SECRET
+
+    databases:
+      main:
+        driver: postgres
+        conn_string: |
+          postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+    secrets:
+      special:
+        kind: vault
+        http:
+          url: http://127.0.0.1:8200/v1/secret/data/somePath/someSecret
+          headers:
+            X-Vault-Token: airpipe
+          format: json
+          accept_invalid_certs: true
+
+```
+
+
+## [Interfaces](./configurations/interfaces)
+
+Define an API Interface that contains a number of actions that can be executed. 
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
+
+global:
+  ...........         
+  .........
+  
+
+interfaces:
+  user/login:
+    output: http
+    method: POST
+
+    response:
+      http_code_on_error: 403
+
+    actions:
+      - name: LoginBody
+        input: a|body
+        hide_data_on_success: true
+        hide_data_on_error: true
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+            - value: pass
+              is_not_null: true
+
+      - name: GetUserDetails
+        run_when_succeeded:
+          - LoginBody
+        database: main
+        query: SELECT email, password, verified FROM users WHERE email = $1;
+        params: [a|LoginBody::email|]
+        assert:
+          error_message: 'Authentication failed'
+          tests:
+            - value: count()
+              is_equal_to: 1
+            - value: '[0]verified'
+              is_equal_to: true
+              error_message: user not verified
+        post_transforms:
+          - return_row: 0
+      
+      - name: VerifyPassword
+        input: a|LoginBody
+        hide_data_on_error: true
+        run_when_succeeded:
+          - GetUserDetails
+        assert:
+          error_message: 'Authentication failed'
+          tests:
+            - value: pass
+              bcrypt_verify: a|GetUserDetails::password|
+        post_transforms:
+          - remove_keys:
+              - pass
+          - add_jwt:
+              key: jwt
+              secret: a|var::JWT_SECRET|
+              exp: 1d
+              data: [email]
+
+```
+
+The above example:
+- defines an interface `user/login`
+- accepts a **POST** request at the interface name `/user/login` unless a `route` is defined. 
+- sets a response code on error
+- defines 3 actions
+  - LoginBody --> checks the body with an **assert** to ensure the email and password fields are available.
+  - GetUserDetails -> only runs if the previous action succeeded and attempts to verify the user.
+  - VerifyPassword -> only runs if the previous action succeeded and attempts to verify the password.  
