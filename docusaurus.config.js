@@ -169,6 +169,9 @@ const config = {
         theme: prismThemes.github,
         darkTheme: prismThemes.vsDark,
       },
+      mermaid: {
+        theme: {light: 'neutral', dark: 'forest'},
+      },
       codeblock: {
         showGithubLink: true,
         githubLinkLabel: 'View on GitHub',
@@ -176,8 +179,12 @@ const config = {
         runmeLinkLabel: 'Checkout via Runme',
       },
     }),
+  markdown: {
+    mermaid: true,
+  },
   themes: [
     'docusaurus-theme-github-codeblock',
+    '@docusaurus/theme-mermaid',
     [
       require.resolve('@easyops-cn/docusaurus-search-local'),
       {

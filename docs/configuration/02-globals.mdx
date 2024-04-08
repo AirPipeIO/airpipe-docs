@@ -5,3 +5,263 @@ displayed_sidebar: configurationSidebar
 ---
 
 # Globals
+
+<p>
+  Defines the **database** | **variables** | **secrets** | **templates** to be
+  used across an API Interface and its subsequent actions. Global is optional
+  and not required when building configurations. However we strongly advise in
+  using globals for better readability throughout your configurations.
+</p>
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
+
+global:
+  variables:
+    SOME_SECRET: MY_SECRET
+
+    databases:
+      main:
+        driver: postgres
+        conn_string: |
+          postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+    secrets:
+      special:
+        kind: vault
+        http:
+          url: http://127.0.0.1:8200/v1/secret/data/somePath/someSecret
+          headers:
+            X-Vault-Token: airpipe
+          format: json
+          accept_invalid_certs: true
+
+    templates:
+        RegisterEmail: |
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>a|var::company_name| Email Registration Verification</title>
+        </head>
+        <body>
+            <div style="background-color: #f9f9f9; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+                    <h2 style="text-align: center;">Email Registration Verification with a|var::company_name|</h2>
+                    <p>Hi $1,</p>
+                    <p>Glad to see you are joining the a|var::company_name|! To complete your account registration, please click the button
+                        button below to verify your email address.</p>
+                    <p style="text-align: center;">
+                        <a href="a|var::app_url|/verify?token=$2" style="display: inline-block; background-color: #007bff; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 5px;">Verify Email</a>
+                    </p>
+                    <p>If the button above doesn't work, you can also copy and paste the following link into your browser's address
+                        bar:</p>
+                    <p style="text-align: center;">a|var::app_url|/verify?token=$3</p>
+                    <p>If you didn't register a a|var::company_name| account, please ignore this email.</p>
+                    <p>Best regards,</p>
+                    <p>The a|var::company_name| Team</p>
+                </div>
+            </div>
+        </body>
+        </html>
+
+```
+
+## Variables
+
+Are a set of predefined keys that can be used throughout a configuration file.
+
+- enviornment variables
+- base urls
+- filenames
+- ports
+- usernames
+
+### Defining Varibles
+
+To define a variable create a `variables` block under `global`, the variables section accepts an array of key value pairs.
+Variables can reference any enviornment variables that are available.
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
+
+global:
+  variables:
+    ENV_1: production
+    ENV_2: a|env::ENVIRONMENT|
+```
+
+### Using Variables
+
+You can access a variable in a configuration file anywhere by following the below syntax.<br />
+`a|var::<VARIABLE_NAME>|`
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
+
+global:
+  variables:
+    ENV_1: production
+    ENV_2: a|env::ENVIRONMENT|
+
+interface:
+  user/login:
+    output: http
+    method: POST
+
+    actions:
+      - name: LoginBody
+        input: a|body
+        hide_data_on_success: true
+        hide_data_on_error: true
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+            - value: a|var::ENV_1|
+              is_not_null: true
+```
+
+## Databases
+
+You can define a number of databases that your configuration will use in each of its actions.
+Supported Database:
+
+- Postgres
+- MySQL
+
+### Defining Databases
+
+To define a database create a `databases` block under `global`, the database section requires an **identifier**.
+For example `main` is used in all database Air Pipe examples.
+
+> You can use the identifier for each action to avoid repetition within a config.
+
+#### Database Options
+
+| Name          | Type   | Description                                           |
+| ------------- | ------ | ----------------------------------------------------- |
+| `driver`      | string | the key or attribute name in the payload i.e password |
+| `conn_string` | string | the password to hash                                  |
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
+
+global:
+  variables:
+    SOME_SECRET: MY_SECRET
+
+    databases:
+      main:
+        driver: postgres
+        conn_string: |
+          postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+```
+
+### Using Databases
+
+1. add a `databases` field to your action and pass it your identifier
+2. add a query block and define your sql query
+
+> to subsitute values from previous actions or inputs define a `params` key.
+> Params takes an array of values and can be subsituted via `$` syntax.
+
+```yml
+name: login_user # unique name within your organization
+version: 0.0.1
+metrics_enabled: true # enables aggregate metrics
+
+global:
+  variables:
+    JWT_SECRET: a|env::JWT_SECRET|
+
+  databases:
+    main:
+      driver: postgres
+      conn_string: |
+        postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+interfaces:
+  user/login:
+    output: http
+    method: POST
+
+    response:
+      http_code_on_error: 403
+
+    actions:
+      - name: GetUserDetails
+        run_when_succeeded:
+          - LoginBody
+        database: main
+        query: SELECT email, password, verified FROM users WHERE email = $1;
+        params: [a|LoginBody::email|]
+        assert:
+          error_message: "Authentication failed"
+          tests:
+            - value: count()
+              is_equal_to: 1
+            - value: "[0]verified"
+              is_equal_to: true
+              error_message: user not verified
+        post_transforms:
+          - return_row: 0
+```
+
+## Secrets
+
+Secrets contain sensistive information such as passwords, API keys, tokens etc.
+Air Pipe supports different kinds of secrets and integrate with popular providers i.e. Hashicorp Vault.
+
+### Defining Secrets
+
+To define a secret create a `secrets` block under `global`, the secrets section requires an identifier.
+For example special is used in all secret Air Pipe examples.
+
+#### Secret Options
+
+| Name   | Type   | Description                                                                                                                                                    |
+| ------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kind` | string | the type of secret store i.e. vault                                                                                                                            |
+| `http` | array  | the method to access your secrets <br /> requires: <ul><li>`url`</li><li>`headers`</li><li>`format` i.e json</li><li>`accept_invalid_certs:` boolean</li></ul> |
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
+
+global:
+  variables:
+    SOME_SECRET: MY_SECRET
+
+    databases:
+      main:
+        driver: postgres
+        conn_string: |
+          postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+    secrets:
+      special:
+        kind: vault
+        http:
+          url: http://127.0.0.1:8200/v1/secret/data/somePath/someSecret
+          headers:
+            X-Vault-Token: airpipe
+          format: json
+          accept_invalid_certs: true
+```
+
+## Templates
+
+### Defining Templates
+### Using Templates
