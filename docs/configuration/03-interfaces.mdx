@@ -1,7 +1,78 @@
 ---
 sidebar_position: 3
-slug: /configurations/interfaces
+slug: /configuration/interfaces
 displayed_sidebar: configurationSidebar
 ---
 
 # Interfaces
+
+Defines a number of API Interfaces for you applications to interact with. Interfaces run a number of **actions** when an API is called.
+## Defining Interfaces 
+
+Defining interfaces are simple. Declare an `interfaces` section and create your identifiers for each interface. 
+
+<h3>Usage</h3>
+```yml
+name: get-vault-secrets
+metrics_enabled: true
+docs: true
+
+interfaces:
+  prod/user-login:
+  prod/user-details:
+```
+
+### Interface Options. 
+
+| Name        | Type              | Description                                                                                                                        |
+|-------------|-------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `summary`     | string (optional) | Short summary on what this api interface is for                                                                                    |
+| `description` | string (optional) | Longer description on what this api interface is for                                                                               |
+| `output`      | string (required) | How to interact with this api <ul><li>`http`</li></ul>                                                                             |
+| `method`      | string (required) | The method to call this api <ul><li>`GET`</li><li>`POST`</li></ul>                                                                 |
+| `route`       | string (optional) | Define the route the api will be called on. The interface identifer is the default route and will be used if no route is defined.  |
+| `tags`        | array (optional)  | Array of strings containing tags                                                                                                   |
+| `actions`     | array (optional)  | An array of instructions and transformations that occur when an API interface is called                                            |
+
+<h3>Usage</h3>
+```yml
+name: get-vault-secrets
+metrics_enabled: true
+docs: true
+
+interfaces:
+  prod/user-login:
+    summary: production endpoint
+    description: production endpoint for login service
+    tags: ['env:production', 'version:1.0.0']
+    output: http
+    method: POST
+
+    actions:
+      - name: CheckInput
+      - name: VerifyUser
+      - name: VerifyPassword
+  
+```
+
+
+## Actions
+
+Actions are a set of instructions an interface will run when called. <br/>
+
+### Action Options
+
+| Name                   | Type              | Description                                                                                                                                              |
+|------------------------|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`                 | string (required) | The name of the action                                                                                                                                   |
+| `input`                | string (optional) | The data available when an interface is called <ul><li>`a\|body`</li><li>`a\|headers`</li><li>`a\|params`</li></ul>                                      |
+| `hide_data_on_success` | boolean(optional) | How to interact with this api <ul><li>`http`</li></ul>                                                                                                   |
+| `hide_data_on_error`   | boolean(optional) | The method to call this api <ul><li>`GET`</li><li>`POST`</li></ul>                                                                                       |
+| `database`             | string (optional) | A database which your action will interact with.                                                                                                         |
+| `query`                | string (optional) | The query to be run on the specified database.                                                                                                           |
+| `params`               | array  (optional) | Array of parameters available for the actions to use                                                                                                     |
+| `assert`               |                   | an **array of test cases** used to validate your data and inputs. See [here](./asserts) for more details.                                  |
+| `post_transforms`      |                   | an **array of functions** which are used to transform your data after it is received. See [here](./transforms/functions) for more details. |
+| `email`                |                   | A set of options to configure email responses.                                                                                                           |
+| `run_when_succeeded`   |                   | A set of options for actions to follow when a particular action has succeeded.                                                                           |
+| `http`                 |                   | A set of options for an action to make http requests to do some sort of activity                                                                         |
