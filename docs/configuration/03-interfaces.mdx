@@ -66,13 +66,13 @@ Actions are a set of instructions an interface will run when called. <br/>
 |------------------------|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `name`                 | string (required) | The name of the action                                                                                                                                   |
 | `input`                | string (optional) | The data available when an interface is called <ul><li>`a\|body`</li><li>`a\|headers`</li><li>`a\|params`</li></ul>                                      |
-| `hide_data_on_success` | boolean(optional) | How to interact with this api <ul><li>`http`</li></ul>                                                                                                   |
-| `hide_data_on_error`   | boolean(optional) | The method to call this api <ul><li>`GET`</li><li>`POST`</li></ul>                                                                                       |
+| `hide_data_on_success` | boolean(optional) | Hide data from the response payload on success.                                                                                                 |
+| `hide_data_on_error`   | boolean(optional) | Hide data from the response payload on error.                                                                                      |
 | `database`             | string (optional) | A database which your action will interact with.                                                                                                         |
 | `query`                | string (optional) | The query to be run on the specified database.                                                                                                           |
 | `params`               | array  (optional) | Array of parameters available for the actions to use                                                                                                     |
 | `assert`               |                   | an **array of test cases** used to validate your data and inputs. See [here](./asserts) for more details.                                  |
 | `post_transforms`      |                   | an **array of functions** which are used to transform your data after it is received. See [here](./transforms/functions) for more details. |
 | `email`                |                   | A set of options to configure email responses.                                                                                                           |
-| `run_when_succeeded`   |                   | A set of options for actions to follow when a particular action has succeeded.                                                                           |
+| `run_when_succeeded`   |                   | Run this action if the specified action has succeeded.                                                                           |
 | `http`                 |                   | A set of options for an action to make http requests to do some sort of activity                                                                         |

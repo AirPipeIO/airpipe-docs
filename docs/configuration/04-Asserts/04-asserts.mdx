@@ -1,0 +1,91 @@
+---
+sidebar_position: 4
+slug: /configuration/asserts
+displayed_sidebar: configurationSidebar
+---
+
+# Asserts
+
+Are an array of functions which are used to test and validate your data
+after it is received. To use **assert functions** you must declare an `assert` block in your specified **action**
+
+## Usage
+```yml
+interfaces:
+  user/register:
+    output: http
+    method: POST
+    show_error_detail: true
+    actions:
+      - name: Input
+        input: a|body
+        hide_data_on_empty: true
+        run_when_succeeded:
+          - UserShouldNotExist
+        assert:
+          error_message: "Password not strong enough"
+          tests:
+            - value: first
+              is_not_null: true
+              is_greater_than: 2
+              is_less_than: 20
+              regex: \S+
+            - value: last
+              is_not_null: true
+              is_greater_than: 3
+              is_less_than: 20
+              regex: \S+
+            - value: email
+              is_not_null: true
+              is_greater_than: 3
+              is_less_than: 100
+              regex: \S+
+            - value: pass
+              is_not_null: true
+              is_greater_than: 9
+              is_less_than: 30
+            - value: pass
+              regex: "[A-Z]"
+              error_message: "Password should contain one uppercase character"
+            - value: pass
+              regex: "[a-z]"
+              error_message: "Password should contain one lowercase character"
+            - value: pass
+              regex: "[0-9!@#]"
+              error_message: "Password should contain at least one number (0-9) or symbol (!,@,#)"
+```
+
+In the above example the created action verifys the data that is received by defining a set of tests that the data needs to match to.
+
+<br />
+
+When defining tests you must create a condition which you expect to evaluate correctly. <br />
+Take for example:
+
+```yml
+assert:
+  error_message: "Username not long enough"
+  tests:
+    - value: first
+      is_not_null: true
+      is_greater_than: 2
+      is_less_than: 20
+```
+
+The input value `first`:
+
+- must not be null
+- is greater than 2
+- is less than 20
+
+When data comes through an API interface the assert defined is what we expect the data to match to. 
+If one of these cases are not met the assert will fail and produce an error message.
+
+## Assert Options
+
+| Name                 | Type   | Description                                       |
+|----------------------|--------|---------------------------------------------------|
+| `error_message`      | string | the error message to display when an assert fails |
+| `success_message`    | string | the success message to display when assert passes |
+| `http_code_on_error` | int    | the http code to display when an assert fails     |
+| `tests`              | array  | an array of tests used to validate your data      |
