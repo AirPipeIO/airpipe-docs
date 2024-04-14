@@ -6,8 +6,10 @@ displayed_sidebar: configurationSidebar
 
 # Tests
 
-Are an array of functions which are used to validate your data. 
+Are an array of functions which are used to validate your data.
 To use tests functions you must declare a `tests` section under your `assert`
+
+## Usage
 
 ```yml
 interfaces:
@@ -18,9 +20,6 @@ interfaces:
     actions:
       - name: Input
         input: a|body
-        hide_data_on_empty: true
-        run_when_succeeded:
-          - UserShouldNotExist
         assert:
           error_message: "Password not strong enough"
           tests:
@@ -54,60 +53,92 @@ interfaces:
               error_message: "Password should contain at least one number (0-9) or symbol (!,@,#)"
 ```
 
-## Name 
+Tests should follow the above format. All tests should start off with the **`value`**
+you want to test followed by the functions you will use to test the **`value`**.
+               |                                                                           |                                                                                                                 |
+## Value
 
-## Description 
+The value field is to access the data from your defined action input. 
 
-## Value 
+Take for example the below JSON data is sent to an API interface. 
 
-## Action Value 
+```json
+{
+  "first": "tom",
+  "last": "bob"
+}
+```
 
-## JQ 
+To access the this input we would use `a|body` 
 
-## Pointer 
+<h3>Usage</h3>
 
-## Is Equal To 
+```yml
+actions:
+  - name: Input
+    input: a|body
+    assert:
+      error_message: "First name not long enough"
+      tests:
+        - value: first
+```
 
-## Is Not Equal To 
+You can access any values that are available in the body, including nested values using JavaScript like syntax. **`data[0].name.first`**
 
-## Is Less Than 
+## Action Value
 
-## Is Less Than Or Equal To 
+## Name
 
-## Is Greater Than 
+## Description
 
-## Is Greater Than Or Equal To 
+## JQ
 
-## Is Not Null 
+## Pointer
 
-## Is Not Empty 
+## Comparisions
 
-## Is Null 
+### Is Equal To
 
-## Is UUID 
+### Is Not Equal To
 
-## Is Valid JWT 
+### Is Less Than
 
-## Contains Value 
+### Is Less Than Or Equal To
 
-## Not Contains Value 
+### Is Greater Than
 
-## Starts With 
+### Is Greater Than Or Equal To
 
-## Ends With 
+### Is Not Null
 
-## Regex 
+### Is Not Empty
 
-## Bcypt Verify 
+### Is Null
 
-## HTTP Code On Error 
+### Is UUID
 
-## Success Message 
+### Is Valid JWT
 
-## Error MEssage 
+### Contains Value
+
+### Not Contains Value
+
+### Starts With
+
+### Ends With
+
+## Regex
+
+## Bcypt Verify
+
+## HTTP Code On Error
+
+## Success Message
+
+## Error MEssage
 
 ## Hide Errors
 
-## Result Key 
+## Result Key
 
-## Expression 
+## Expression
