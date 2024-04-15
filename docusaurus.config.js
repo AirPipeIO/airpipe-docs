@@ -180,7 +180,7 @@ const config = {
   },
   themes: [
     "docusaurus-theme-github-codeblock",
-    "@docusaurus/theme-mermaid",
+
     [
       require.resolve("@easyops-cn/docusaurus-search-local"),
       {

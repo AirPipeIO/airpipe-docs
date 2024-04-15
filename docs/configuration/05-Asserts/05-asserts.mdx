@@ -6,10 +6,12 @@ displayed_sidebar: configurationSidebar
 
 # Asserts
 
-Are an array of functions which are used to test and validate your data
-after it is received. To use **assert functions** you must declare an `assert` block in your specified **action**
+Are a way to test and validate your input.
+To use assertions you must provide an array of [tests](/docs/configuration/asserts/functions) which can contain one or many test functions
+to validate a field within your input data.
 
 ## Usage
+
 ```yml
 interfaces:
   user/register:
@@ -78,14 +80,13 @@ The input value `first`:
 - is greater than 2
 - is less than 20
 
-When data comes through an API interface the assert defined is what we expect the data to match to. 
+When data comes through an API interface the assert defined is what we expect the data to match to.
 If one of these cases are not met the assert will fail and produce an error message.
-
 
 ## Assert Options
 
 | Name                 | Type   | Description                                       |
-|----------------------|--------|---------------------------------------------------|
+| -------------------- | ------ | ------------------------------------------------- |
 | `error_message`      | string | the error message to display when an assert fails |
 | `success_message`    | string | the success message to display when assert passes |
 | `http_code_on_error` | int    | the http code to display when an assert fails     |

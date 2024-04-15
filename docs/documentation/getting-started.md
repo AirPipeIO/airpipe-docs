@@ -6,8 +6,6 @@ slug: /getting-started
 
 # Getting Started
 
-Air Pipe is a highly performant no code....
-
 ## Hosted (SaaS) on our Platform
 
 ## Self Hosted
