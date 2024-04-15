@@ -49,17 +49,7 @@ const config = {
           // Remove this to remove the "edit this page" links.
           editUrl: `https://github.com/${organizationName}/${projectName}/tree/main/`,
         },
-        blog: {
-          showReadingTime: true,
-          postsPerPage: 1,
-          blogListComponent: "@theme/BlogListPage",
-          blogPostComponent: "@theme/BlogPostPage",
-          blogTagsListComponent: "@theme/BlogTagsListPage",
-          blogTagsPostsComponent: "@theme/BlogTagsPostsPage",
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl: `https://github.com/${organizationName}/${projectName}/tree/main/`,
-        },
+        blog: false,
         theme: {
           customCss: "./src/css/custom.css",
         },
@@ -101,7 +91,13 @@ const config = {
             label: "Examples",
           },
 
-          { to: "/blog", label: "Blog", position: "left" },
+          {
+            href: "https://blog.airpipe.io",
+            label: "Blog",
+            position: "left",
+            className: "internal-href",
+            target: "_self",
+          },
           {
             href: "https://github.com/facebook/docusaurus",
             label: "GitHub",
@@ -149,7 +145,7 @@ const config = {
             items: [
               {
                 label: "Blog",
-                to: "/blog",
+                href: "https://blog.airpipe.io",
               },
               {
                 label: "GitHub",
