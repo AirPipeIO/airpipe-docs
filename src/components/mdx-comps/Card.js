@@ -1,111 +1,63 @@
-import * as React from "react";
-import "@mantine/core/styles.css";
-import {
-  Card,
-  Image,
-  Text,
-  SimpleGrid,
-  Badge,
-  Group,
-  MantineProvider,
-} from "@mantine/core";
+import React from "react";
 import { IconClick, IconFiles } from "@tabler/icons-react";
 import { Link } from "react-router-dom";
-import card from "./card.css";
+import "./card.css";
+const cards = [
+  {
+    title: "Getting Started",
+    to: "/docs/getting-started",
+    desc: "Get up and running in 5 minutes",
+    icon: <IconClick color="#007bff" />,
+  },
+  {
+    title: "Configuration",
+    to: "/docs/configuration",
+    desc: "Learn the all features needed to create configuration files",
+    icon: <IconFiles color="#007bff" />,
+  },
+  {
+    title: "Examples",
+    to: "/docs/examples/http-example",
+    desc: "Built by Air Pipe and the community",
+    icon: <IconFiles color="#007bff" />,
+  },
+];
+const GenerateCards = () => {
+  return cards.map((card, index) => {
+    return (
+      <div className="col col--6" style={{ padding: "20px" }}>
+        <div className="col-demo">
+          <Link
+            key={index}
+            to={card.to}
+            style={{ textDecoration: "none", color: "inherit" }}
+          >
+            <div className="card-demo">
+              <div className="card">
+                <div className="card__header">
+                  <div style={{ display: "flex" }}>
+                    <h3 style={{ paddingRight: "5px" }}>{card.title}</h3>
+                    {card.icon}
+                  </div>
+                </div>
+                <div className="card__body">
+                  <p>{card.desc}</p>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </div>
+      </div>
+    );
+  });
+};
+
 export default function BasicCard() {
   return (
-    <MantineProvider defaultColorScheme="dark">
-      <SimpleGrid cols={2}>
-        <Link
-          to="/docs/getting-started"
-          style={{ textDecoration: "none", color: "inherit" }}
-        >
-          <Card
-            withBorder
-            shadow="sm"
-            radius="md"
-            padding="xl"
-            className="custom-card"
-          >
-            <Card.Section>
-              <Group justify="center" mt="md" mb="xs">
-                <Text
-                  variant="gradient"
-                  gradient={{ from: "#007bff", to: "#007bff", deg: 90 }}
-                  ta="center"
-                  fw={500}
-                >
-                  Getting Started
-                </Text>
-                <IconClick color="#007bff" />
-              </Group>
-            </Card.Section>
-
-            <Group justify="center" mt="md" mb="xs">
-              <Text c="white">
-                Learn how to easily run Air Pipe configurations
-              </Text>
-            </Group>
-            <Card.Section></Card.Section>
-          </Card>
-        </Link>
-        <Link
-          to="/docs/configuration"
-          style={{ textDecoration: "none", color: "inherit" }}
-        >
-          <Card
-            withBorder
-            shadow="sm"
-            radius="md"
-            padding="xl"
-            className="custom-card"
-          >
-            <Card.Section>
-              <Group justify="center" mt="md" mb="xs">
-                <Text
-                  variant="gradient"
-                  gradient={{ from: "#007bff", to: "#007bff", deg: 90 }}
-                  ta="center"
-                  fw={500}
-                >
-                  Configuration
-                </Text>
-                <IconFiles color="#007bff" />
-              </Group>
-            </Card.Section>
-            <Card.Section></Card.Section>
-          </Card>
-        </Link>
-
-        <Link
-          to="/docs/examples/http-example"
-          style={{ textDecoration: "none", color: "inherit" }}
-        >
-          <Card
-            withBorder
-            shadow="sm"
-            radius="md"
-            padding="xl"
-            className="custom-card"
-          >
-            <Card.Section>
-              <Group justify="center" mt="md" mb="xs">
-                <Text
-                  t
-                  variant="gradient"
-                  gradient={{ from: "#007bff", to: "#007bff", deg: 90 }}
-                  ta="center"
-                  fw={500}
-                >
-                  Examples
-                </Text>
-                <IconFiles color="#007bff" />
-              </Group>
-            </Card.Section>
-            <Card.Section></Card.Section>
-          </Card>
-        </Link>
-      </SimpleGrid>
-    </MantineProvider>
+    <div className="container">
+      <div className="row">
+        <GenerateCards />
+      </div>
+    </div>
   );
 }

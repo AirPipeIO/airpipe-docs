@@ -73,8 +73,7 @@ const config = {
       image: "img/docusaurus-social-card.jpg",
       colorMode: {
         defaultMode: "dark",
-        disableSwitch: false,
-        respectPrefersColorScheme: false,
+        disableSwitch: true,
       },
       navbar: {
         title: "",
@@ -180,7 +179,6 @@ const config = {
   },
   themes: [
     "docusaurus-theme-github-codeblock",
-
     [
       require.resolve("@easyops-cn/docusaurus-search-local"),
       {

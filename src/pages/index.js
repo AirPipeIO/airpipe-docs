@@ -3,13 +3,10 @@ import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 import HomepageFeatures from "@site/src/components/HomepageFeatures";
-import WordSwitcher from "../components/HomepageFeatures/word-switcher";
 import Heading from "@theme/Heading";
 import styles from "./index.module.css";
-import "@mantine/core/styles.css";
-import { MantineProvider } from "@mantine/core";
+
 function HomepageHeader() {
-  const wordsList = ["backend", "APIs", "performant"];
   const originalSentence = "Build high performance backend services";
   const { siteConfig } = useDocusaurusContext();
   return (
@@ -17,11 +14,6 @@ function HomepageHeader() {
       <div className="container">
         <Heading as="h1" className="hero__title">
           {originalSentence}
-          {/* <WordSwitcher
-            wordsList={wordsList}
-            interval={2000}
-            originalSentence={originalSentence}
-          /> */}
         </Heading>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
         <div className={styles.buttons}>
@@ -37,16 +29,14 @@ function HomepageHeader() {
 export default function Home() {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <MantineProvider defaultColorScheme="dark">
-      <Layout
-        title={`v1`}
-        description="Description will go into a meta tag in <head />"
-      >
-        <HomepageHeader />
-        <main>
-          <HomepageFeatures />
-        </main>
-      </Layout>
-    </MantineProvider>
+    <Layout
+      title={`v1`}
+      description="Description will go into a meta tag in <head />"
+    >
+      <HomepageHeader />
+      <main>
+        <HomepageFeatures />
+      </main>
+    </Layout>
   );
 }
