@@ -9,7 +9,7 @@ import styles from "./index.module.css";
 
 function HomepageHeader() {
   const wordsList = ["backend", "APIs", "performant"];
-  const originalSentence = "Build high performance no code ";
+  const originalSentence = "Build high performance backend services";
   const { siteConfig } = useDocusaurusContext();
   return (
     <header className={clsx("hero hero--primary", styles.heroBanner)}>
