@@ -4,6 +4,10 @@ displayed_sidebar: documentationSidebar
 slug: /
 ---
 
-# Intro Documentation
+import Card from '../../src/components/mdx-comps/Card';
 
-Let's discover **Docusaurus in less than 5 minutes**.
+# Introduction
+
+Air Pipe is a zero code high performant service which supports building APIs, integrations, workflows anywhere. We offer SaaS Managed and Self Hosted options.
+
+<Card />

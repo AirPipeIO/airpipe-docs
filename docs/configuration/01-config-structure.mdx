@@ -9,6 +9,7 @@ displayed_sidebar: configurationSidebar
 Air Pipe configuration files are built with **YAML** and follow a logical flow.
 
 A configuration contains several sections:
+
 - `name`
 - `metrics_enabled`
 - `docs`
@@ -23,8 +24,6 @@ A configuration contains several sections:
     - method
     - route
     - actions
-
-
 
 ```yml
 name: login-api
@@ -50,20 +49,16 @@ interfaces:
 
 ## Air Pipe Syntax
 
-
 TBD
-
-
-
 
 ## Starters
 
-The start of a configuration file contains 3 fields:
+The start of a configuration file contains a few fields:
 
-
-> `name:`             the configuration name i.e. login-api, register-api     
-> `metrics-enabled:`  enables metrics to be displayed in the payload returned\
-> `docs:`             generates open api specification docs                   
+> `name:` the configuration name i.e. login-api, register-api  
+> `metrics-enabled:` enables metrics to be displayed in the payload returned\
+> `docs:` generates open api specification docs
+> `version:` used for versioning your configuration files
 
 ```yml
 name: login-api
@@ -74,8 +69,8 @@ docs: true
 ## Globals | Optional
 
 <p>
-  Defines the **database** | **variables** | **secrets** | **templates** to be used across an
-  API Interface and its subsequent actions. 
+  Defines the **database** | **variables** | **secrets** | **templates** to be
+  used across an API Interface and its subsequent actions.
 </p>
 
 ```yml
@@ -140,17 +135,15 @@ Detailed information for Globals and usage can be found [here](./configuration/g
 
 ## Interfaces
 
-Define an API Interface that contains a number of actions that can be executed. 
+Define an API Interface that contains a number of actions that can be executed.
 
 ```yml
 name: login-api
 metrics_enabled: true
 docs: true
 
-global:
-  ...........         
+global: ...........
   .........
-  
 
 interfaces:
   user/login:
@@ -179,23 +172,23 @@ interfaces:
         query: SELECT email, password, verified FROM users WHERE email = $1;
         params: [a|LoginBody::email|]
         assert:
-          error_message: 'Authentication failed'
+          error_message: "Authentication failed"
           tests:
             - value: count()
               is_equal_to: 1
-            - value: '[0]verified'
+            - value: "[0]verified"
               is_equal_to: true
               error_message: user not verified
         post_transforms:
           - return_row: 0
-      
+
       - name: VerifyPassword
         input: a|LoginBody
         hide_data_on_error: true
         run_when_succeeded:
           - GetUserDetails
         assert:
-          error_message: 'Authentication failed'
+          error_message: "Authentication failed"
           tests:
             - value: pass
               bcrypt_verify: a|GetUserDetails::password|
@@ -207,17 +200,16 @@ interfaces:
               secret: a|var::JWT_SECRET|
               exp: 1d
               data: [email]
-
 ```
 
 The above example:
+
 - defines an interface `user/login`
-- accepts a **POST** request at the interface name `/user/login` unless a `route` is defined. 
+- accepts a **POST** request at the interface name `/user/login` unless a `route` is defined.
 - sets a response code on error
 - defines 3 actions
   - LoginBody --> checks the body with an **assert** to ensure the email and password fields are available.
   - GetUserDetails -> only runs if the previous action succeeded and attempts to verify the user.
-  - VerifyPassword -> only runs if the previous action succeeded and attempts to verify the password.  
-
+  - VerifyPassword -> only runs if the previous action succeeded and attempts to verify the password.
 
 Detailed information for Interfaces its options and usage can be found [here](./configuration/interfaces)

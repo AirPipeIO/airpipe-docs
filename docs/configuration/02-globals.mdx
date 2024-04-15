@@ -14,14 +14,11 @@ displayed_sidebar: configurationSidebar
 </p>
 
 <h3>Usage</h3>
-```yml
-name: login-api
-metrics_enabled: true
-docs: true
+```yml name: login-api metrics_enabled: true docs: true
 
 global:
-  variables:
-    SOME_SECRET: MY_SECRET
+variables:
+SOME_SECRET: MY_SECRET
 
     databases:
       main:
@@ -70,7 +67,7 @@ global:
         </body>
         </html>
 
-```
+````
 
 ## Variables
 
@@ -97,7 +94,7 @@ global:
   variables:
     ENV_1: production
     ENV_2: a|env::ENVIRONMENT|
-```
+````
 
 ### Using Variables
 
@@ -155,21 +152,19 @@ For example `main` is used in all database Air Pipe examples.
 | `conn_string` | string | the password to hash                                  |
 
 <h3>Usage</h3>
-```yml
-name: login-api
-metrics_enabled: true
-docs: true
+```yml name: login-api metrics_enabled: true docs: true
 
 global:
-  variables:
-    SOME_SECRET: MY_SECRET
+variables:
+SOME_SECRET: MY_SECRET
 
     databases:
       main:
         driver: postgres
         conn_string: |
           postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
-```
+
+````
 
 ### Using Databases
 
@@ -219,7 +214,7 @@ interfaces:
               error_message: user not verified
         post_transforms:
           - return_row: 0
-```
+````
 
 ## Secrets
 
@@ -239,14 +234,11 @@ For example special is used in all secret Air Pipe examples.
 | `http` | array  | the method to access your secrets <br /> requires: <ul><li>`url`</li><li>`headers`</li><li>`format` i.e json</li><li>`accept_invalid_certs:` boolean</li></ul> |
 
 <h3>Usage</h3>
-```yml
-name: login-api
-metrics_enabled: true
-docs: true
+```yml name: login-api metrics_enabled: true docs: true
 
 global:
-  variables:
-    SOME_SECRET: MY_SECRET
+variables:
+SOME_SECRET: MY_SECRET
 
     databases:
       main:
@@ -263,7 +255,8 @@ global:
             X-Vault-Token: airpipe
           format: json
           accept_invalid_certs: true
-```
+
+````
 
 
 ### Using Secrets
@@ -313,32 +306,30 @@ interfaces:
           - add_attribute:
               hello: test - a|secret::special::someName|
 
-```
+````
+
 ## Templates
 
-Air Pipe templates are a way to automate email? responses for a variety of cases. 
+Air Pipe templates are a way to automate email? responses for a variety of cases.
 
-- Inviting Users 
-- Registering Users 
-- Automated Responses 
+- Inviting Users
+- Registering Users
+- Automated Responses
 
 ### Defining Templates
 
-To define a template create a `templates` section under `global`, the template section requires an identifier. 
-For example `RegisterEmail`. Then define a multiline string with the `|` operator. On a new line add your HTML template. 
+To define a template create a `templates` section under `global`, the template section requires an identifier.
+For example `RegisterEmail`. Then define a multiline string with the `|` operator. On a new line add your HTML template.
 
 Templates support variables and paramaters using the same syntax `a|var::variable` or `$3`. For more information on Air Pipe Syntax see here (ADD A LINK)
 
 <h3>Usage</h3>
-```yml
-name: login-api
-metrics_enabled: true
-docs: true
+```yml name: login-api metrics_enabled: true docs: true
 
 global:
-    variables:
-      company_name: a|env::COMPANY_NAME|
-      app_url: a|env::APP_URL|
+variables:
+company_name: a|env::COMPANY_NAME|
+app_url: a|env::APP_URL|
 
     templates:
         RegisterEmail: |
@@ -370,13 +361,14 @@ global:
             </div>
         </body>
         </html>
-```
+
+````
 
 ### Using Templates
 
 1. add a `email` block to your action
 
-`email` has the following options. 
+`email` has the following options.
 
 | Name              | Type   | Description                                                                                                                                      |
 |-------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -389,7 +381,7 @@ global:
 | `error_message`   | string | message to display on failure                                                                                                                    |
 | `smtp`            | array  | smpt connection details <br /> <ul><li>`user`</li><li>`pass`</li><li>`server`</li><li>`port`</li></ul>                                           |
 
-```yml 
+```yml
 name: register_user
 version: 0.0.2
 description: Register a user
@@ -438,4 +430,29 @@ interfaces:
         run_when_succeeded:
           - previous
 
+````
+
+:::info
+
+## Beta
+
+:::
+
+### Scheduler
+
+Run configuration files on a cron like interval.
+
+```yml
+name: run-schedule
+metrics_enabled: true
+docs: true
+
+global:
+  scheduler:
+    get-post:
+      rate: 1/10 * * * * *
+      http:
+        url: http://0.0.0.0:4111/tests/get-headers
+        headers:
+          customheader: hello
 ```
