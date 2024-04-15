@@ -8,6 +8,6 @@ import Card from '../../src/components/mdx-comps/Card';
 
 # Introduction
 
-Air Pipe is a zero code high performant service which supports building APIs, integrations, workflows anywhere. We offer SaaS Managed and Self Hosted options.
+Air Pipe is a zero code high performance service which supports building APIs, integrations, workflows anywhere. We offer SaaS Managed and Self Hosted options.
 
 <Card />

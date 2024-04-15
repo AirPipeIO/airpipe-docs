@@ -1,50 +1,111 @@
 import * as React from "react";
-import Box from "@mui/material/Box";
-import { Link } from "react-router-dom";
-import CardActions from "@mui/material/CardActions";
-
-import Button from "@mui/material/Button";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import "@mantine/core/styles.css";
 import {
-  Grid,
   Card,
-  CardActionArea,
-  CardContent,
-  Typography,
-} from "@mui/material";
-
-const darkTheme = createTheme({
-  palette: {
-    mode: "dark",
-  },
-});
-const cards = [
-  { title: "Getting Started", url: "/docs/getting-started" },
-  { title: "Configuration", url: "/docs/configuration" },
-  { title: "Examples", url: "/docs/examples/http-example" },
-];
-
+  Image,
+  Text,
+  SimpleGrid,
+  Badge,
+  Group,
+  MantineProvider,
+} from "@mantine/core";
+import { IconClick, IconFiles } from "@tabler/icons-react";
+import { Link } from "react-router-dom";
+import card from "./card.css";
 export default function BasicCard() {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <Grid container spacing={3}>
-        {cards.map((card, index) => (
-          <Grid item key={index} xs={12} sm={6} md={6} lg={3}>
-            <Link to={card.url} style={{ textDecoration: "none" }}>
-              <Card>
-                <CardActionArea>
-                  <CardContent>
-                    <Typography variant="h6">{card.title}</Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Description of the card goes here...
-                    </Typography>
-                  </CardContent>
-                </CardActionArea>
-              </Card>
-            </Link>
-          </Grid>
-        ))}
-      </Grid>
-    </ThemeProvider>
+    <MantineProvider defaultColorScheme="dark">
+      <SimpleGrid cols={2}>
+        <Link
+          to="/docs/getting-started"
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
+          <Card
+            withBorder
+            shadow="sm"
+            radius="md"
+            padding="xl"
+            className="custom-card"
+          >
+            <Card.Section>
+              <Group justify="center" mt="md" mb="xs">
+                <Text
+                  variant="gradient"
+                  gradient={{ from: "#007bff", to: "#007bff", deg: 90 }}
+                  ta="center"
+                  fw={500}
+                >
+                  Getting Started
+                </Text>
+                <IconClick color="#007bff" />
+              </Group>
+            </Card.Section>
+
+            <Group justify="center" mt="md" mb="xs">
+              <Text c="white">
+                Learn how to easily run Air Pipe configurations
+              </Text>
+            </Group>
+            <Card.Section></Card.Section>
+          </Card>
+        </Link>
+        <Link
+          to="/docs/configuration"
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
+          <Card
+            withBorder
+            shadow="sm"
+            radius="md"
+            padding="xl"
+            className="custom-card"
+          >
+            <Card.Section>
+              <Group justify="center" mt="md" mb="xs">
+                <Text
+                  variant="gradient"
+                  gradient={{ from: "#007bff", to: "#007bff", deg: 90 }}
+                  ta="center"
+                  fw={500}
+                >
+                  Configuration
+                </Text>
+                <IconFiles color="#007bff" />
+              </Group>
+            </Card.Section>
+            <Card.Section></Card.Section>
+          </Card>
+        </Link>
+
+        <Link
+          to="/docs/examples/http-example"
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
+          <Card
+            withBorder
+            shadow="sm"
+            radius="md"
+            padding="xl"
+            className="custom-card"
+          >
+            <Card.Section>
+              <Group justify="center" mt="md" mb="xs">
+                <Text
+                  t
+                  variant="gradient"
+                  gradient={{ from: "#007bff", to: "#007bff", deg: 90 }}
+                  ta="center"
+                  fw={500}
+                >
+                  Examples
+                </Text>
+                <IconFiles color="#007bff" />
+              </Group>
+            </Card.Section>
+            <Card.Section></Card.Section>
+          </Card>
+        </Link>
+      </SimpleGrid>
+    </MantineProvider>
   );
 }

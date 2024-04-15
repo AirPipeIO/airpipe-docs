@@ -1,0 +1,12 @@
+.custom-card {
+  transition: border-color 0.3s ease;
+  /* Added transition for smooth color change */
+}
+
+.custom-card:hover {
+  border-color: #007bff; /* Change this color to whatever you prefer */
+}
+
+.custom-card-wrapper a {
+  user-select: none;
+}
