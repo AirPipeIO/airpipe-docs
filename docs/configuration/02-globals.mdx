@@ -234,11 +234,16 @@ For example special is used in all secret Air Pipe examples.
 | `http` | array  | the method to access your secrets <br /> requires: <ul><li>`url`</li><li>`headers`</li><li>`format` i.e json</li><li>`accept_invalid_certs:` boolean</li></ul> |
 
 <h3>Usage</h3>
-```yml name: login-api metrics_enabled: true docs: true
+
+```yml
+name: login-api
+metrics_enabled:
+true
+docs: true
 
 global:
-variables:
-SOME_SECRET: MY_SECRET
+  variables:
+    SOME_SECRET: MY_SECRET
 
     databases:
       main:
@@ -256,8 +261,7 @@ SOME_SECRET: MY_SECRET
           format: json
           accept_invalid_certs: true
 
-````
-
+```
 
 ### Using Secrets
 
@@ -280,12 +284,11 @@ global:
         format: json
         accept_invalid_certs: true
 
-
 interfaces:
   tests/get-vault-secrets:
     summary: Get data from JSON API
     description: Get JSON data and add secret from hashicorp vault to attributes
-    tags: ['secrets']
+    tags: ["secrets"]
     output: http
     method: GET
 
@@ -300,13 +303,12 @@ interfaces:
 
       - name: LoginBody
         http:
-            url: https://jsonplaceholder.typicode.com/todos/a|Input::id|
+          url: https://jsonplaceholder.typicode.com/todos/a|Input::id|
 
         post_transforms:
           - add_attribute:
               hello: test - a|secret::special::someName|
-
-````
+```
 
 ## Templates
 

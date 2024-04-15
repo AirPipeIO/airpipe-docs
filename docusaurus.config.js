@@ -4,16 +4,16 @@
 // There are various equivalent ways to declare your Docusaurus config.
 // See: https://docusaurus.io/docs/api/docusaurus-config
 
-import { themes as prismThemes } from 'prism-react-renderer';
-const organizationName = 'AirPipeIO';
-const projectName = 'dummy';
+import { themes as prismThemes } from "prism-react-renderer";
+const organizationName = "AirPipeIO";
+const projectName = "dummy";
 const baseUrl = `/${projectName}/`;
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'AirPipe Docs',
-  tagline: '',
-  favicon: 'img/favicon.ico',
+  title: "AirPipe Docs",
+  tagline: "",
+  favicon: "img/favicon.ico",
   organizationName,
   projectName,
   // Set the production url of your site here
@@ -21,7 +21,7 @@ const config = {
 
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/',
+  baseUrl: "/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -33,17 +33,17 @@ const config = {
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".
   i18n: {
-    defaultLocale: 'en',
-    locales: ['en'],
+    defaultLocale: "en",
+    locales: ["en"],
   },
 
   presets: [
     [
-      'classic',
+      "classic",
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
-          sidebarPath: './sidebars.js',
+          sidebarPath: "./sidebars.js",
 
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
@@ -52,16 +52,16 @@ const config = {
         blog: {
           showReadingTime: true,
           postsPerPage: 1,
-          blogListComponent: '@theme/BlogListPage',
-          blogPostComponent: '@theme/BlogPostPage',
-          blogTagsListComponent: '@theme/BlogTagsListPage',
-          blogTagsPostsComponent: '@theme/BlogTagsPostsPage',
+          blogListComponent: "@theme/BlogListPage",
+          blogPostComponent: "@theme/BlogPostPage",
+          blogTagsListComponent: "@theme/BlogTagsListPage",
+          blogTagsPostsComponent: "@theme/BlogTagsPostsPage",
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl: `https://github.com/${organizationName}/${projectName}/tree/main/`,
         },
         theme: {
-          customCss: './src/css/custom.css',
+          customCss: "./src/css/custom.css",
         },
       }),
     ],
@@ -70,123 +70,119 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       // Replace with your project's social card
-      image: 'img/docusaurus-social-card.jpg',
+      image: "img/docusaurus-social-card.jpg",
       colorMode: {
-        defaultMode: 'dark',
+        defaultMode: "dark",
         disableSwitch: false,
         respectPrefersColorScheme: false,
       },
       navbar: {
-        title: '',
+        title: "",
         logo: {
-          alt: 'My Site Logo',
-          src: 'img/ap-logo-white.png',
+          alt: "My Site Logo",
+          src: "img/ap-logo-white.png",
         },
         items: [
           {
-            position: 'left',
-            label: 'Docs',
-            sidebarId: 'documentationSidebar',
-            type: 'docSidebar',
+            position: "left",
+            label: "Docs",
+            sidebarId: "documentationSidebar",
+            type: "docSidebar",
           },
           {
-            type: 'docSidebar',
-            sidebarId: 'configurationSidebar',
-            position: 'left',
-            label: 'Configuration',
+            type: "docSidebar",
+            sidebarId: "configurationSidebar",
+            position: "left",
+            label: "Configuration",
           },
           {
-            type: 'docSidebar',
-            sidebarId: 'exampleSidebar',
-            position: 'left',
-            label: 'Examples',
+            type: "docSidebar",
+            sidebarId: "exampleSidebar",
+            position: "left",
+            label: "Examples",
           },
 
-          { to: '/blog', label: 'Blog', position: 'left' },
+          { to: "/blog", label: "Blog", position: "left" },
           {
-            href: 'https://github.com/facebook/docusaurus',
-            label: 'GitHub',
-            position: 'right',
+            href: "https://github.com/facebook/docusaurus",
+            label: "GitHub",
+            position: "right",
           },
           // { type: 'docsVersionDropdown' },
         ],
       },
       footer: {
-        style: 'dark',
+        style: "dark",
         links: [
           {
-            title: 'Configuration',
+            title: "Configuration",
             items: [
               {
-                label: 'Configuration',
-                to: '/docs/configuration/',
+                label: "Configuration",
+                to: "/docs/configuration/",
               },
             ],
           },
           {
-            title: 'Docs',
+            title: "Docs",
             items: [
               {
-                label: 'Documentation',
-                to: '/docs/',
+                label: "Documentation",
+                to: "/docs/",
               },
             ],
           },
           {
-            title: 'Community',
+            title: "Community",
             items: [
               {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
+                label: "Discord",
+                href: "https://discordapp.com/invite/docusaurus",
               },
               {
-                label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-              {
-                label: 'Twitter',
-                href: 'https://twitter.com/docusaurus',
+                label: "Twitter",
+                href: "https://twitter.com/airpipeio",
               },
             ],
           },
           {
-            title: 'More',
+            title: "More",
             items: [
               {
-                label: 'Blog',
-                to: '/blog',
+                label: "Blog",
+                to: "/blog",
               },
               {
-                label: 'GitHub',
-                href: 'https://github.com/facebook/docusaurus',
+                label: "GitHub",
+                href: "https://github.com/facebook/docusaurus",
               },
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © 2024 Air Pipe`,
       },
       prism: {
         theme: prismThemes.github,
         darkTheme: prismThemes.vsDark,
       },
       mermaid: {
-        theme: {light: 'neutral', dark: 'forest'},
+        theme: { light: "neutral", dark: "forest" },
       },
       codeblock: {
         showGithubLink: true,
-        githubLinkLabel: 'View on GitHub',
+        githubLinkLabel: "View on GitHub",
         showRunmeLink: false,
-        runmeLinkLabel: 'Checkout via Runme',
+        runmeLinkLabel: "Checkout via Runme",
       },
     }),
   markdown: {
     mermaid: true,
   },
   themes: [
-    'docusaurus-theme-github-codeblock',
-    '@docusaurus/theme-mermaid',
+    "docusaurus-theme-github-codeblock",
+    "@docusaurus/theme-mermaid",
     [
-      require.resolve('@easyops-cn/docusaurus-search-local'),
+      require.resolve("@easyops-cn/docusaurus-search-local"),
       {
         hashed: true,
       },
