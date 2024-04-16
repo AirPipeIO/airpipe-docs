@@ -237,8 +237,7 @@ For example special is used in all secret Air Pipe examples.
 
 ```yml
 name: login-api
-metrics_enabled:
-true
+metrics_enabled: true
 docs: true
 
 global:
@@ -260,7 +259,6 @@ global:
             X-Vault-Token: airpipe
           format: json
           accept_invalid_certs: true
-
 ```
 
 ### Using Secrets
@@ -326,7 +324,11 @@ For example `RegisterEmail`. Then define a multiline string with the `|` operato
 Templates support variables and paramaters using the same syntax `a|var::variable` or `$3`. For more information on Air Pipe Syntax see here (ADD A LINK)
 
 <h3>Usage</h3>
-```yml name: login-api metrics_enabled: true docs: true
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
 
 global:
 variables:
@@ -364,7 +366,7 @@ app_url: a|env::APP_URL|
         </body>
         </html>
 
-````
+```
 
 ### Using Templates
 
@@ -372,16 +374,16 @@ app_url: a|env::APP_URL|
 
 `email` has the following options.
 
-| Name              | Type   | Description                                                                                                                                      |
-|-------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------|
-| `to`              | string | who receives the emails                                                                                                                          |
-| `from`            | string | who sent the email                                                                                                                               |
-| `html`            | string | reference your predefined template or define a template  <ul><li> refer to a predefined template: `a\|template::RegisterEmail\|`</li></ul> |
-| `params`          | array  | params available for the template                                                                                                                |
-| `subject`         | string | brief summary of the email                                                                                                                       |
-| `success_message` | string | message to display on success                                                                                                                    |
-| `error_message`   | string | message to display on failure                                                                                                                    |
-| `smtp`            | array  | smpt connection details <br /> <ul><li>`user`</li><li>`pass`</li><li>`server`</li><li>`port`</li></ul>                                           |
+| Name              | Type   | Description                                                                                                                               |
+| ----------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `to`              | string | who receives the emails                                                                                                                   |
+| `from`            | string | who sent the email                                                                                                                        |
+| `html`            | string | reference your predefined template or define a template <ul><li> refer to a predefined template: `a\|template::RegisterEmail\|`</li></ul> |
+| `params`          | array  | params available for the template                                                                                                         |
+| `subject`         | string | brief summary of the email                                                                                                                |
+| `success_message` | string | message to display on success                                                                                                             |
+| `error_message`   | string | message to display on failure                                                                                                             |
+| `smtp`            | array  | smpt connection details <br /> <ul><li>`user`</li><li>`pass`</li><li>`server`</li><li>`port`</li></ul>                                    |
 
 ```yml
 name: register_user
@@ -422,8 +424,8 @@ interfaces:
             - a|Input::verification_token|
             - a|Input::verification_token|
           subject: Welcome to a|env::COMPANY_NAME|
-          success_message: 'Email successfully sent'
-          error_message: 'Failed to send email'
+          success_message: "Email successfully sent"
+          error_message: "Failed to send email"
           smtp:
             user: a|env::SMTP_USER|
             pass: a|env::SMTP_PASS|
@@ -431,8 +433,7 @@ interfaces:
             port: 465
         run_when_succeeded:
           - previous
-
-````
+```
 
 :::info
 

@@ -109,21 +109,25 @@ const config = {
       footer: {
         style: "dark",
         links: [
-          {
-            title: "Configuration",
-            items: [
-              {
-                label: "Configuration",
-                to: "/docs/configuration/",
-              },
-            ],
-          },
+          // {
+          //   title: "Configuration",
+          //   items: [
+          //     {
+          //       label: "Configuration",
+          //       to: "/docs/configuration/",
+          //     },
+          //   ],
+          // },
           {
             title: "Docs",
             items: [
               {
-                label: "Documentation",
-                to: "/docs/",
+                label: "Getting Started",
+                to: "/docs/getting-started",
+              },
+              {
+                label: "Configuration",
+                to: "/docs/configuration",
               },
             ],
           },

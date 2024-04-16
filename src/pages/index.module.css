@@ -7,9 +7,58 @@
   padding: 4rem 0;
   text-align: center;
   position: relative;
-  overflow: hidden;
+  overflow: auto;
+  /* background-image: linear-gradient(
+    to bottom right,
+    rgb(0, 0, 0) 3%,
+    rgb(3, 0, 61) 30%
+  ); */
+  background-color: black;
+  /* background: linear-gradient(
+    315deg,
+    rgb(16, 239, 255) 3%,
+    rgb(16, 239, 255) 30%,
+    rgb(196, 196, 196) 40%,
+    rgb(23, 166, 255) 60%,
+    rgb(16, 239, 255) 98%
+  );
+  animation: gradient 10s ease infinite;
+  background-size: 400% 400%;
+  background-attachment: fixed; */
 }
 
+.dots {
+  position: absolute;
+  color: #3b3b3b;
+  @media (max-width: 48em) {
+    display: none;
+  }
+}
+
+.dotsLeft {
+  left: 0;
+  top: 0;
+}
+
+body {
+  margin: auto;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: auto;
+  background-color: black;
+  min-height: 100%; /*or 100vh */
+  height: 100%;
+}
+@keyframes gradient {
+  0% {
+    background-position: 100% 100%;
+  }
+  50% {
+    background-position: 50% 50%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
 @media screen and (max-width: 996px) {
   .heroBanner {
     padding: 2rem;

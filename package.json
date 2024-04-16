@@ -29,6 +29,7 @@
     "prism-react-renderer": "^2.3.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
+    "react-rotating-text": "^1.4.1",
     "recharts": "^2.12.5",
     "styled-components": "^6.1.8"
   },
