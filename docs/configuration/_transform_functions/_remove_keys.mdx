@@ -1,0 +1,111 @@
+## Remove Keys
+
+This function is used to rename keys for better readability, usage and consistency.
+
+<h3> Usage </h3>
+
+```yaml
+post_transforms:
+  - remove_keys:
+      colour: col
+```
+
+<details>
+
+<summary>Remove Keys Example</summary>
+
+Consider the following data:
+
+```json
+[
+  {
+    firstname: "blah"
+    lastname: "blahblah"
+    address1: "blah address"
+  }
+]
+```
+
+Using the remove keys function we can remove unnecssary data from your response i.e `address1`.
+
+```yml
+# unique name within your organization
+name: user_api
+version: 0.0.1
+description: Retrieve User Details
+metrics_enabled: true
+
+global:
+  databases:
+    main:
+      driver: postgres
+      conn_string: |
+        postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+interfaces:
+  user/remove-keys:
+    output: http
+    route: details
+    method: POST
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        run_when_succeeded:
+          - previous
+        assert:
+          tests:
+            - value: firstname
+              is_not_null: true
+
+      - name: CheckUser
+        run_when_succeeded:
+          - previous
+        database: main
+        query: |
+          SELECT firstname, lastname, address1 FROM customers WHERE firstname LIKE $1 LIMIT 2;
+        params:
+          - a|CheckBody::firstname|
+        assert:
+          error_message: "User Does Not Exist"
+          tests:
+            - value: count()
+              is_equal_to: 1
+              error_message: "No User Found"
+        post_transforms:
+          - remove_keys:
+              address1: addr
+```
+
+This will result in the below output when the API is called.
+
+```json
+{
+  "data": {
+    "CheckBody": {
+      "data": {
+        "firstname": "VKUUXF"
+      },
+      "message": "success",
+      "time.ms": 0
+    },
+    "CheckUser": {
+      "data": [
+        {
+          "firstname": "VKUUXF",
+          "lastname": "ITHOMQJNYX"
+        }
+      ],
+      "message": "success",
+      "time.ms": 669
+    }
+  },
+  "metrics": {
+    "user_api.config.ms": 670
+  }
+}
+```
+
+---
+
+</details>

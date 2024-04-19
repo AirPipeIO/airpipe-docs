@@ -2,31 +2,12 @@ import React from "react";
 import { IconClick, IconFiles } from "@tabler/icons-react";
 import { Link } from "react-router-dom";
 import "./card.css";
-const cards = [
-  {
-    title: "Getting Started",
-    to: "/docs/getting-started",
-    desc: "Get up and running in 5 minutes",
-    icon: <IconClick color="#007bff" />,
-  },
-  {
-    title: "Configuration",
-    to: "/docs/configuration",
-    desc: "Learn the all features needed to create configuration files",
-    icon: <IconFiles color="#007bff" />,
-  },
-  {
-    title: "Examples",
-    to: "/docs/examples/http-example",
-    desc: "Built by Air Pipe and the community",
-    icon: <IconFiles color="#007bff" />,
-  },
-];
-const GenerateCards = () => {
+
+const GenerateCards = ({ cards, col }) => {
   return cards.map((card, index) => {
     return (
-      <div className="col col--6" style={{ padding: "20px" }}>
-        <div className="col-demo">
+      <div key={index} className={`col ${col}`} style={{ padding: "20px" }}>
+        <div key={index} className="col-demo">
           <Link
             key={index}
             to={card.to}
@@ -52,11 +33,11 @@ const GenerateCards = () => {
   });
 };
 
-export default function BasicCard() {
+export default function Cards({ cards, col }) {
   return (
     <div className="container">
       <div className="row">
-        <GenerateCards />
+        <GenerateCards cards={cards} col={col} />
       </div>
     </div>
   );

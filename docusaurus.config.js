@@ -6,7 +6,7 @@
 
 import { themes as prismThemes } from "prism-react-renderer";
 const organizationName = "AirPipeIO";
-const projectName = "dummy";
+const projectName = "airpipe-docs";
 const baseUrl = `/${projectName}/`;
 
 /** @type {import('@docusaurus/types').Config} */
@@ -99,7 +99,7 @@ const config = {
             target: "_self",
           },
           {
-            href: "https://github.com/facebook/docusaurus",
+            href: "https://github.com/airpipeio/dummy",
             label: "GitHub",
             position: "right",
           },
@@ -153,7 +153,7 @@ const config = {
               },
               {
                 label: "GitHub",
-                href: "https://github.com/facebook/docusaurus",
+                href: "https://github.com/airpipeio/dummy",
               },
             ],
           },

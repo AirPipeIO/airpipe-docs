@@ -1,0 +1,101 @@
+## Group By
+
+This function will group your data by a particular field(s)
+
+<h3>Usage</h3>
+
+```yml
+post_transforms:
+  - group_by:
+      - customerid
+```
+
+OR
+
+```yml
+post_transforms:
+  - group_by: [customerid, orderid]
+```
+
+<details>
+
+<summary>Group By Example</summary>
+
+<br />
+Group data by specified field(s)
+
+```yml
+name: user_api
+version: 0.0.1
+description: Retrieve User Details
+metrics_enabled: true
+
+global:
+  databases:
+    main:
+      driver: postgres
+      conn_string: |
+        postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+interfaces:
+  group/orders:
+    output: http
+    method: GET
+    actions:
+      - name: GroupData
+        database: main
+        query: |
+          SELECT * FROM orders ORDER BY customerid LIMIT 20;
+        post_transforms:
+          - group_by:
+              - customerid
+```
+
+This will result in the below output when the API is called.
+
+```json
+{
+  "data": {
+    "GroupData": {
+      "data": {
+        "12": [
+          {
+            "customerid": 12,
+            "netamount": "350.8700",
+            "orderdate": "2004-04-20",
+            "orderid": 3710,
+            "tax": "28.9500",
+            "totalamount": "379.8200"
+          }
+        ],
+        "13": [
+          {
+            "customerid": 13,
+            "netamount": "227.4500",
+            "orderdate": "2004-01-14",
+            "orderid": 379,
+            "tax": "18.7600",
+            "totalamount": "246.2100"
+          },
+          {
+            "customerid": 13,
+            "netamount": "83.3100",
+            "orderdate": "2004-10-10",
+            "orderid": 9447,
+            "tax": "6.8700",
+            "totalamount": "90.1800"
+          }
+        ]
+      },
+      "time.ms": 307
+    }
+  },
+  "metrics": {
+    "http-tests.config.ms": 307
+  }
+}
+```
+
+---
+
+</details>

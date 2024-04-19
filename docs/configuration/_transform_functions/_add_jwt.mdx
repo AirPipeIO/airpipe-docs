@@ -1,0 +1,126 @@
+## Add JWT
+
+To add a JWT token to your action you require the below fields.
+
+### Options
+
+| Name     | Type   | Default | Description                                                                                                                                                                                                                                                             |
+| -------- | ------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`    | string |         | the key or attribute name in the payload i.e jwt                                                                                                                                                                                                                        |
+| `secret` | string |         | the secret to use to sign the JWT                                                                                                                                                                                                                                       |
+| `exp`    | string | \*      | expiry is set with friendly human time formats <ul><li>Parses durations in free form like `15days 2min 2s`</li><li>Parses and formats timestamp in rfc3339 format: `2018-01-01T12:53:00Z`</li><li>Parses timestamps in a weaker format: `2018-01-01 12:53:00`</li></ul> |
+| `data`   | array  |         | put the variables to be included in the token                                                                                                                                                                                                                           |
+
+<h3>Usage</h3>
+
+```yaml
+post_transforms:
+  - add_jwt:
+      key: jwt
+      secret: a|var::JWT_SECRET|
+      exp: 1d
+      data: [email]
+```
+
+<details>
+
+<summary>Add JWT Example</summary>
+
+Add a JWT to a succesful user login.
+
+<br />
+
+```yml
+name: login_user # unique name within your organization
+version: 0.0.1
+metrics_enabled: true # enables aggregate metrics
+
+global:
+  variables:
+    JWT_SECRET: a|env::JWT_SECRET|
+
+  databases:
+    main:
+      driver: postgres
+      conn_string: |
+        postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+interfaces:
+  user/login:
+    output: http
+    method: POST
+
+    response:
+      http_code_on_error: 403
+
+    actions:
+      - name: LoginBody
+        input: a|body
+        hide_data_on_success: true
+        hide_data_on_error: true
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+            - value: pass
+              is_not_null: true
+
+      - name: GetUserDetails
+        run_when_succeeded:
+          - LoginBody
+        database: main
+        query: SELECT email, password, verified FROM users WHERE email = $1;
+        params: [a|LoginBody::email|]
+        assert:
+          error_message: "Authentication failed"
+          tests:
+            - value: count()
+              is_equal_to: 1
+            - value: "[0]verified"
+              is_equal_to: true
+              error_message: user not verified
+        post_transforms:
+          - return_row: 0
+
+      - name: VerifyPassword
+        input: a|LoginBody
+        hide_data_on_error: true
+        run_when_succeeded:
+          - GetUserDetails
+        assert:
+          error_message: "Authentication failed"
+          tests:
+            - value: pass
+              bcrypt_verify: a|GetUserDetails::password|
+        post_transforms:
+          - remove_keys:
+              - pass
+          - add_jwt:
+              key: jwt
+              secret: a|var::JWT_SECRET|
+              exp: 1d
+              data: [email]
+```
+
+This will result in a JWT being added to the api response.
+
+```json
+{
+  "data": {
+    "VerifyPassword": {
+      "data": {
+        "jwt": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE3MTI0MTAwNDMsImlzcyI6IkFpciBQaXBlIiwiZGF0YSI6e319.I4NDj8XrLU0Ojk0HIxkZCMpClFgtDUoj4sIpqiY23uw",
+        ......
+      },
+      "time.ms": 302
+    }
+  },
+  "metrics": {
+    "jwt.config.ms": 302
+  }
+}
+```
+
+---
+
+</details>

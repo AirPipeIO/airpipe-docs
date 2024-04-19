@@ -70,3 +70,14 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+.wrapper {
+  position: relative;
+  padding-top: rem(10px);
+  padding-bottom: rem(10px);
+
+  @media (max-width: $mantine-breakpoint-sm) {
+    padding-top: rem(10px);
+    padding-bottom: rem(10px);
+  }
+}

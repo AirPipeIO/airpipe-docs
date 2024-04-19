@@ -1,0 +1,63 @@
+## Numerics
+
+This function is used to convert strings to numerics.
+
+<h3>Usage</h3>
+
+```yml
+post_transforms:
+  - numerics: [percentage]
+```
+
+<details>
+
+<summary>Numerics Example</summary>
+
+Consider data that is returning numbers as strings. For example a payload containing `{"percentage":"50%"}`
+
+```yml
+name: http-tests
+metrics_enabled: true
+docs: true
+
+interfaces:
+  string-numeric:
+    output: http
+    route: details
+    method: POST
+
+    actions:
+      - name: ConvertPercentage
+        input: a|body
+        run_when_succeeded:
+          - previous
+        assert:
+          tests:
+            - value: percentage
+              is_not_null: true
+        post_transforms:
+          - numerics: [percentage]
+```
+
+This would output
+
+```json
+{
+  "data": {
+    "ConvertPercentage": {
+      "data": {
+        "percentage": 50
+      },
+      "message": "success",
+      "time.ms": 0
+    }
+  },
+  "metrics": {
+    "http-tests.config.ms": 0
+  }
+}
+```
+
+---
+
+</details>

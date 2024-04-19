@@ -12,7 +12,9 @@ function HomepageHeader() {
   const originalSentence = "Build high performance";
   const { siteConfig } = useDocusaurusContext();
   return (
-    <header className={clsx("hero hero--primary", styles.heroBanner)}>
+    <header
+      className={clsx("hero hero--primary", styles.heroBanner, styles.wrapper)}
+    >
       <Dots className={styles.dots} style={{ left: 0, top: 0 }} />
       <Dots className={styles.dots} style={{ left: 60, top: 0 }} />
       <Dots className={styles.dots} style={{ left: 0, top: 140 }} />
@@ -41,6 +43,7 @@ export default function Home() {
     <Layout
       title={`v1`}
       description="Description will go into a meta tag in <head />"
+      className={styles.wrapper}
     >
       <HomepageHeader />
       <main>

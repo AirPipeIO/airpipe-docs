@@ -1,0 +1,194 @@
+## Bcrypt
+
+To easily hash and verify passwords Air Pipe implements the Bcrypt Crate. Requires the below fields.
+
+### Options
+
+| Name    | Type   | Default | Description                                                     |
+| ------- | ------ | ------- | --------------------------------------------------------------- |
+| `key`   | string |         | the key or attribute name in the payload i.e password           |
+| `value` | string |         | the password to hash                                            |
+| `cost`  | int    |         | increase the amount of time cpu/memory needs to compute the has |
+
+<h3>Usage</h3>
+
+```yaml
+post_transforms:
+  - bcrypt:
+      key: password_hash
+      value: password
+      cost: 12
+```
+
+<details>
+
+<summary>Bcrypt Example</summary>
+
+Hash a users password during registration.
+
+<br />
+
+```yml
+# unique name within your organization
+name: register_user
+version: 0.0.2
+description: Register a user
+metrics_enabled: true
+
+global:
+  variables:
+    company_name: a|env::COMPANY_NAME|
+    app_url: a|env::APP_URL|
+
+  templates:
+    RegisterEmail: |
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta http-equiv="X-UA-Compatible" content="IE=edge">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>a|var::company_name| Email Registration Verification</title>
+      </head>
+      <body>
+          <div style="background-color: #f9f9f9; padding: 20px;">
+              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+                  <h2 style="text-align: center;">Email Registration Verification with a|var::company_name|</h2>
+                  <p>Hi $1,</p>
+                  <p>Glad to see you are joining the a|var::company_name|! To complete your account registration, please click the button
+                      button below to verify your email address.</p>
+                  <p style="text-align: center;">
+                      <a href="a|var::app_url|/verify?token=$2" style="display: inline-block; background-color: #007bff; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 5px;">Verify Email</a>
+                  </p>
+                  <p>If the button above doesn't work, you can also copy and paste the following link into your browser's address
+                      bar:</p>
+                  <p style="text-align: center;">a|var::app_url|/verify?token=$3</p>
+                  <p>If you didn't register a a|var::company_name| account, please ignore this email.</p>
+                  <p>Best regards,</p>
+                  <p>The a|var::company_name| Team</p>
+              </div>
+          </div>
+      </body>
+      </html>
+
+  databases:
+    main:
+      driver: postgres
+      conn_string: |
+        postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+interfaces:
+  user/register:
+    output: http
+    method: POST
+    show_error_detail: true
+    actions:
+      - name: UserShouldNotExist
+        database: main
+        query: SELECT email FROM users WHERE email = $1;
+        params: [a|body::email|]
+        timeout: 2000
+        data_hide_on_error: true
+        run_when_succeeded:
+          - previous
+        assert:
+          error_message: "Registration failed"
+          tests:
+            - value: count()
+              is_equal_to: 0
+              error_message: "User already exists"
+
+      - name: Input
+        input: a|body
+        hide_data_on_empty: true
+        run_when_succeeded:
+          - UserShouldNotExist
+        assert:
+          error_message: "Password not strong enough"
+          tests:
+            - value: first
+              is_not_null: true
+              is_greater_than: 2
+              is_less_than: 20
+              regex: \S+
+            - value: last
+              is_not_null: true
+              is_greater_than: 3
+              is_less_than: 20
+              regex: \S+
+            - value: email
+              is_not_null: true
+              is_greater_than: 3
+              is_less_than: 100
+              regex: \S+
+            - value: pass
+              is_not_null: true
+              is_greater_than: 9
+              is_less_than: 30
+            - value: pass
+              regex: "[A-Z]"
+              error_message: "Password should contain one uppercase character"
+            - value: pass
+              regex: "[a-z]"
+              error_message: "Password should contain one lowercase character"
+            - value: pass
+              regex: "[0-9!@#]"
+              error_message: "Password should contain at least one number (0-9) or symbol (!,@,#)"
+        post_transforms:
+          - add_attribute:
+              user_uuid: a|uuid|
+              verification_token: a|uuid|
+          - bcrypt:
+              value: pass
+              cost: 12
+
+      - name: InsertUser
+        data_hide:
+          on_empty: true
+        database: main
+        query: INSERT INTO users(uuid, email, first, last, verification_token, password) VALUES($1::uuid, $2, $3, $4, $5::uuid, $6);
+        params:
+          - a|Input::user_uuid|
+          - a|Input::email|
+          - a|Input::first|
+          - a|Input::last|
+          - a|Input::verification_token|
+          - a|Input::pass|
+        run_when_succeeded:
+          - previous
+        assert:
+          success_message: "User successfully added"
+          error_message: "Failed to register user"
+          tests:
+            - value: count()
+              is_equal_to: 0
+
+      - name: SendEmail
+        data_metrics:
+          on_error: true
+        data_hide:
+          on_empty: true
+        email:
+          to: a|Input::first| <a|Input::email|>
+          from: a|env::COMPANY_NAME| <admin@omiconvo.com>
+          html: |
+            a|template::RegisterEmail|
+          params:
+            - a|Input::first|
+            - a|Input::verification_token|
+            - a|Input::verification_token|
+          subject: Welcome to a|env::COMPANY_NAME|
+          success_message: "Email successfully sent"
+          error_message: "Failed to send email"
+          smtp:
+            user: a|env::SMTP_USER|
+            pass: a|env::SMTP_PASS|
+            server: a|env::SMTP_SERVER|
+            port: 465
+        run_when_succeeded:
+          - previous
+```
+
+---
+
+</details>

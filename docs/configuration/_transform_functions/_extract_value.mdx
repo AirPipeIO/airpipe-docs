@@ -1,0 +1,67 @@
+## Extract Value
+
+This function is used to extract values from your input. <br />
+`extract_value` uses javascript like notation:
+
+- `.body`
+- `[0].name`
+- `body.some.value`
+- `data[2].value`
+- `data.value[1]`
+
+<h3>Usage</h3>
+
+```yaml
+post_transforms:
+  - extract_value: ".body"
+```
+
+<details>
+
+<summary>Extract Value Example</summary>
+
+<br />
+Extract the body from an API Response
+
+```yml
+name: http-tests
+metrics_enabled: true
+docs: true
+
+interfaces:
+  tests/extracts:
+    output: http
+    method: GET
+
+    actions:
+      - name: ExtractData
+        http:
+          url: https://jsonplaceholder.typicode.com/todos/10
+        post_transforms:
+          - extract_value: ".body"
+```
+
+This will result in the below output when the API is called.
+
+```json
+{
+  "data": {
+    "ExtractData": {
+      "data": {
+        "completed": true,
+        "id": 10,
+        "title": "illo est ratione doloremque quia maiores aut",
+        "userId": 1
+      },
+      "time.ms": 307
+    }
+  },
+  "metrics": {
+    "http-tests.config.ms": 307
+  }
+}
+```
+
+---
+
+</details>
