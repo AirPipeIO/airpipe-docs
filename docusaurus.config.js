@@ -99,7 +99,7 @@ const config = {
             target: "_self",
           },
           {
-            href: "https://github.com/airpipeio/dummy",
+            href: "https://github.com/AirPipeIO/airpipe-docs",
             label: "GitHub",
             position: "right",
           },
@@ -153,7 +153,7 @@ const config = {
               },
               {
                 label: "GitHub",
-                href: "https://github.com/airpipeio/dummy",
+                href: "https://github.com/AirPipeIO/airpipe-docs",
               },
             ],
           },
