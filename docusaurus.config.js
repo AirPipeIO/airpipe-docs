@@ -129,6 +129,10 @@ const config = {
                 label: "Configuration",
                 to: "/docs/configuration",
               },
+              {
+                label: "Examples",
+                to: "/docs/examples/http-example",
+              },
             ],
           },
           {

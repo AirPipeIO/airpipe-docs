@@ -7,22 +7,21 @@ displayed_sidebar: configurationSidebar
 # Interfaces
 
 Defines a number of API Interfaces for you applications to interact with. Interfaces run a number of **actions** when an API is called.
-## Defining Interfaces 
 
-Defining interfaces are simple. Declare an `interfaces` section and create your identifiers for each interface. 
+## Defining Interfaces
+
+Defining interfaces are simple. Declare an `interfaces` section and create your identifiers for each interface.
 
 <h3>Usage</h3>
-```yml
-name: get-vault-secrets
-metrics_enabled: true
-docs: true
+```yml name: get-vault-secrets metrics_enabled: true docs: true
 
 interfaces:
-  prod/user-login:
-  prod/user-details:
-```
+prod/user-login:
+prod/user-details:
 
-## Interface Options. 
+````
+
+## Options
 
 | Name        | Type              | Description                                                                                                                        |
 |-------------|-------------------|------------------------------------------------------------------------------------------------------------------------------------|
@@ -52,7 +51,5 @@ interfaces:
       - name: CheckInput
       - name: VerifyUser
       - name: VerifyPassword
-  
-```
 
-
+````

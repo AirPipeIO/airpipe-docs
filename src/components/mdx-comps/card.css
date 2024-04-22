@@ -15,6 +15,16 @@
   transition: border-color 0.3s ease;
   height: 150px;
 }
-.card:hover {
+.card-hover:hover {
+  border-color: #007bff;
+}
+
+.card-description {
+  border: 1px solid transparent;
+  transition: border-color 0.3s ease;
+  height: 500px;
+}
+
+.card-description:hover {
   border-color: #007bff;
 }

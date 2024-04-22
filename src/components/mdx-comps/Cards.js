@@ -8,25 +8,37 @@ const GenerateCards = ({ cards, col }) => {
     return (
       <div key={index} className={`col ${col}`} style={{ padding: "20px" }}>
         <div key={index} className="col-demo">
-          <Link
-            key={index}
-            to={card.to}
-            style={{ textDecoration: "none", color: "inherit" }}
-          >
+          {card.to == "" ? (
             <div className="card-demo">
-              <div className="card">
+              <div className="card" style={{ height: "400px" }}>
                 <div className="card__header">
                   <div style={{ display: "flex" }}>
                     <h3 style={{ paddingRight: "5px" }}>{card.title}</h3>
                     {card.icon}
                   </div>
                 </div>
-                <div className="card__body">
-                  <p>{card.desc}</p>
-                </div>
+                <div className="card__body">{card.desc}</div>
               </div>
             </div>
-          </Link>
+          ) : (
+            <Link
+              key={index}
+              to={card.to}
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <div className="card-demo">
+                <div className="card card-hover">
+                  <div className="card__header">
+                    <div style={{ display: "flex" }}>
+                      <h3 style={{ paddingRight: "5px" }}>{card.title}</h3>
+                      {card.icon}
+                    </div>
+                  </div>
+                  <div className="card__body">{card.desc}</div>
+                </div>
+              </div>
+            </Link>
+          )}
         </div>
       </div>
     );
