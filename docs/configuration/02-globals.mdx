@@ -14,7 +14,11 @@ displayed_sidebar: configurationSidebar
 </p>
 
 <h3>Usage</h3>
-```yml name: login-api metrics_enabled: true docs: true
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
 
 global:
 variables:
@@ -67,7 +71,7 @@ SOME_SECRET: MY_SECRET
         </body>
         </html>
 
-````
+```
 
 ## Variables
 
@@ -85,16 +89,17 @@ To define a variable create a `variables` block under `global`, the variables se
 Variables can reference any enviornment variables that are available.
 
 <h3>Usage</h3>
+
 ```yml
 name: login-api
 metrics_enabled: true
 docs: true
 
 global:
-  variables:
-    ENV_1: production
-    ENV_2: a|env::ENVIRONMENT|
-````
+variables:
+ENV_1: production
+ENV_2: a|env::ENVIRONMENT|
+```
 
 ### Using Variables
 
@@ -146,13 +151,17 @@ For example `main` is used in all database Air Pipe examples.
 
 #### Database Options
 
-| Name          | Type   | Description                                           |
-| ------------- | ------ | ----------------------------------------------------- |
-| `driver`      | string | the key or attribute name in the payload i.e password |
-| `conn_string` | string | the password to hash                                  |
+| Name          | Type   | Description                       |
+| ------------- | ------ | --------------------------------- |
+| `driver`      | string | the database driver i.e. postgres |
+| `conn_string` | string | the database connection string    |
 
 <h3>Usage</h3>
-```yml name: login-api metrics_enabled: true docs: true
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
 
 global:
 variables:
@@ -164,7 +173,7 @@ SOME_SECRET: MY_SECRET
         conn_string: |
           postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
 
-````
+```
 
 ### Using Databases
 
@@ -214,7 +223,7 @@ interfaces:
               error_message: user not verified
         post_transforms:
           - return_row: 0
-````
+```
 
 ## Secrets
 
