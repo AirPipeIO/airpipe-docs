@@ -7,7 +7,7 @@ This function is used to rename keys for better readability, usage and consisten
 ```yaml
 post_transforms:
   - remove_keys:
-      colour: col
+      - address1
 ```
 
 <details>
@@ -74,7 +74,7 @@ interfaces:
               error_message: "No User Found"
         post_transforms:
           - remove_keys:
-              address1: addr
+              - address1
 ```
 
 This will result in the below output when the API is called.

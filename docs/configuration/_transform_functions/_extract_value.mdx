@@ -3,7 +3,7 @@
 This function is used to extract values from your input. <br />
 `extract_value` uses javascript like notation:
 
-- `.body`
+- `body`
 - `[0].name`
 - `body.some.value`
 - `data[2].value`
@@ -38,7 +38,7 @@ interfaces:
         http:
           url: https://jsonplaceholder.typicode.com/todos/10
         post_transforms:
-          - extract_value: ".body"
+          - extract_value: body
 ```
 
 This will result in the below output when the API is called.
