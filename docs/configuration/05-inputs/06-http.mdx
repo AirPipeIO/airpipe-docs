@@ -48,36 +48,6 @@ interfaces:
 
 ## HTTP Example
 
-```yml
-name: openai
-version: 0.0.1
-description: OpenAI AssistantsAPI
-metrics_enabled: true
-docs: true
-
-interfaces:
-  assistants/list:
-    method: POST
-    input: a|body
-    output: http
-
-    actions:
-      - name: CheckBody
-        input: a|body
-        run_when_succeeded:
-          - previous
-        assert:
-          tests:
-            - value: API_KEY
-              is_not_null: true
-
-      - name: GetAssistants
-        run_when_succeeded:
-          - previous
-        http:
-          url: https://api.openai.com/v1/assistants?limit=50&order=desc
-          headers:
-            content-type: application/json
-            authorization: Bearer a|CheckBody::API_KEY|
-            OpenAI-Beta: assistants=v2
+```js reference
+https://github.com/airpipeio/airpipe-docs/docs/examples/_ex_ymls/_http/_http-basic.yml#L1-L31
 ```
