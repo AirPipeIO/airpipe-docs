@@ -6,4 +6,53 @@ displayed_sidebar: configurationSidebar
 
 # Inputs
 
-Something
+Air Pipe **inputs** define the way an action will be used when an API Interface is called.<br />
+Each **action** can only contain **one** input.
+
+```yml
+name: input-tests
+
+interfaces:
+  inputs/example:
+    output: http
+    method: GET
+
+    actions:
+      - name: Inputs
+        input: a|body
+```
+
+The default `input` accepts
+
+- `a|body`
+- `a|headers`
+- `a|params`
+- `a|<action-name>`
+
+> Note **inputs** do not have trailing `|` Pipes
+
+Alternatively to use the other available inputs,
+define their required parameters as described in their corresponding documentation.
+
+For example:
+
+```yml
+name: input-tests
+
+interfaces:
+  inputs/example:
+    output: http
+    method: GET
+
+    actions:
+      - name: ParseCsv
+        command:
+          run: cat payloads/heroes.csv
+          parse:
+            data_type: csv
+```
+
+- [`command`](/docs/configuration/inputs/command)
+- [`database`](/docs/configuration/inputs/databases)
+- [`http`](/docs/configuration/inputs/http)
+- [`email`](/docs/configuration/inputs/email)

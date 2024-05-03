@@ -5,3 +5,78 @@ displayed_sidebar: configurationSidebar
 ---
 
 # HTTP
+
+Supply a HTTP url for an action to use as an input.
+
+```yml
+name: http-tests
+metrics_enabled: true
+docs: true
+
+interfaces:
+  http/basic:
+    output: http
+    method: GET
+
+    actions:
+      - name: BasicHTTP
+        http:
+          url: https://jsonplaceholder.typicode.com/todos/
+```
+
+## Options
+
+| Name                   | Type    | Description                            |
+| ---------------------- | ------- | -------------------------------------- |
+| `url`                  | String  | The url to interact with               |
+| `user`                 | String  | basic authentication user field        |
+| `pass`                 | String  | basic authentication password field    |
+| `headers`              | Array   | Accepts an array of headers            |
+| `body`                 | Object  | data associated with the request       |
+| `proxy`                | string  | Proxy url to route requests through    |
+| `method`               | string  | the http method                        |
+| `data_type`            |         |                                        |
+| `bearer_auth`          | string  | authorization bearer token             |
+| `accept_invalid_certs` | boolean |                                        |
+| `ca`                   | string  | certifcate authority                   |
+| `root_certificates`    | string  | root certificate                       |
+| `timeout`              | string  | specify the timeout of a request in ms |
+| `connect_timeout`      | string  | connection timeout of a request in ms  |
+| `digest_auth_user`     | string  |                                        |
+| `digest_auth_pass`     | string  |                                        |
+
+## HTTP Example
+
+```yml
+name: openai
+version: 0.0.1
+description: OpenAI AssistantsAPI
+metrics_enabled: true
+docs: true
+
+interfaces:
+  assistants/list:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        run_when_succeeded:
+          - previous
+        assert:
+          tests:
+            - value: API_KEY
+              is_not_null: true
+
+      - name: GetAssistants
+        run_when_succeeded:
+          - previous
+        http:
+          url: https://api.openai.com/v1/assistants?limit=50&order=desc
+          headers:
+            content-type: application/json
+            authorization: Bearer a|CheckBody::API_KEY|
+            OpenAI-Beta: assistants=v2
+```
