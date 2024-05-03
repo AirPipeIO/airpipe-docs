@@ -1,0 +1,17 @@
+name: command-tests
+
+interfaces:
+  tests/parse-curl-json:
+    output: http
+    method: GET
+
+    actions:
+      - name: GetPost
+        command:
+          run: curl -s https://jsonplaceholder.typicode.com/todos/1
+          parse:
+            data_type: json
+        assert:
+          tests:
+            - expression: 1 == a|test::id|
+            - expression: a|test::id| > 0

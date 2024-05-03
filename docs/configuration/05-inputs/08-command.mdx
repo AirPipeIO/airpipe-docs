@@ -5,3 +5,51 @@ displayed_sidebar: configurationSidebar
 ---
 
 # Command
+
+The `command` input enables you to execute terminal commands.
+
+- curl
+- execute cli tools
+  - terraform apply
+  - package updates
+- execute scripts
+- linux commands
+  - df
+  - ps
+
+## Options
+
+| Name                      | Type   | Description                                                |
+| ------------------------- | ------ | ---------------------------------------------------------- |
+| `timeout`                 | string | specify the command timeout                                |
+| `name`                    | string | name of the command                                        |
+| `shell`                   | string | bash, powershell, sh                                       |
+| `run`                     | string | the command to run                                         |
+| [`parse`](#parse-options) | array  | parsing the output of a command accepts a range of options |
+| `parse_stderr`            | array  | parsing the output to stderr                               |
+
+### Parse Options
+
+| Name               | Type     | Description                            |
+| ------------------ | -------- | -------------------------------------- |
+| `data_type`        | DataType | the datatype returned i.e. json, csv   |
+| `delimiter`        | string   | used for csv                           |
+| `split_start`      | string   | specifys where to start the split      |
+| `split_end`        | string   | specifys where to end the split        |
+| `split_by`         | string   | split the output by symbol `( : , ; )` |
+| `split_whitespace` | boolean  | splits the output by whitespaces       |
+| `line_start`       | int      | specifys the line to start             |
+| `line_end`         | int      | specifys the line to end               |
+| `keys`             | array    | specify the keys to capture            |
+| `matches`          | regex    | regex pattern to match the output      |
+| `ignore_output`    | boolean  | remove output from console             |
+
+```yml reference title="Linux df"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_command/linux/_df.yml#L1-L16
+```
+
+```yml reference title="Linux curl"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_command/linux/_curl.yml#L1-L16
+```
+
+To see a list of examples with all the options check out the [examples](/docs/examples)

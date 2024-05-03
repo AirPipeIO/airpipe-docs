@@ -5,3 +5,33 @@ displayed_sidebar: configurationSidebar
 ---
 
 # Email
+
+Configuration for an action to send an email.
+
+## Options
+
+| Name                  | Type    | Description                                |
+| --------------------- | ------- | ------------------------------------------ |
+| aws_ses               | boolean | flag for to enable aws_ses                 |
+| [smtp](#smtp-options) | SMTP    | an array of options to define smpt options |
+| from                  | string  | from email address                         |
+| reply_to              | string  | reply to email address                     |
+| to                    | string  | to email address                           |
+| cc                    | string  | cc email addresses                         |
+| bcc                   | string  | bcc email addresses                        |
+| subject               | string  | subject header                             |
+| header                | string  | email header                               |
+| html                  | string  | provide a html template for the email      |
+| text                  | string  | text for the email                         |
+| params                | array   | params to substitute into the email        |
+| success_message       | string  | smpt password                              |
+| error_message         | string  | smpt address                               |
+
+### SMTP Options
+
+| Name   | Type   | Description   |
+| ------ | ------ | ------------- |
+| user   | string | smtp username |
+| pass   | string | smtp password |
+| server | string | smtp address  |
+| port   | int    | smtp port     |

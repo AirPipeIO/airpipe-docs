@@ -131,7 +131,7 @@ const config = {
               },
               {
                 label: "Examples",
-                to: "/docs/examples/http-example",
+                to: "/docs/examples",
               },
             ],
           },

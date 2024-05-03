@@ -1,0 +1,16 @@
+name: command-tests
+metrics_enabled: true
+docs: true
+
+interfaces:
+  tests/http/parse-df:
+    output: http
+    method: GET
+
+    actions:
+      - name: DiskDfWhitespace
+        command:
+          run: df -k
+          parse:
+            keys: [fs, 1K-blocks, used, available, usePerc, mountedOn]
+            split_whitespace: true
