@@ -1,0 +1,132 @@
+---
+sidebar_position: 5
+slug: /configuration/globals/templates
+displayed_sidebar: configurationSidebar
+---
+
+# Templates
+
+Air Pipe templates are a way to automate email? responses for a variety of cases.
+
+- Inviting Users
+- Registering Users
+- Automated Responses
+
+### Defining Templates
+
+To define a template create a `templates` section under `global`, the template section requires an identifier.
+For example `RegisterEmail`. Then define a multiline string with the `|` operator. On a new line add your HTML template.
+
+Templates support variables and paramaters using the same syntax `a|var::variable` or `$3`. For more information on Air Pipe Syntax see here (ADD A LINK)
+
+<h3>Usage</h3>
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
+
+global:
+variables:
+company_name: a|env::COMPANY_NAME|
+app_url: a|env::APP_URL|
+
+    templates:
+        RegisterEmail: |
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>a|var::company_name| Email Registration Verification</title>
+        </head>
+        <body>
+            <div style="background-color: #f9f9f9; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+                    <h2 style="text-align: center;">Email Registration Verification with a|var::company_name|</h2>
+                    <p>Hi $1,</p>
+                    <p>Glad to see you are joining the a|var::company_name|! To complete your account registration, please click the button
+                        button below to verify your email address.</p>
+                    <p style="text-align: center;">
+                        <a href="a|var::app_url|/verify?token=$2" style="display: inline-block; background-color: #007bff; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 5px;">Verify Email</a>
+                    </p>
+                    <p>If the button above doesn't work, you can also copy and paste the following link into your browser's address
+                        bar:</p>
+                    <p style="text-align: center;">a|var::app_url|/verify?token=$3</p>
+                    <p>If you didn't register a a|var::company_name| account, please ignore this email.</p>
+                    <p>Best regards,</p>
+                    <p>The a|var::company_name| Team</p>
+                </div>
+            </div>
+        </body>
+        </html>
+
+```
+
+### Using Templates
+
+1. add a `email` block to your action
+
+`email` has the following options.
+
+| Name              | Type   | Description                                                                                                                               |
+| ----------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `to`              | string | who receives the emails                                                                                                                   |
+| `from`            | string | who sent the email                                                                                                                        |
+| `html`            | string | reference your predefined template or define a template <ul><li> refer to a predefined template: `a\|template::RegisterEmail\|`</li></ul> |
+| `params`          | array  | params available for the template                                                                                                         |
+| `subject`         | string | brief summary of the email                                                                                                                |
+| `success_message` | string | message to display on success                                                                                                             |
+| `error_message`   | string | message to display on failure                                                                                                             |
+| `smtp`            | array  | smpt connection details <br /> <ul><li>`user`</li><li>`pass`</li><li>`server`</li><li>`port`</li></ul>                                    |
+
+```yml
+name: register_user
+version: 0.0.2
+description: Register a user
+metrics_enabled: true
+
+global:
+  variables:
+    company_name: a|env::COMPANY_NAME|
+    app_url: a|env::APP_URL|
+
+  templates:
+    RegisterEmail: |
+      <!DOCTYPE html>
+      <html lang="en">
+          ...template here...
+      </html>
+
+interfaces:
+  user/register:
+    output: http
+    method: POST
+    show_error_detail: true
+    actions:
+      - name: SendEmail
+        data_metrics:
+          on_error: true
+        data_hide:
+          on_empty: true
+        email:
+          to: a|Input::first| <a|Input::email|>
+          from: a|env::COMPANY_NAME| <admin@omiconvo.com>
+          html: |
+            a|template::RegisterEmail|
+          params:
+            - a|Input::first|
+            - a|Input::verification_token|
+            - a|Input::verification_token|
+          subject: Welcome to a|env::COMPANY_NAME|
+          success_message: "Email successfully sent"
+          error_message: "Failed to send email"
+          smtp:
+            user: a|env::SMTP_USER|
+            pass: a|env::SMTP_PASS|
+            server: a|env::SMTP_SERVER|
+            port: 465
+        run_when_succeeded:
+          - previous
+```

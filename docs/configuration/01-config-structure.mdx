@@ -10,20 +10,16 @@ Air Pipe configuration files are built with **YAML** and follow a logical flow.
 
 A configuration contains several sections:
 
-- `name`
-- `metrics_enabled`
-- `docs`
-- `global`
-  - variables
-  - databases
-  - secrets
-  - templates
-- `interfaces`
-  - API interfaces
-    - output
-    - method
-    - route
-    - actions
+- [Globals](/docs/configuration/globals)
+  - [Variables](/docs/configuration/globals/variables)
+  - [Secrets](/docs/configuration/globals/secrets)
+  - [Templates](/docs/configuration/globals/templates)
+  - [databases](/docs/configuration/globals/databases)
+- [Interfaces](/docs/configuration/interfaces)
+  - [Actions](/docs/configuration/interfaces/actions)
+    - [Inputs](/docs/configuration/interfaces/actions/inputs)
+    - [Asserts](/docs/configuration/interfaces/actions/asserts)
+    - [Transforms](/docs/configuration/interfaces/actions/transforms/functions)
 
 ```yml
 name: login-api
@@ -46,166 +42,3 @@ interfaces:
           post_transforms: "<transform/manipulate data>"
       - action2: ......
 ```
-
-## Starters
-
-The start of a configuration file contains a few fields:
-
-> `name:` the configuration name i.e. login-api, register-api  
-> `metrics-enabled:` enables metrics to be displayed in the payload returned\
-> `docs:` generates open api specification docs
-> `version:` used for versioning your configuration files
-
-```yml
-name: login-api
-metrics_enabled: true
-docs: true
-```
-
-## Globals | Optional
-
-<p>
-  Defines the **database** | **variables** | **secrets** | **templates** to be
-  used across an API Interface and its subsequent actions.
-</p>
-
-```yml
-name: login-api
-metrics_enabled: true
-docs: true
-
-global:
-  variables:
-    SOME_SECRET: MY_SECRET
-
-    databases:
-      main:
-        driver: postgres
-        conn_string: |
-          postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
-
-    secrets:
-      special:
-        kind: vault
-        http:
-          url: http://127.0.0.1:8200/v1/secret/data/somePath/someSecret
-          headers:
-            X-Vault-Token: airpipe
-          format: json
-          accept_invalid_certs: true
-
-    templates:
-        RegisterEmail: |
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta http-equiv="X-UA-Compatible" content="IE=edge">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>a|var::company_name| Email Registration Verification</title>
-        </head>
-        <body>
-            <div style="background-color: #f9f9f9; padding: 20px;">
-                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
-                    <h2 style="text-align: center;">Email Registration Verification with a|var::company_name|</h2>
-                    <p>Hi $1,</p>
-                    <p>Glad to see you are joining the a|var::company_name|! To complete your account registration, please click the button
-                        button below to verify your email address.</p>
-                    <p style="text-align: center;">
-                        <a href="a|var::app_url|/verify?token=$2" style="display: inline-block; background-color: #007bff; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 5px;">Verify Email</a>
-                    </p>
-                    <p>If the button above doesn't work, you can also copy and paste the following link into your browser's address
-                        bar:</p>
-                    <p style="text-align: center;">a|var::app_url|/verify?token=$3</p>
-                    <p>If you didn't register a a|var::company_name| account, please ignore this email.</p>
-                    <p>Best regards,</p>
-                    <p>The a|var::company_name| Team</p>
-                </div>
-            </div>
-        </body>
-        </html>
-
-```
-
-Detailed information for Globals and usage can be found [here](./configuration/globals)
-
-## Interfaces
-
-Define an API Interface that contains a number of actions that can be executed.
-
-```yml
-name: login-api
-metrics_enabled: true
-docs: true
-
-global: ...........
-  .........
-
-interfaces:
-  user/login:
-    output: http
-    method: POST
-
-    response:
-      http_code_on_error: 403
-
-    actions:
-      - name: LoginBody
-        input: a|body
-        hide_data_on_success: true
-        hide_data_on_error: true
-        assert:
-          tests:
-            - value: email
-              is_not_null: true
-            - value: pass
-              is_not_null: true
-
-      - name: GetUserDetails
-        run_when_succeeded:
-          - LoginBody
-        database: main
-        query: SELECT email, password, verified FROM users WHERE email = $1;
-        params: [a|LoginBody::email|]
-        assert:
-          error_message: "Authentication failed"
-          tests:
-            - value: count()
-              is_equal_to: 1
-            - value: "[0]verified"
-              is_equal_to: true
-              error_message: user not verified
-        post_transforms:
-          - return_row: 0
-
-      - name: VerifyPassword
-        input: a|LoginBody
-        hide_data_on_error: true
-        run_when_succeeded:
-          - GetUserDetails
-        assert:
-          error_message: "Authentication failed"
-          tests:
-            - value: pass
-              bcrypt_verify: a|GetUserDetails::password|
-        post_transforms:
-          - remove_keys:
-              - pass
-          - add_jwt:
-              key: jwt
-              secret: a|var::JWT_SECRET|
-              exp: 1d
-              data: [email]
-```
-
-The above example:
-
-- defines an interface `user/login`
-- accepts a **POST** request at the interface name `/user/login` unless a `route` is defined.
-- sets a response code on error
-- defines 3 actions
-  - LoginBody --> checks the body with an **assert** to ensure the email and password fields are available.
-  - GetUserDetails -> only runs if the previous action succeeded and attempts to verify the user.
-  - VerifyPassword -> only runs if the previous action succeeded and attempts to verify the password.
-
-Detailed information for Interfaces its options and usage can be found [here](./configuration/interfaces)

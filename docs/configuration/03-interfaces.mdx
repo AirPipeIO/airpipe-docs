@@ -13,43 +13,43 @@ Defines a number of API Interfaces for you applications to interact with. Interf
 Defining interfaces are simple. Declare an `interfaces` section and create your identifiers for each interface.
 
 <h3>Usage</h3>
-```yml name: get-vault-secrets metrics_enabled: true docs: true
 
-interfaces:
-prod/user-login:
-prod/user-details:
-
-````
-
-## Options
-
-| Name        | Type              | Description                                                                                                                        |
-|-------------|-------------------|------------------------------------------------------------------------------------------------------------------------------------|
-| `summary`     | string (optional) | Short summary on what this api interface is for                                                                                    |
-| `description` | string (optional) | Longer description on what this api interface is for                                                                               |
-| `output`      | string (required) | How to interact with this api <ul><li>`http`</li></ul>                                                                             |
-| `method`      | string (required) | The method to call this api <ul><li>`GET`</li><li>`POST`</li></ul>                                                                 |
-| `route`       | string (optional) | Define the route the api will be called on. The interface identifer is the default route and will be used if no route is defined.  |
-| `tags`        | array (optional)  | Array of strings containing tags                                                                                                   |
-| `actions`     | array (optional)  | An array of instructions and transformations that occur when an API interface is called                                            |
-
-<h3>Usage</h3>
 ```yml
 name: get-vault-secrets
-metrics_enabled: true
-docs: true
 
 interfaces:
   prod/user-login:
-    summary: production endpoint
-    description: production endpoint for login service
-    tags: ['env:production', 'version:1.0.0']
-    output: http
-    method: POST
+  prod/user-details:
+```
+
+## Options
+
+| Name          | Type              | Description                                                                                                                       |
+| ------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `summary`     | string (optional) | Short summary on what this api interface is for                                                                                   |
+| `description` | string (optional) | Longer description on what this api interface is for                                                                              |
+| `output`      | string (required) | How to interact with this api <ul><li>`http`</li></ul>                                                                            |
+| `method`      | string (required) | The method to call this api <ul><li>`GET`</li><li>`POST`</li></ul>                                                                |
+| `route`       | string (optional) | Define the route the api will be called on. The interface identifer is the default route and will be used if no route is defined. |
+| `tags`        | array (optional)  | Array of strings containing tags                                                                                                  |
+| `actions`     | array (optional)  | An array of instructions and transformations that occur when an API interface is called                                           |
+
+<h3>Usage</h3>
+
+```yml
+name: get-vault-secrets
+
+interfaces:
+prod/user-login:
+summary: production endpoint
+description: production endpoint for login service
+tags: ['env:production', 'version:1.0.0']
+output: http
+method: POST
 
     actions:
       - name: CheckInput
       - name: VerifyUser
       - name: VerifyPassword
 
-````
+```

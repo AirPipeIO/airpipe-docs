@@ -1,7 +1,61 @@
 ---
 sidebar_position: 7
-slug: /configuration/inputs/databases
+slug: /configuration/interfaces/actions/inputs/databases
 displayed_sidebar: configurationSidebar
 ---
 
 # Databases
+
+The database can be defined in the globals part of a configuration or the action itself.
+Defining it in the globals section allows any action to utilise the database.
+Any database config defined with a matching name will have its existing connection reused.
+
+## Options
+
+| Name          | Type              | Description                                         |
+| ------------- | ----------------- | --------------------------------------------------- |
+| `driver`      | string            | the database driver to use i.e. postgres, mysql     |
+| `conn_string` | string (optional) | the full connection string to connect to a database |
+| `user`        | string (optional) | database user                                       |
+| `pass`        | string (optional) | database password                                   |
+| `host`        | string (optional) | database host                                       |
+| `dbname`      | string (optional) | name of the db                                      |
+| `params`      | array             | optional paramaters for the database                |
+
+> note if the `conn_string` is used only the driver needs to be supplied <br />
+> note if using user, pass, host, dbname is supplied do not use `conn_string`
+
+### Global Example
+
+```yml
+name: database
+version: 0.0.1
+
+  databases:
+    main:
+      driver: postgres
+      conn_string: |
+        postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+```
+
+### Action Example
+
+```yml
+name: database
+version: 0.0.1
+
+interfaces:
+  database/example:
+    output: http
+    method: POST
+
+    actions:
+      - name: UserList
+        database:
+          dbname: main
+          driver: postgres
+          conn_string: |
+            postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+        query: |
+          SELECT * FROM Users;
+```

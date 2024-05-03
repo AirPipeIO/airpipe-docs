@@ -1,0 +1,62 @@
+---
+sidebar_position: 3
+slug: /configuration/globals/variables
+displayed_sidebar: configurationSidebar
+---
+
+# Variables
+
+Are a set of predefined keys that can be used throughout a configuration file.
+
+- enviornment variables
+- base urls
+- filenames
+- ports
+- usernames
+
+### Defining Varibles
+
+To define a variable create a `variables` block under `global`, the variables section accepts an array of key value pairs.
+Variables can reference any enviornment variables that are available.
+
+<h3>Usage</h3>
+
+```yml
+name: login-api
+
+global:
+  variables:
+    ENV_1: production
+    ENV_2: a|env::ENVIRONMENT|
+```
+
+### Using Variables
+
+You can access a variable in a configuration file anywhere by following the below syntax.<br />
+`a|var::<VARIABLE_NAME>|`
+
+```yml
+name: login-api
+
+global:
+  variables:
+    ENV_1: production
+    ENV_2: a|env::ENVIRONMENT|
+
+interface:
+  user/login:
+    output: http
+    method: POST
+
+    actions:
+      - name: LoginBody
+        input: a|body
+        hide_data_on_success: true
+        hide_data_on_error: true
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+            - value: a|var::ENV_1|
+              is_not_null: true
+```

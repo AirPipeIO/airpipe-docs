@@ -1,0 +1,42 @@
+---
+sidebar_position: 6
+slug: /configuration/globals/databases
+displayed_sidebar: configurationSidebar
+---
+
+# Databases
+
+You can define a number of databases that your configuration will use in each of its actions.
+
+Supported Database:
+
+- Postgres
+- MySQL
+
+### Defining Databases
+
+To define a database create a `databases` block under `global`, the database section requires an **identifier**.
+For example `main` is used in all database Air Pipe examples.
+
+> You can use the identifier for each action to avoid repetition within a config.
+
+<h3>Usage</h3>
+
+```yml
+name: login-api
+metrics_enabled: true
+docs: true
+
+global:
+variables:
+SOME_SECRET: MY_SECRET
+
+    databases:
+      main:
+        driver: postgres
+        conn_string: |
+          postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+```
+
+For all database options checkout the database [input](/docs/configuration/interfaces/actions/inputs/databases)
