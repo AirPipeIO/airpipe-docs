@@ -1,0 +1,45 @@
+name: postgres_example
+
+global:
+  databases:
+    main: # identifier to use with each action
+      driver: postgres
+      conn_string: |
+        postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+    # Optionally define the user, pass, host and port instead of connection string
+    # main:
+    #   driver: postgres
+    #   user: a|env::POSTGRES_USER|
+    #   pass: a|env::POSTGRES_PASS|
+    #   host: a|env::POSTGRES_HOST|
+    #   port: a|env::POSTGRES_PORT|
+
+interfaces:
+  postgres/example:
+    output: http
+    route: details
+    method: POST
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: firstname
+              is_not_null: true
+
+      - name: CheckUser
+        run_when_succeeded:
+          - previous
+        database: main
+        query: |
+          SELECT firstname, lastname, address1 FROM customers WHERE firstname LIKE $1 LIMIT 2;
+        params:
+          - a|CheckBody::firstname|
+        assert:
+          error_message: "User Does Not Exist"
+          tests:
+            - value: count()
+              is_equal_to: 1
+              error_message: "No User Found"

@@ -66,21 +66,6 @@ app_url: a|env::APP_URL|
 
 ### Using Templates
 
-1. add a `email` block to your action
-
-`email` has the following options.
-
-| Name              | Type   | Description                                                                                                                               |
-| ----------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `to`              | string | who receives the emails                                                                                                                   |
-| `from`            | string | who sent the email                                                                                                                        |
-| `html`            | string | reference your predefined template or define a template <ul><li> refer to a predefined template: `a\|template::RegisterEmail\|`</li></ul> |
-| `params`          | array  | params available for the template                                                                                                         |
-| `subject`         | string | brief summary of the email                                                                                                                |
-| `success_message` | string | message to display on success                                                                                                             |
-| `error_message`   | string | message to display on failure                                                                                                             |
-| `smtp`            | array  | smpt connection details <br /> <ul><li>`user`</li><li>`pass`</li><li>`server`</li><li>`port`</li></ul>                                    |
-
 ```yml
 name: register_user
 version: 0.0.2
@@ -130,3 +115,5 @@ interfaces:
         run_when_succeeded:
           - previous
 ```
+
+For more details on how to use the **email** input see the [documentation](/docs/configuration/interfaces/actions/inputs/email).

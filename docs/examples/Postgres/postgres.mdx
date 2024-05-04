@@ -1,0 +1,40 @@
+---
+sidebar_position: 1
+slug: /examples/postgres
+---
+
+# Postgres
+
+Postgres is one of the most common databases our users integrate with.
+
+## Defining the database
+
+1. Define a `globals` section
+2. Add the `databases` field
+3. Add a database identifier
+4. Set the driver to `postgres`
+5. Add the connection string or define the user, pass, host and port
+
+```yml reference title="Postgres Basic"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_databases/postgres.yml#L1-L16
+```
+
+For all available `database` options see [database inputs](/docs/configuration/interfaces/actions/inputs/databases)
+
+## Adding the database to your action
+
+1. Add a `database` input to your action
+2. Pass the `database` identifier from the globals section `main` if defined or redefine a new database
+
+```yml reference title="Postgres Basic"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_databases/postgres.yml#L26-L29
+```
+
+## Querying the database
+
+1. Set a `query` for the database
+2. Optionally you can use `params` to substitute data into the query
+
+```yml reference title="Postgres Basic"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_databases/postgres.yml#L26-L39
+```
