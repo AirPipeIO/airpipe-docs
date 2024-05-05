@@ -190,6 +190,9 @@ const config = {
       },
     ],
   ],
+   scripts: [
+    '/js/sidebar-toggle.js',
+  ],
 };
 
 export default config;
