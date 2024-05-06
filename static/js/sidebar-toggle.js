@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function() {
   
   // Check if the 'sidebar' parameter is present and set to 'full'
   if (urlParams.has('sidebar') && urlParams.get('sidebar') === 'full') {
-    // Open the sidebar
-    document.querySelector('.navbar.navbar--fixed-top').classList.add('navbar-sidebar--show');
+    const navbarElement = document.querySelector('.navbar__toggle');
+    navbarElement.click();
   }
 });
