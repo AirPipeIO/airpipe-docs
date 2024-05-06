@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const checkNavbarToggle = () => {
       const navbarElement = document.querySelector('.navbar__toggle');
+      console.log(navbarElement);
       if (navbarElement) {
         clickNavbarToggle(); 
       } else {
