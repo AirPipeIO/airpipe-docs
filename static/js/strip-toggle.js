@@ -5,31 +5,37 @@ document.addEventListener("DOMContentLoaded", function() {
     const stripValue = urlParams.get('strip');
 
     const removeHeaderAndFooter = () => {
-      const headerElement = document.querySelector('.navbar.navbar--fixed-top');
-      const footerElement = document.querySelector('.footer.footer--dark');
-      
-      if (headerElement) {
-        headerElement.remove();
-      }
-      if (footerElement) {
-        footerElement.remove();
-      }
+      setTimeout(() => {
+        const headerElement = document.querySelector('.navbar.navbar--fixed-top');
+        const footerElement = document.querySelector('.footer.footer--dark');
+        
+        if (headerElement) {
+          headerElement.remove();
+        }
+        if (footerElement) {
+          footerElement.remove();
+        }
+      }, 150);
     };
 
     const removeHeader = () => {
-      const headerElement = document.querySelector('.navbar.navbar--fixed-top');
-      
-      if (headerElement) {
-        headerElement.remove();
-      }
+      setTimeout(() => {
+        const headerElement = document.querySelector('.navbar.navbar--fixed-top');
+        
+        if (headerElement) {
+          headerElement.remove();
+        }
+      }, 150);
     };
 
     const removeFooter = () => {
-      const footerElement = document.querySelector('.footer.footer--dark');
-      
-      if (footerElement) {
-        footerElement.remove();
-      }
+      setTimeout(() => {
+        const footerElement = document.querySelector('.footer.footer--dark');
+        
+        if (footerElement) {
+          footerElement.remove();
+        }
+      }, 150);
     };
 
     switch(stripValue) {
@@ -43,7 +49,6 @@ document.addEventListener("DOMContentLoaded", function() {
         removeFooter();
         break;
       default:
-        // Invalid 'strip' value, do nothing
     }
   }
 });
