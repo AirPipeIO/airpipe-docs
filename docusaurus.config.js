@@ -68,7 +68,7 @@ const config = {
       navbar: {
         title: "",
         logo: {
-          alt: "My Site Logo",
+          alt: "Air Pipe",
           src: "img/ap-logo-white.png",
         },
         items: [
@@ -192,6 +192,7 @@ const config = {
   ],
    scripts: [
     '/js/sidebar-toggle.js',
+    '/js/strip-toggle.js',
   ],
 };
 
