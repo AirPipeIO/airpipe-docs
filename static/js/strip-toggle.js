@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", function() {
   
   if (urlParams.has('strip')) {
     const stripValue = urlParams.get('strip');
+    const delay = urlParams.has('delay') ? parseInt(urlParams.get('delay')) : 150;
 
     const removeHeaderAndFooter = () => {
       setTimeout(() => {
@@ -15,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (footerElement) {
           footerElement.remove();
         }
-      }, 150);
+      }, delay);
     };
 
     const removeHeader = () => {
@@ -25,7 +26,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (headerElement) {
           headerElement.remove();
         }
-      }, 150);
+      }, delay);
     };
 
     const removeFooter = () => {
@@ -35,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (footerElement) {
           footerElement.remove();
         }
-      }, 150);
+      }, delay);
     };
 
     switch(stripValue) {
