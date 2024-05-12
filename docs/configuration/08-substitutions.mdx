@@ -1,7 +1,59 @@
 ---
-sidebar_position: 8
+sidebar_position: 1
 slug: /configuration/substitutions
 displayed_sidebar: configurationSidebar
 ---
 
-# Substitutions
+# Variable Substitutions
+
+Variable substitutions are used to dynamically inject data and modify your configuration.
+
+### Usecases
+    - Database input parameters
+    - Using environment variables or secrets
+    - Dynamically building URLs or payload structures
+
+### How
+To substitute variables the following convention is followed `a|<something>|`.
+    - All substitutions must start with `a|` and end with a `|` 
+    - You may notice in configs, `a|body`, `a|params`, `a|headers` these are **not** substitutions, they are for accessing data when used in the `input` parameter of, as such they do not have a trailing `|`.
+    - Complicated substitutions such as `templates`, `HTML`, `JSON` etc. should use a literal scalar blocks eg.
+
+    ```yml
+    actions:
+        name: send data
+        http:
+            url: http://endpoint123.com/someroute
+            body: | # <- literal scalar block
+                a|var::something| # assuming a variable called `something` is stored in the global variable store
+    ```
+
+### Global Variables
+See [`variables`](/docs/configuration/globals/variables) 
+
+### Environment Variables (Self Hosted Only)
+
+Substitute an environment variable called `MY_ENV` into your configuration yaml.
+ - `a|env::MY_ENV|`
+
+ ### Action Variables
+
+ You can access data from prior actions with the following convention `a|ACTION_NAME::some_variable|`
+
+
+We can access the `firstname` variable from the `CheckBody` action with `a|CheckBody::firstname|`, to supply as a parameter to our database query.
+This assumes that the input data for the `CheckBody` action contains a variable called `firstname`.
+```yaml
+    actions:
+      - name: CheckBody
+        input: a|body # <- NOT a variable substitution
+
+      - name: CheckUser
+        run_when_succeeded:
+          - previous
+        database: main
+        query: |
+          SELECT firstname, lastname, address1 FROM customers WHERE firstname LIKE $1 LIMIT 2;
+        params:
+          - a|CheckBody::firstname| # <-- here
+```

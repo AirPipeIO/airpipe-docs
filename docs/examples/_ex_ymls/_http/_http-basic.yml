@@ -7,7 +7,6 @@ docs: true
 interfaces:
   assistants/list:
     method: POST
-    input: a|body
     output: http
 
     actions:

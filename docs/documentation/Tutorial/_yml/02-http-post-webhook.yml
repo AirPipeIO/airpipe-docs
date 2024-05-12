@@ -1,0 +1,11 @@
+name: Tutorial - HTTP POST (Webhook)
+description: Receive JSON post payload
+
+interfaces:
+  tutorial/webhook:
+    method: POST # method set as POST
+    output: http 
+
+    actions:
+      - name: CheckBody
+        input: a|body # input now set as a|body to inspect the incoming payload

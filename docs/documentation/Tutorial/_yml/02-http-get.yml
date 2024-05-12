@@ -1,0 +1,10 @@
+name: Tutorial - HTTP GET
+description: Receive a GET request
+
+interfaces:
+  tutorial/myroute: # <- if a route is not defined, the interface name will be the default route
+    output: http # <- output as http, if no method is defined it is defaulted to GET
+    # route: tutorial/customroute # if this was enabled, then the http route would be this, and not the interface name
+    actions:
+      - name: CheckQueryParams # every action should have a name
+        input: a|params # a|params is a special input to view the query parameters from the http request, a|body and a|headers are also options
