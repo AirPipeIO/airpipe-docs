@@ -1,0 +1,32 @@
+---
+sidebar_position: 5
+displayed_sidebar: documentationSidebar
+slug: /install/mac
+---
+
+# Mac
+
+### Retrieve API Key
+
+Log in and retrieve an API key from https://app.airpipe.io/apikeys
+
+### Permissions & Security
+
+On new Apple devices, gatekeeper will block the binary from running by default.
+
+After you attempt to run it once simply with `./airpipe` you will need to allow it by going to `Privacy & Security` scroll towards the bottom, and there will be a prompt to allow the binary.
+
+### Download the binary to the current directory
+```sh
+  curl -s https://download.airpipe.io/setup.sh | sudo bash -s -- \
+    --api-key enter-your-api-key-12345 \
+    --download
+```
+
+### Download the binary to the current directory and generate directories
+This is typically used in tutorial mode.
+```sh
+  curl -s https://download.airpipe.io/setup.sh | sudo bash -s -- \
+    --api-key enter-your-api-key-12345 \
+    --local
+```

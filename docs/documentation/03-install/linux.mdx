@@ -1,0 +1,35 @@
+---
+sidebar_position: 5
+displayed_sidebar: documentationSidebar
+slug: /install/linux
+---
+
+# Linux
+
+### Retrieve API Key
+
+Log in and retrieve an API key from https://app.airpipe.io/apikeys
+
+You have several deployment/setup options depending on your requirements.
+
+### Setup with systemd
+```bash
+  curl -s https://download.airpipe.io/setup.sh | sudo bash -s -- --api-key enter-your-api-key-12345
+```
+
+This will automatically setup the necessary folders and `airpipe.service` script.
+
+### Download the binary to the current directory
+```sh
+  curl -s https://download.airpipe.io/setup.sh | sudo bash -s -- \
+    --api-key enter-your-api-key-12345 \
+    --download
+```
+
+### Download the binary to the current directory and generate directories
+This is typically used in tutorial mode.
+```sh
+  curl -s https://download.airpipe.io/setup.sh | sudo bash -s -- \
+    --api-key enter-your-api-key-12345 \
+    --local
+```
