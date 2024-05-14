@@ -6,7 +6,7 @@ displayed_sidebar: configurationSidebar
 
 # Interfaces
 
-Defines a number of API Interfaces for you applications to interact with. Interfaces run a number of **actions** when an API is called.
+Add any number of interfaces to a single configuration to interact with. Interfaces run a number of **actions** when triggered.
 
 ## Defining Interfaces
 
@@ -40,12 +40,12 @@ interfaces:
 name: get-vault-secrets
 
 interfaces:
-prod/user-login:
-summary: production endpoint
-description: production endpoint for login service
-tags: ['env:production', 'version:1.0.0']
-output: http
-method: POST
+  prod/user-login:
+    summary: production endpoint
+    description: production endpoint for login service
+    tags: ['env:production', 'version:1.0.0']
+    output: http
+    method: POST
 
     actions:
       - name: CheckInput

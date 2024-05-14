@@ -4,24 +4,35 @@ slug: /configuration
 displayed_sidebar: configurationSidebar
 ---
 
-# Configuration Structure
+# Configuration Files
 
-Air Pipe configuration files are built with **YAML** and follow a logical flow.
+Configuration files are built with **YAML** and follow a logical flow. 
 
-A configuration contains several sections:
+They are the key component to building your workflows, APIs, integrations and anything else you can think off.
+
+### Info
+  - All actions are executed asynchronously by default, you can use features to control the flow of actions eg. `depends_on`
+  - Avoid overlapping interface and route names to prevent unintended collisions/overlaps
+  - You can have many interfaces with many actions in a single configuration
+  - Some features such as input `commands` are for self hosted deployments only
+
+### Structure
+
+This is a high level view of the general structured and is non-exhaustive.
 
 - [Globals](/docs/configuration/globals)
   - [Variables](/docs/configuration/globals/variables)
   - [Secrets](/docs/configuration/globals/secrets)
   - [Templates](/docs/configuration/globals/templates)
-  - [databases](/docs/configuration/globals/databases)
+  - [Databases](/docs/configuration/globals/databases)
 - [Interfaces](/docs/configuration/interfaces)
   - [Actions](/docs/configuration/interfaces/actions)
     - [Inputs](/docs/configuration/interfaces/actions/inputs)
     - [Asserts](/docs/configuration/interfaces/actions/asserts)
     - [Transforms](/docs/configuration/interfaces/actions/transforms/functions)
 
-```yml
+<br/>
+```yml title="Non-exhaustive example"
 name: login-api
 metrics_enabled: true
 docs: true
@@ -35,10 +46,14 @@ interfaces:
     route?: "</user/login>"
 
     actions:
-      - action1:
-          name: "<validate user>"
-          input: "<payload>"
-          assert: "<tests>"
-          post_transforms: "<transform/manipulate data>"
-      - action2: ......
+      - name: ActionName1
+        input: "<payload>"
+        assert: "<tests>"
+        post_transforms: "<transform/manipulate data>"
+
+      - name: ActionName2
+        depends_on:
+          - ActionName1
+        http:
+          url: http://some-endpoint.com/api/posts/1
 ```

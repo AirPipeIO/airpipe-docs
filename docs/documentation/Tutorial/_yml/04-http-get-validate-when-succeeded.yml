@@ -1,0 +1,25 @@
+name: Tutorial - HTTP GET and validate successfully
+description: Receive a GET and validate successfully
+
+interfaces:
+  tutorial/validate-success: # <- if a route is not defined, the interface name will be the default route
+    output: http # <- output as http, if no method is defined it is defaulted to GET
+    # route: tutorial/customvalidate-success # if this was enabled, then the http route would be this, and not the interface name
+    actions:
+      - name: CheckParams
+        input: a|params # we do not use a closing pipe here, as we want the input to access the data, and not replace the value here
+        assert:
+          tests:
+            - value: id # look for the `id` value in query parameters
+              is_not_null: true # ensure it exists else error
+            - value: first # look for the `first` value in query parameters
+              is_not_null: true # ensure it exists and the value is greater than 2 and less than 5
+              is_greater_than: 2
+              is_less_than: 5
+
+      - name: GetData
+        run_when_succeeded: # we can now use `run_when_succeeded` to provide a list of actions to complete successfully before running the GetData action
+          - previous # `previous` is a special key word, we can use this to say do not run this action until the previous
+        #  - CheckParams # we could remove `previous` and explicitly define the action name from the previous called `CheckParams` 
+        http:
+          url: https://jsonplaceholder.typicode.com/comments/a|params::id| 

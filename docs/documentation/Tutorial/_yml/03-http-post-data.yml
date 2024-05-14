@@ -1,0 +1,14 @@
+name: Tutorial - HTTP POST request and fetch data
+description: Receive a POST request and fetch data
+
+interfaces:
+  tutorial/getdata: # <- if a route is not defined, the interface name will be the default route
+    output: http # <- output as http, if no method is defined it is defaulted to GET
+    method: POST
+    # route: tutorial/customgetdata # if this was enabled, then the http route would be this, and not the interface name
+    actions:
+      - name: GetData
+        http:
+          # we can access a query parameter using a|body::id| which will read the `id` query paramater -> tutorial/getdata?id=1
+          # you could alternatively change it to a|body::commentId| then change your query parameter too -> tutorial/getdata?commentId=1
+          url: https://jsonplaceholder.typicode.com/comments/a|body::id| 

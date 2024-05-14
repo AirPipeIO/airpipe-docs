@@ -1,0 +1,35 @@
+name: Tutorial - HTTP GET and modify data
+description: Receive a GET and modify data
+
+interfaces:
+  tutorial/modify: # <- if a route is not defined, the interface name will be the default route
+    output: http # <- output as http, if no method is defined it is defaulted to GET
+    # route: tutorial/custommodify # if this was enabled, then the http route would be this, and not the interface name
+    actions:
+      - name: GetFirstUserAddress
+        http:
+          url: https://jsonplaceholder.typicode.com/users # browse to this in your browser if you would like to see the raw data
+        post_transforms:
+          - extract_value: "body[0]" # use JS like syntax to extract values, we will extract the first value
+          - extract_value: "address" # stack repeatable functions
+          - add_attribute:
+              new_key: someNewValue # we can inject new keys and values
+
+      - name: CleanUpFirstUserData
+        http:
+          url: https://jsonplaceholder.typicode.com/users # browse to this in your browser if you would like to see the raw data
+        post_transforms:
+          - extract_value: "body[0]" # use JS like syntax to extract values, we will extract the first value
+          - rename_keys:
+              name: full_name # rename to full_name
+          - remove_keys:
+              - address # remove sensitive data
+              - phone
+
+      - name: GroupPostsByUserId
+        http:
+          url: https://jsonplaceholder.typicode.com/posts # browse to this in your browser if you would like to see the raw data
+        post_transforms:
+          - extract_value: "body" # use JS like syntax to extract values, we will extract the first value
+          - group_by:
+              - userId

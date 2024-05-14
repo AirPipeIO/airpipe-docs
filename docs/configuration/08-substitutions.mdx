@@ -8,15 +8,16 @@ displayed_sidebar: configurationSidebar
 
 Variable substitutions are used to dynamically inject data and modify your configuration.
 
-### Usecases
+## Usecases
     - Database input parameters
     - Using environment variables or secrets
     - Dynamically building URLs or payload structures
 
-### How
+## How
 To substitute variables the following convention is followed `a|<something>|`.
     - All substitutions must start with `a|` and end with a `|` 
-    - You may notice in configs, `a|body`, `a|params`, `a|headers` these are **not** substitutions, they are for accessing data when used in the `input` parameter of, as such they do not have a trailing `|`.
+    - You may notice in configs, `input: a|body`, `input: a|params`, `input: a|headers` these are **not** substitutions, they are for accessing data when used in the `input` parameter, as such they do not have a trailing `|`.
+      - See [Input Variables](#input-variables) below on how to access values within the above mentioned.
     - Complicated substitutions such as `templates`, `HTML`, `JSON` etc. should use a literal scalar blocks eg.
 
     ```yml
@@ -25,35 +26,62 @@ To substitute variables the following convention is followed `a|<something>|`.
         http:
             url: http://endpoint123.com/someroute
             body: | # <- literal scalar block
-                a|var::something| # assuming a variable called `something` is stored in the global variable store
+                a|var::some_big_json| # assuming a variable called `some_big_json` is stored in the global variable store
     ```
 
-### Global Variables
-See [`variables`](/docs/configuration/globals/variables) 
+## Input Variables
+To substitute a value from one of the above mentioned properties into a config it would need to be for eg. `a|body::id|`, `a|params::id|` this specifies a parameter to access, followed by a trailing `|` pipe.
 
-### Environment Variables (Self Hosted Only)
+### Access a query parameter
+  ```yml title="Access a query parameter"
+  actions:
+      name: doSomething
+      http:
+          url: http://endpoint123.com/someroute?id=a|params::id| 
+          # ^^ access the value of `id` from the query parameters ^^
+  ```
 
-Substitute an environment variable called `MY_ENV` into your configuration yaml.
- - `a|env::MY_ENV|`
+### Access a value from the input body
+  ```yml title="Access a value from the input body"
+  actions:
+      name: doSomething
+      http:
+          url: http://endpoint123.com/someroute?id=a|body::id| 
+          # ^^ access the value of `id` from the input body ^^
+  ```
 
- ### Action Variables
+## Action Variables
 
  You can access data from prior actions with the following convention `a|ACTION_NAME::some_variable|`
 
 
 We can access the `firstname` variable from the `CheckBody` action with `a|CheckBody::firstname|`, to supply as a parameter to our database query.
 This assumes that the input data for the `CheckBody` action contains a variable called `firstname`.
-```yaml
+```yaml title="Access the variable named 'firstname' from the CheckBody action"
     actions:
       - name: CheckBody
         input: a|body # <- NOT a variable substitution
 
       - name: CheckUser
         run_when_succeeded:
-          - previous
+          - previous # wait for the previous action to complete
         database: main
         query: |
           SELECT firstname, lastname, address1 FROM customers WHERE firstname LIKE $1 LIMIT 2;
         params:
           - a|CheckBody::firstname| # <-- here
+```
+
+## Global Variables
+See [`global variables`](/docs/configuration/globals/variables).
+
+## Environment Variables (Self Hosted Only)
+Substitute an environment variable called `MY_ENV` into your configuration yaml with:<br/>
+```a|env::MY_ENV|``` 
+
+ ```yaml title="Substitute an environment variable called 'ORG_ID' into the url of the http request"
+    actions:
+      - name: CheckBody
+        http:
+          url: https://some-endpoint.com/a|env::ORG_ID|/data/something
 ```
