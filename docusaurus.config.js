@@ -91,13 +91,13 @@ const config = {
             label: "Examples",
           },
 
-          {
-            href: "https://blog.airpipe.io",
-            label: "Blog",
-            position: "left",
-            className: "internal-href",
-            target: "_self",
-          },
+          // {
+          //   href: "https://blog.airpipe.io",
+          //   label: "Blog",
+          //   position: "left",
+          //   className: "internal-href",
+          //   target: "_self",
+          // },
           {
             href: "https://github.com/AirPipeIO/airpipe-docs",
             label: "GitHub",
@@ -123,7 +123,7 @@ const config = {
             items: [
               {
                 label: "Getting Started",
-                to: "/docs/getting-started",
+                to: "/docs/tutorial/setup",
               },
               {
                 label: "Configuration",
@@ -138,10 +138,10 @@ const config = {
           {
             title: "Community",
             items: [
-              {
-                label: "Discord",
-                href: "https://discordapp.com/invite/docusaurus",
-              },
+              // {
+              //   label: "Discord",
+              //   href: "https://discordapp.com/invite/docusaurus",
+              // },
               {
                 label: "Twitter",
                 href: "https://twitter.com/airpipeio",
@@ -151,10 +151,10 @@ const config = {
           {
             title: "More",
             items: [
-              {
-                label: "Blog",
-                href: "https://blog.airpipe.io",
-              },
+              // {
+              //   label: "Blog",
+              //   href: "https://blog.airpipe.io",
+              // },
               {
                 label: "GitHub",
                 href: "https://github.com/AirPipeIO/airpipe-docs",
@@ -190,10 +190,7 @@ const config = {
       },
     ],
   ],
-   scripts: [
-    '/js/sidebar-toggle.js',
-    '/js/strip-toggle.js',
-  ],
+  scripts: ["/js/sidebar-toggle.js", "/js/strip-toggle.js"],
 };
 
 export default config;
