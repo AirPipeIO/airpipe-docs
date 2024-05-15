@@ -1,0 +1,88 @@
+---
+sidebar_position: 1
+slug: /tutorial/json-output-to-api
+---
+
+# 01 - JSON output to API
+
+The most easiest way for you to convert an existing command or script to API is if it outputs to a supported output such as JSON.
+
+Simply supply your required `run` command, view all the [available options here](/docs/configuration/interfaces/actions/inputs/command).
+
+## Prepare sample data
+
+1. Ready an existing JSON file or script that outputs JSON, else save an example JSON file eg.
+
+```json title="heroes.json"
+{
+    "message": "hero ouput",
+    "heroes": [
+        {
+            "name": "batman",
+            "identity": "bruce"
+        },
+        {
+            "name": "superman",
+            "identity": "clark"
+        }
+    ]
+}
+```
+
+### Review configuration
+2. Set the interface name and/or http route on how you want to access the output
+3. Specify the command you'd like to run
+4. Set the parse option to json
+5. Place the configuration into your `configs` directory
+6. Stop/Start the binary
+  ```sh
+  ./airpipe --api-key enter-your-api-key --config-dir configs/
+  ```
+
+
+```yaml title="tutorial-json-cat-to-api.yml"
+name: json-cat-to-api
+description: run cat command to read json file
+
+interfaces:
+  tutorial/json-cat-to-api:
+    output: http # as we have not specified a method it will default to a GET route
+    
+    actions:
+      - name: RunCommand
+        command:
+          run: cat heroes.json # this can be any command or script that outputs json
+          parse:
+            data_type: json # this will ensure it attempts to process the data as json
+```
+
+### Test
+
+As we've specified `http` we can just run this in our browser or a perform a simple `curl`
+
+http://0.0.0.0:4111/tutorial/json-cat-to-api
+
+### HTTP Response
+
+```json
+{
+    "data": {
+        "RunCommand": {
+            "data": {
+                "heroes": [
+                    {
+                        "identity": "bruce",
+                        "name": "batman"
+                    },
+                    {
+                        "identity": "clark",
+                        "name": "superman"
+                    }
+                ],
+                "message": "hero ouput"
+            },
+            "time.ms": 1
+        }
+    }
+}
+```

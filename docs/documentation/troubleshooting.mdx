@@ -1,0 +1,110 @@
+---
+sidebar_position: 3
+displayed_sidebar: documentationSidebar
+slug: /troubleshooting
+---
+
+# Troubleshooting
+
+## Local Testing
+
+Your configuration files should seamlessly work in the majority of cases on your local machine. As such this is generally the best way to test quickly.
+
+### Detailed Logs
+1. [Download or install](/docs/install) the binary to your local machine.
+    - Using the local flag is recommended, else you can also use the download flag for just the binary.
+2. Add your configuration files to your target directory, and run the binary locally.
+
+    Given the below local structure: 
+    ```
+    ├── airpipe # <- binary
+    ├── configs
+    │   ├── my-test-config.yml
+    │   └── mongo.yml
+    ```
+
+    Running the below command will run the configuration files from the target directory.
+    ```sh
+    ./airpipe --api-key enter-your-api-key --config-dir configs/
+    ```
+
+3. Review the current log output, or increase the log level.
+
+    Log Levels: info, debug, warning, error, trace, critical
+    ```sh
+    ./airpipe --api-key enter-your-api-key --config-dir configs/ --log-level trace
+    ```
+
+4. Stop and Start the binary when you make changes to the configuration file to ensure there are no issues and you have fresh logs.
+
+
+## API / HTTP Response
+
+When building HTTP based configs for APIs, the API response provides information at each action you define. You can also hide this from the output if required.
+
+Use your preferred HTTP testing tool or command whether that is postman, bruno or curl etc. and review the full response.
+
+Each action also provides the time taken at each step, so you know where best to optimize.
+
+If you need to handle errors and edge cases review [04 - Validating & Testing Data](/docs/tutorial/validating-data) and [asserts](/docs/configuration/interfaces/actions/asserts).
+
+```json
+{
+  "data": {
+    "CheckParams": {
+      "data": {
+        "first": "panther",
+        "id": "1"
+      },
+      "errors": [
+        "first::is_less_than: expected target panther not less than 5"
+      ],
+      "time.ms": 0
+    },
+    "GetData": {
+      "data": null,
+      "error": "previous action 'CheckParams' did not succeed",
+      "time.ms": 0
+    }
+  }
+}
+```
+
+## Custom Logging
+
+In your configuration files, you can use the `pre_log` and `post_log` features to either enhance your logs, or debug issues commonly to do with interpolation ([variable substitution](/docs/configuration/substitutions)) problems.
+
+- `pre_log` can be used before your input has run
+- `post_log` for after the input has run
+- Supply an array of log messages with a `msg` and `level` parameters
+- Messages are able to use [variable substitutions](/docs/configuration/substitutions) 
+
+### Example
+```yaml
+      - name: CreateAsssistant
+        pre_log:
+          - msg: hello
+            level: info
+          - msg: hi there
+            level: debug
+        run_when_succeeded:
+          - previous
+        retry:
+          attempts: 3
+          delay: 1500
+          exponential_backoff: true
+        command:
+          run: cat tests/payloads/nested-json.out
+          parse:
+            data_type: json
+        assert:
+          tests:
+            - value: firstname
+              is_equal_to: tom
+              is_not_null: true
+        post_log:
+          - msg: some trace msg - a|CreateAsssistant::something| - a|CreateAsssistant::id|
+            level: trace
+          - msg: goodbye
+            level: critical
+```

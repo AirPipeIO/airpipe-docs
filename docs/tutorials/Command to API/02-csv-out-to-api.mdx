@@ -1,0 +1,156 @@
+---
+sidebar_position: 1
+slug: /tutorial/csv-output-to-api
+---
+
+# 02 - CSV output to API
+
+If your script or command outputs CSV data, you can simply set the parse option to `csv` to convert it instantly into an API.
+
+Supply your required `run` command to target your CSV file or script that generates CSV data.
+
+View all the available [command options here](/docs/configuration/interfaces/actions/inputs/command).
+
+## Prepare sample data
+
+1. Ready an existing CSV file or script that outputs CSV, else save an example CSV file eg.
+
+```csv title="heroes.csv"
+Hero Name,First Name,Last Name,Favorite Weapon,Vehicle,Country of Origin
+Superman,Clark,Kent, ,Supermobile,United States
+Wonder Woman,Diana,Prince,Lasso of Truth,Invisible Jet,Themyscira
+Spider-Man,Peter,Parker,Web-shooters, ,United States
+Batman,Bruce,Wayne,Batarangs,Batmobile,United States
+Captain America,Steve,Rogers,Shield, ,United States
+Iron Man,Tony,Stark,Repulsor Beams, ,United States
+Black Widow,Natasha,Romanoff,Pistols, ,Russia
+Thor,Thor,Odinson,Mjolnir, ,Asgard
+The Flash,Barry,Allen,Speed Force, ,United States
+Aquaman,Arthur,Curry,Trident, ,Atlantis
+```
+
+### Review configuration
+2. Set the interface name and/or http route on how you want to access the output
+3. Specify the command you'd like to run
+4. Set the parse option to csv
+5. Place the configuration into your `configs` directory
+6. Stop/Start the binary
+  ```sh
+  ./airpipe --api-key enter-your-api-key --config-dir configs/
+  ```
+
+```yaml title="tutorial-csv-cat-to-api.yml"
+name: csv-cat-to-api
+description: run cat command to read csv file
+
+interfaces:
+  tutorial/csv-cat-to-api:
+    output: http # as we have not specified a method it will default to a GET route
+    
+    actions:
+      - name: RunCommand
+        command:
+          run: cat heroes.csv # this can be any command or script that outputs csv
+          parse:
+            data_type: csv # this will ensure it attempts to process the data as csv
+```
+
+### Test
+
+As we've specified `http` we can just run this in our browser or a perform a simple `curl`
+
+http://0.0.0.0:4111/tutorial/csv-cat-to-api
+
+### HTTP Response
+
+```json
+{
+    "data": {
+        "RunCommand": {
+            "data": [
+                {
+                    "Country of Origin": "United States",
+                    "Favorite Weapon": " ",
+                    "First Name": "Clark",
+                    "Hero Name": "Superman",
+                    "Last Name": "Kent",
+                    "Vehicle": "Supermobile"
+                },
+                {
+                    "Country of Origin": "Themyscira",
+                    "Favorite Weapon": "Lasso of Truth",
+                    "First Name": "Diana",
+                    "Hero Name": "Wonder Woman",
+                    "Last Name": "Prince",
+                    "Vehicle": "Invisible Jet"
+                },
+                {
+                    "Country of Origin": "United States",
+                    "Favorite Weapon": "Web-shooters",
+                    "First Name": "Peter",
+                    "Hero Name": "Spider-Man",
+                    "Last Name": "Parker",
+                    "Vehicle": " "
+                },
+                {
+                    "Country of Origin": "United States",
+                    "Favorite Weapon": "Batarangs",
+                    "First Name": "Bruce",
+                    "Hero Name": "Batman",
+                    "Last Name": "Wayne",
+                    "Vehicle": "Batmobile"
+                },
+                {
+                    "Country of Origin": "United States",
+                    "Favorite Weapon": "Shield",
+                    "First Name": "Steve",
+                    "Hero Name": "Captain America",
+                    "Last Name": "Rogers",
+                    "Vehicle": " "
+                },
+                {
+                    "Country of Origin": "United States",
+                    "Favorite Weapon": "Repulsor Beams",
+                    "First Name": "Tony",
+                    "Hero Name": "Iron Man",
+                    "Last Name": "Stark",
+                    "Vehicle": " "
+                },
+                {
+                    "Country of Origin": "Russia",
+                    "Favorite Weapon": "Pistols",
+                    "First Name": "Natasha",
+                    "Hero Name": "Black Widow",
+                    "Last Name": "Romanoff",
+                    "Vehicle": " "
+                },
+                {
+                    "Country of Origin": "Asgard",
+                    "Favorite Weapon": "Mjolnir",
+                    "First Name": "Thor",
+                    "Hero Name": "Thor",
+                    "Last Name": "Odinson",
+                    "Vehicle": " "
+                },
+                {
+                    "Country of Origin": "United States",
+                    "Favorite Weapon": "Speed Force",
+                    "First Name": "Barry",
+                    "Hero Name": "The Flash",
+                    "Last Name": "Allen",
+                    "Vehicle": " "
+                },
+                {
+                    "Country of Origin": "Atlantis",
+                    "Favorite Weapon": "Trident",
+                    "First Name": "Arthur",
+                    "Hero Name": "Aquaman",
+                    "Last Name": "Curry",
+                    "Vehicle": " "
+                }
+            ],
+            "time.ms": 1
+        }
+    }
+}
+```
