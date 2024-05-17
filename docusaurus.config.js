@@ -13,7 +13,7 @@ const baseUrl = `/${projectName}/`;
 const config = {
   title: "AirPipe Docs",
   tagline: "",
-  favicon: "img/favicon.ico",
+  favicon: "img/ap-resize.png",
   organizationName,
   projectName,
   // Set the production url of your site here
@@ -88,7 +88,7 @@ const config = {
             type: "docSidebar",
             sidebarId: "tutorialSidebar",
             position: "left",
-            label: "Tutorials"
+            label: "Tutorials",
           },
           {
             type: "docSidebar",
@@ -96,7 +96,6 @@ const config = {
             position: "left",
             label: "Examples",
           },
-         
 
           // {
           //   href: "https://blog.airpipe.io",
