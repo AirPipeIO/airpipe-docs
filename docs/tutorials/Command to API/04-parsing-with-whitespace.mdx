@@ -1,13 +1,15 @@
 ---
 sidebar_position: 2
-slug: /tutorial/df-disk-usage-to-api
+slug: /tutorial/parsing-with-whitespace
 ---
 
-# 03 - `df` Disk Usage to API
+# 04 - Parsing with whitespace
 
 The `df` command is a very common command used to check disk usage. It provides a table like structure of data that doesn't automatically parse.
 
 However, we can use the inbuilt parsing capabilities to handle these in more then one way, either via detecting `whitespace`, or with `regex`.
+
+Whitespace parsing may not work for all cases where the output is as straight forward, so utilize `regex` parsing for more complex scenarios.
 
 ### Command output
 Example command output from `df -k`
@@ -21,8 +23,6 @@ tmpfs               5120       0      5120   0% /run/lock
 /dev/sda15         99791    6418     93374   7% /boot/efi
 tmpfs              98436       4     98432   1% /run/user/1001
 ```
-
-## Parsing with whitespace
 
 ### Review configuration
 
@@ -50,44 +50,6 @@ interfaces:
           parse:
             keys: [fs, 1K-blocks, used, available, usePerc, mountedOn]
             split_whitespace: true
-```
-
-## Parsing with regex
-
-We have set the `run` command to `df-k`.
-
-The parse options have set the `matches` parsing option with the required `regex`, and keys, as well as what line to start parsing from.
-
-- Place the configuration into your `configs` directory
-- Stop/Start the binary
-  ```sh
-  ./airpipe --api-key enter-your-api-key --config-dir configs/
-  ```
-
-### Review configuration
-```yaml title="tutorial-df-regex-to-api.yml"
-name: tutorial-df-regex-to-api
-
-interfaces:
-  tutorial/parse-df-regex:
-    output: http
-
-    actions:
-      - name: DiskDf
-        command: 
-          run: df -k
-          parse:
-            line_start: 1
-            matches:
-              - keys: [
-                  fs,
-                  1K-blocks,
-                  used,
-                  available,
-                  usePerc,
-                  mountedOn,
-                ]
-                regex: (\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)
 ```
 
 ## HTTP Response

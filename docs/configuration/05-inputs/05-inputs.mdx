@@ -6,43 +6,47 @@ displayed_sidebar: configurationSidebar
 
 # Inputs
 
-Air Pipe **inputs** define the way an action will be used when an API Interface is called.<br />
-Each **action** can only contain **one** input.
+Inputs are a way to fetch or process data in each of your actions.
+They can be incoming data, previous action data, or newly fetched data eg. database queries, http requests, commands, or even used for triggering emails and processing the response etc.
 
-```yml
+Each action accepts **one** input only.
+
+You can either define in your action:
+- `input: a|body`
+- `input: a|headers`
+- `input: a|params`
+- `input: a|<action-name>`
+
+Or alternatively, make a request to fetch data by defining one of the below options:
+- [`command`](/docs/configuration/interfaces/actions/inputs/command)
+- [`database`](/docs/configuration/interfaces/actions/inputs/databases)
+- [`http`](/docs/configuration/interfaces/actions/inputs/http)
+- [`email`](/docs/configuration/interfaces/actions/inputs/email)
+
+> Note **inputs** do not have trailing `|` Pipes
+
+```yml title="handling the input body from a http request"
 name: input-tests
 
 interfaces:
   inputs/example:
     output: http
-    method: GET
 
     actions:
       - name: Inputs
         input: a|body
 ```
 
-The default `input` accepts
-
-- `a|body`
-- `a|headers`
-- `a|params`
-- `a|<action-name>`
-
-> Note **inputs** do not have trailing `|` Pipes
 
 Alternatively to use the other available inputs,
 define their required parameters as described in their corresponding documentation.
 
-For example:
-
-```yml
+```yml title="fetching new data via the command functionality"
 name: input-tests
 
 interfaces:
   inputs/example:
     output: http
-    method: GET
 
     actions:
       - name: ParseCsv
@@ -52,7 +56,4 @@ interfaces:
             data_type: csv
 ```
 
-- [`command`](/docs/configuration/interfaces/actions/inputs/command)
-- [`database`](/docs/configuration/interfaces/actions/inputs/databases)
-- [`http`](/docs/configuration/interfaces/actions/inputs/http)
-- [`email`](/docs/configuration/interfaces/actions/inputs/email)
+

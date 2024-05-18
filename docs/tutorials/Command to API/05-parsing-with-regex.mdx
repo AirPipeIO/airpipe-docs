@@ -1,0 +1,121 @@
+---
+sidebar_position: 2
+slug: /tutorial/parsing-with-regex
+---
+
+# 05 - Parsing with regex
+
+Following from the previous section, the below demonstrates parsing the same output with `regex`.
+
+Utilize `regex` parsing when dealing with complicated outputs.
+
+### Command output
+Example command output from `df -k`
+```
+ubuntu@host:~$ df -k
+Filesystem     1K-blocks    Used Available Use% Mounted on
+tmpfs              98440    1560     96880   2% /run
+/dev/sda1       47145992 5042744  42086864  11% /
+tmpfs             492196       0    492196   0% /dev/shm
+tmpfs               5120       0      5120   0% /run/lock
+/dev/sda15         99791    6418     93374   7% /boot/efi
+tmpfs              98436       4     98432   1% /run/user/1001
+```
+
+We have set the `run` command to `df -k`.
+
+The parse options have set the `matches` parsing option with the required `regex`, and keys, as well as what line to start parsing from.
+
+- Place the configuration into your `configs` directory
+- Stop/Start the binary
+  ```sh
+  ./airpipe --api-key enter-your-api-key --config-dir configs/
+  ```
+
+### Review configuration
+```yaml title="tutorial-df-regex-to-api.yml"
+name: tutorial-df-regex-to-api
+
+interfaces:
+  tutorial/parse-df-regex:
+    output: http
+
+    actions:
+      - name: DiskDf
+        command: 
+          run: df -k
+          parse:
+            line_start: 1
+            matches:
+              - keys: [
+                  fs,
+                  1K-blocks,
+                  used,
+                  available,
+                  usePerc,
+                  mountedOn,
+                ]
+                regex: (\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)
+```
+
+## HTTP Response
+
+```json
+{
+    "data": {
+        "DiskDf": {
+            "data": [
+                {
+                    "1K-blocks": 4106912,
+                    "available": 4105284,
+                    "fs": "tmpfs",
+                    "mountedOn": "/run",
+                    "usePerc": "1%",
+                    "used": 1628
+                },
+                {
+                    "1K-blocks": 203770680,
+                    "available": 5789456,
+                    "fs": "/dev/mapper/ubuntu--vg-ubuntu--lv",
+                    "mountedOn": "/",
+                    "usePerc": "98%",
+                    "used": 188632988
+                },
+                {
+                    "1K-blocks": 20534548,
+                    "available": 20534520,
+                    "fs": "tmpfs",
+                    "mountedOn": "/dev/shm",
+                    "usePerc": "1%",
+                    "used": 28
+                },
+                {
+                    "1K-blocks": 5120,
+                    "available": 5116,
+                    "fs": "tmpfs",
+                    "mountedOn": "/run/lock",
+                    "usePerc": "1%",
+                    "used": 4
+                },
+                {
+                    "1K-blocks": 1992552,
+                    "available": 1515172,
+                    "fs": "/dev/sda2",
+                    "mountedOn": "/boot",
+                    "usePerc": "20%",
+                    "used": 356140
+                },
+                {
+                    "1K-blocks": 4106908,
+                    "available": 4106832,
+                    "fs": "tmpfs",
+                    "mountedOn": "/run/user/1000",
+                    "usePerc": "1%",
+                    "used": 76
+                }
+            ],
+            "time.ms": 20
+        }
+    }
+}
+```

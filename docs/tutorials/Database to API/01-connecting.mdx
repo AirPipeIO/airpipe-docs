@@ -1,0 +1,49 @@
+---
+sidebar_position: 1
+slug: /tutorial/database-to-api-connecting
+---
+
+# 01 - Connecting
+
+You can define your database parameters inline with your action.
+
+However the recommended place to define your database is in the **globals** section.
+ - This will enable you to reuse connections where possible over different configuration files
+ - If you are running in self-hosted mode ensure you do not have different database connections using the same identifier
+    - eg. do **not** have multiple **different** connections defined as **main** or other
+    - if they are the same connection then it is okay to have the same name
+
+You can connect with two formats depending on your usecase, [`conn_string`](#connecting-with-a-connection-string) or defining the connection parameters. 
+
+Sometimes due to complex passwords and particular characters the connection string may become invalid or require escaping.
+To overcome this it is best to use the [explicit parameters](#connecting-with-parameters).
+
+
+## Connecting with a connection string
+
+```yaml title="global postgres connection"
+name: postgres
+description: example pg connection
+
+global:
+  databases:
+    main: # identifier to use with each action
+      driver: postgres
+      conn_string: |
+        postgresql://my_pg_user:my_pg_pass@200.100.50.9:5432?connect_timeout=10"
+```
+
+## Connecting with parameters
+```yaml title="global postgres connection"
+name: postgres_example
+description: example pg connection
+
+global:
+  databases:
+    main: # identifier to use with each action
+      driver: postgres
+      user: my_pg_user
+      pass: my_password
+      host: "200.100.50.9"
+      port: "5432"
+```

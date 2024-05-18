@@ -1,0 +1,144 @@
+---
+sidebar_position: 1
+slug: /tutorial/xml-output-to-api
+---
+
+# 02 - XML output to API
+
+If your script or command outputs XML data, you can simply set the parse option to `xml` to convert it instantly into an API.
+
+Supply your required `run` command to target your XML file or script that generates XML data.
+
+View all the available [command options here](/docs/configuration/interfaces/actions/inputs/command).
+
+## Prepare sample data
+
+1. Ready an existing XML file or script that outputs XML, else save an example XML file eg.
+
+```xml title="heroes.xml"
+<?xml version="1.0" encoding="UTF-8"?>
+<superheroes>
+    <hero>
+        <heroName>Superman</heroName>
+        <identity>Clark Kent</identity>
+        <favoriteWeapon>None</favoriteWeapon>
+        <vehicle>None</vehicle>
+    </hero>
+    <hero>
+        <heroName>Batman</heroName>
+        <identity>Bruce Wayne</identity>
+        <favoriteWeapon>Batarang</favoriteWeapon>
+        <vehicle>Batmobile</vehicle>
+    </hero>
+    <hero>
+        <heroName>Wonder Woman</heroName>
+        <identity>Diana Prince</identity>
+        <favoriteWeapon>Lasso of Truth</favoriteWeapon>
+        <vehicle>Invisible Jet</vehicle>
+    </hero>
+    <hero>
+        <heroName>Spider-Man</heroName>
+        <identity>Peter Parker</identity>
+        <favoriteWeapon>Web Shooters</favoriteWeapon>
+        <vehicle>None</vehicle>
+    </hero>
+    <hero>
+        <heroName>Iron Man</heroName>
+        <identity>Tony Stark</identity>
+        <favoriteWeapon>Repulsor Rays</favoriteWeapon>
+        <vehicle>Iron Man Suit</vehicle>
+    </hero>
+    <hero>
+        <heroName>Thor</heroName>
+        <identity>Thor Odinson</identity>
+        <favoriteWeapon>Mjolnir</favoriteWeapon>
+        <vehicle>Bifrost</vehicle>
+    </hero>
+</superheroes>
+```
+
+### Review configuration
+2. Set the interface name and/or http route on how you want to access the output
+3. Specify the command you'd like to run
+4. Set the parse option to xml
+5. Place the configuration into your `configs` directory
+6. Stop/Start the binary
+  ```sh
+  ./airpipe --api-key enter-your-api-key --config-dir configs/
+  ```
+
+```yaml title="tutorial-xml-cat-to-api.yml"
+name: xml-cat-to-api
+description: run cat command to read xml file
+
+interfaces:
+  tutorial/xml-cat-to-api:
+    output: http # as we have not specified a method it will default to a GET route
+    
+    actions:
+      - name: RunCommand
+        command:
+          run: cat heroes.xml # this can be any command or script that outputs xml
+          parse:
+            data_type: xml # this will ensure it attempts to process the data as xml
+```
+
+### Test
+
+As we've specified `http` we can just run this in our browser or a perform a simple `curl`
+
+http://0.0.0.0:4111/tutorial/xml-cat-to-api
+
+### HTTP Response
+
+```json
+{
+  "data": {
+    "RunCommand": {
+      "data": {
+        "superheroes": {
+          "hero": [
+            {
+              "favoriteWeapon": "None",
+              "heroName": "Superman",
+              "identity": "Clark Kent",
+              "vehicle": "None"
+            },
+            {
+              "favoriteWeapon": "Batarang",
+              "heroName": "Batman",
+              "identity": "Bruce Wayne",
+              "vehicle": "Batmobile"
+            },
+            {
+              "favoriteWeapon": "Lasso of Truth",
+              "heroName": "Wonder Woman",
+              "identity": "Diana Prince",
+              "vehicle": "Invisible Jet"
+            },
+            {
+              "favoriteWeapon": "Web Shooters",
+              "heroName": "Spider-Man",
+              "identity": "Peter Parker",
+              "vehicle": "None"
+            },
+            {
+              "favoriteWeapon": "Repulsor Rays",
+              "heroName": "Iron Man",
+              "identity": "Tony Stark",
+              "vehicle": "Iron Man Suit"
+            },
+            {
+              "favoriteWeapon": "Mjolnir",
+              "heroName": "Thor",
+              "identity": "Thor Odinson",
+              "vehicle": "Bifrost"
+            }
+          ]
+        }
+      },
+      "time.ms": 1
+    }
+  }
+}
+```

@@ -1,0 +1,155 @@
+---
+sidebar_position: 1
+slug: /tutorial/database-to-api-querying
+---
+
+# 02 - Querying
+
+To begin we will create a simple HTTP GET route to query a postgres database for the top 10 orders.
+
+Following we will then:
+- Enhance it by utilizing input parameters to dynamically adjust the query via query parameters and the body payload
+- Validate the input parameters before executing the query
+
+### Simple example
+```yaml title="querying your database"
+name: GetTopOrders
+description: perform postgres query to get the top orders from the database
+
+global:
+  databases:
+    main:
+      driver: postgres
+      conn_string: |
+        postgresql://my_pg_user:my_pg_pass@200.100.50.9:5432?connect_timeout=10"
+
+interfaces:
+  tutorial/top-orders:
+    output: http
+
+    actions:
+      - name: FetchTopOrders
+        database: main
+        query: SELECT order_id, customer_name, order_date, total_amount, status FROM orders ORDER BY total_amount DESC LIMIT 10;
+```
+
+## Dynamic with input parameters
+
+Now we will extend the previous example to use input parameters from query parameters, we can also do this via data in a payload body.
+
+You can also do this from chaining on from data contained in a previous action.
+
+### From query parameters
+
+Assuming your API endpoint has the following structure with a `?customer=bob` query parameter.
+
+Eg. 
+- https://api.airpipe.io/your-org-uuid/staging/tutorial/top-orders?customer=bob
+- http://0.0.0.0:4111/tutorial/top-orders?customer=bob
+
+We can dynamically use the customer value in the query parameter and pass it to our query.
+
+```yaml title="querying your database using query parameters"
+name: GetTopOrders
+description: perform postgres query to get the top orders from the database
+
+global:
+  databases:
+    main:
+      driver: postgres
+      conn_string: |
+        postgresql://my_pg_user:my_pg_pass@200.100.50.9:5432?connect_timeout=10"
+
+interfaces:
+  tutorial/top-orders:
+    output: http
+
+    actions:
+      - name: FetchTopOrders
+        database: main
+        # updated query to have a where clause on customer_name using $1  
+        query: SELECT order_id, customer_name, order_date, total_amount, status FROM orders WHERE customer_name LIKE $1 ORDER BY total_amount DESC LIMIT 10;
+        params: [ a|params::customer| ] # passing the value `customer` from the query parameters
+```
+
+### From body payload
+
+Assuming your API endpoint has the following structure, we can send a post payload with for eg.
+
+```json
+{
+  "customer": "bob"
+}
+```
+
+Eg. 
+- https://api.airpipe.io/your-org-uuid/staging/tutorial/top-orders
+- http://0.0.0.0:4111/tutorial/top-orders
+
+We can dynamically use the customer value in the body and pass it to our query.
+
+```yaml title="querying your database using body payload"
+name: GetTopOrders
+description: perform postgres query to get the top orders from the database
+
+global:
+  databases:
+    main:
+      driver: postgres
+      conn_string: |
+        postgresql://my_pg_user:my_pg_pass@200.100.50.9:5432?connect_timeout=10"
+
+interfaces:
+  tutorial/top-orders:
+    output: http
+    method: POST # <-- method updated to POST
+
+    actions:
+      - name: FetchTopOrders
+        database: main
+        # updated query to have a where clause on customer_name using $1  
+        query: SELECT order_id, customer_name, order_date, total_amount, status FROM orders WHERE customer_name LIKE $1 ORDER BY total_amount DESC LIMIT 10;
+        params: [ a|body::customer| ] # passing the value `customer` from the body payload
+```
+
+### Validating inputs and using previous action data
+
+In typical scenarios you want to validate your input data before proceeding.
+
+You can use the [assertion](/docs/configuration/interfaces/actions/asserts) system to validate prior actions, and then also use special keywords to prevent the next actions from executing conditionally.
+
+
+```yaml title="querying your database using body payload with validation"
+name: GetTopOrders
+description: perform postgres query to get the top orders from the database
+
+global:
+  databases:
+    main:
+      driver: postgres
+      conn_string: |
+        postgresql://my_pg_user:my_pg_pass@200.100.50.9:5432?connect_timeout=10"
+
+interfaces:
+  tutorial/top-orders:
+    output: http
+    method: POST # <-- method updated to POST
+
+    actions:
+      - name: InputBody
+        input: a|body
+        assert:  # use the assert/test system to validate the payload
+          tests:
+            - value: customer # target the customer attribute from a|body payload
+              is_not_null: true # ensure it exists
+              is_greater_than: 2
+              is_less_than: 20
+
+      - name: FetchTopOrders
+        run_when_succeeded:
+          - InputBody # prevent this action from running unless this succeeds (you can also use `previous` as a shortcut to refer to the prior action)
+        database: main
+        # updated query to have a where clause on customer_name using $1 positional parameter
+        query: SELECT order_id, customer_name, order_date, total_amount, status FROM orders WHERE customer_name LIKE $1 ORDER BY total_amount DESC LIMIT 10;
+        params: [ a|InputBody::customer| ] # passing the `customer` value from the previous action (InputBody) to $1 
+```
