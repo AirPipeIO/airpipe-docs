@@ -6,14 +6,15 @@ const FeatureList = [
   {
     title: "Zero Code",
     Svg: require("@site/static/img/undraw_docusaurus_mountain.svg").default,
-    description: <>APIs made easy, just some text in a YAML file.</>,
+    description: <>Just a handful of text in your YAML file</>,
   },
   {
     title: "High Performance",
     Svg: require("@site/static/img/undraw_docusaurus_tree.svg").default,
     description: (
       <>
-        Build fully functional APIs, integrations & workflows faster than ever
+        Build performant, fully functional APIs, integrations & workflows faster
+        than ever
       </>
     ),
   },
@@ -22,8 +23,8 @@ const FeatureList = [
     Svg: require("@site/static/img/undraw_docusaurus_react.svg").default,
     description: (
       <>
-        <b>Run anywhere</b> - on your own infrastructure, host, container,
-        serverless or let us.
+        <b>Run anywhere</b> - managed by us, or self hosted on your own
+        infrastructure, host, container etc.
       </>
     ),
   },
