@@ -1,0 +1,32 @@
+---
+sidebar_position: 3
+displayed_sidebar: documentationSidebar
+slug: /otel-tracing
+---
+
+# Open Telemetry Tracing
+
+Zero code automatic open telemetry tracing is supported when using the binary directly in self hosted mode.
+
+This will enable you to get detailed tracing sent to your preferred observability solution.
+
+We also support trace propagation in most cases with no further configuration required.
+
+## How
+
+Supply your OTEL endpoint and optionally authorization header as required via environment variables or the argument flags.
+
+You can also supply specific headers such as `authorization` for authentication to your otel endpoint as needed by supplying environment variables in the following format:
+`AIRPIPE_OTEL_HDR_<YOUR_HEADER_NAME>="<YOUR_HEADER_VALUE>"`
+
+No further configuration is required.
+
+### Environment variables
+```
+AIRPIPE_OTEL_ENDPOINT="http://192.168.1.52:5080/api/default" AIRPIPE_OTEL_HDR_AUTHORIZATION="Basic 123==" ./airpipe server --some-other-flags
+```
+
+### Arguments
+```
+AIRPIPE_OTEL_HDR_AUTHORIZATION="Basic 123==" ./airpipe server --otel-endpoint "http://192.168.1.52:5080/api/default" ./airpipe server 
+```
