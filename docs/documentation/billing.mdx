@@ -1,0 +1,31 @@
+---
+sidebar_position: 3
+displayed_sidebar: documentationSidebar
+slug: /billing
+---
+
+# Billing
+
+We aim to offer simple transparent pricing.
+
+As such we bill per `request unit` we define this as each time you trigger a configuration file with 1 second of execution time.
+
+You are not charged for:
+    - Bandwidth/egress/data charges.
+    - How many actions your single configuration and interface may take.
+
+### Scenarios
+- Your configuration that validates data and connects to a database takes 500ms 
+    - Billed: 1 request unit
+- Your configuration that has many actions and connects to many endpoints takes 800ms 
+    - Billed: 1 request unit
+- Your configuration has 1 action, that collects and generates a large amount of data takes 4700ms
+    - Billed: 5 request units
+
+### Hosted (Managed) & Self-Hosted (Unmanaged) Request Units
+
+If you are hosting your configuration file on our backend your managed request unit balance will be deducted.
+
+If you are self hosting by using the binary directly in anyway eg. server, local machine etc. this will be deducted from the self-hosted/unmanaged balance.
+
+You can view your respective balances and usage under `Billing > Usage`.
