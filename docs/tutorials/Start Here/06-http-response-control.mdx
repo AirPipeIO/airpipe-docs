@@ -1,0 +1,197 @@
+---
+sidebar_position: 2
+slug: /tutorial/http-response-control
+---
+
+# 06 - HTTP Response Control
+
+In this section we will look at using the assert system to control the http response code.
+
+You can define any http response code, and the default will be 200 if not defined.
+
+## Steps
+
+## 1. HTTP Error & Assert Control
+
+In this example we will assess two ways to control the http code.
+
+This example configuration contains two interfaces with different http routes to present how to do this via any error or a specific assertion at the action level.
+
+### Deploy via Hosted / Managed
+- Ensure you are logged into https://app.airpipe.io
+- Click <a target="_blank" and rel="noopener noreferrer" href="https://app.airpipe.io/configuration/load?yml=https://raw.githubusercontent.com/airpipeio/airpipe-docs/main/docs/tutorials/_yml/06-http-response-control.yml" style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px', marginBottom:"5px" }}>Deploy</a>
+ to load the below [example config](#example-config) into your account
+    - Alternatively, go to Configurations > Add New, and copy and paste the example
+
+### Deploy via Self Hosted / Unmanaged
+- A `configs` directory should have been created automatically for you, else create one.
+- Copy the below [example config](#example-config) into your `configs` directory, eg.
+    ```
+        configs/06-http-response-control
+    ```
+- Stop/Start `airpipe` eg.
+    ```
+    ./airpipe server --api-key your-api-key --config-dir configs
+    ```
+
+### Example Config
+<a target="_blank" and rel="noopener noreferrer" href="https://app.airpipe.io/configuration/load?yml=https://raw.githubusercontent.com/airpipeio/airpipe-docs/main/docs/tutorials/_yml/06-http-response-control" style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px', marginBottom:"5px" }}>Deploy</a>
+```yml reference title="HTTP Response Control"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/tutorials/_yml/06-http-response-control
+```
+
+### Test
+
+#### Hosted mode, either navigate to or curl:
+- The load configuration UI will automatically show you what your detected routes are, you can copy this for the next steps.
+
+- The link is automatically built with your organization uuid and environment, your API endpoints can be found here if required https://app.airpipe.io/configurations.
+
+- Update the route as necessary
+
+```sh
+https://api.airpipe.io/your_org_id/staging/tutorial/error-control
+
+https://api.airpipe.io/your_org_id/staging/tutorial/assert-control
+```
+
+## Error Control
+
+### Test
+
+Curl or use your preferred API testing tool to make the below POST request:
+```
+# or change to your above hosted route
+curl --location 'http://0.0.0.0:4111/tutorial/error-control' \
+--header 'Content-Type: application/json' \
+--data '{
+    "message": "hello world"
+}'
+```
+
+
+### Response - HTTP 403
+
+In our config we have set that for any error we will return a **403** , as such the assertion tests failed returning this code.
+
+```
+    response:
+      http_code_on_error: 403 
+```
+
+```json
+{
+    "data": {
+        "LoginBody": {
+            "data": {},
+            "errors": [
+                "email::is_not_null: expected to not be null",
+                "pass::is_not_null: expected to not be null"
+            ],
+            "time.ms": 4
+        }
+    }
+}
+```
+
+## Assert Control - Conditional Codes
+
+In the second interface `tutorial/assert-control` you will note that there are two **http_code_on_error** that has been set in each action.
+
+- The first action if it fails will return a **403**
+- The second action if it fails will return a **500**
+- If both fail the first actions code will take precedence
+
+To test the example try different payloads.
+
+### Test
+
+Curl or use your preferred API testing tool to make the below POST request:
+```
+# or change to your above hosted route
+curl --location 'http://0.0.0.0:4111/tutorial/error-control' \
+--header 'Content-Type: application/json' \
+--data '{
+    "message": "hello world"
+}'
+```
+
+
+
+### Test 1 - Empty Body
+
+Curl or use your preferred API testing tool to make the below POST request.
+
+```sh
+# or change to your above hosted route
+curl --location 'http://0.0.0.0:4111/tutorial/assert-control' \
+--header 'Content-Type: application/json' \
+--data '{}'
+```
+
+### Response 1 - HTTP 403
+
+The first action failed, and the second depended on the first to succeed thus a **403** was returned.
+
+```json
+{
+    "data": {
+        "CheckLoginBody": {
+            "data": {},
+            "errors": [
+                "email::is_not_null: expected to not be null",
+                "pass::is_not_null: expected to not be null"
+            ],
+            "time.ms": 6
+        },
+        "CheckSomeOtherData": {
+            "data": null,
+            "error": "action 'CheckLoginBody' did not succeed",
+            "time.ms": 0
+        }
+    }
+}
+```
+
+### Test 2 - Second Action Failure
+
+Curl or use your preferred API testing tool to make the below POST request.
+
+```sh
+# or change to your above hosted route
+curl --location 'http://0.0.0.0:4111/tutorial/assert-control' \
+--header 'Content-Type: application/json' \
+--data '{
+    "email": "blah@blah.com",
+    "pass": 123
+}'
+```
+
+### Response 2 - HTTP 500
+
+The first action passed, while the second failed thus returning a **500** as defined in the second action.
+
+```json
+{
+    "data": {
+        "CheckLoginBody": {
+            "data": {
+                "email": "blah@blah.com",
+                "pass": 123
+            },
+            "message": "success",
+            "time.ms": 1
+        },
+        "CheckSomeOtherData": {
+            "data": {
+                "email": "blah@blah.com",
+                "pass": 123
+            },
+            "errors": [
+                "something::is_not_null: expected to not be null"
+            ],
+            "time.ms": 0
+        }
+    }
+}
+```

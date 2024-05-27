@@ -1,0 +1,46 @@
+name: Tutorial - HTTP Response Control
+description: Control HTTP response codes
+
+interfaces:
+  tutorial/error-control: # first route
+    output: http
+    method: POST
+
+    response:
+      http_code_on_error: 403 # if any action has an error, return this response code
+
+    actions:
+      - name: LoginBody
+        input: a|body
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+            - value: pass
+              is_not_null: true
+
+  tutorial/assert-control: # second route
+    output: http
+    method: POST
+
+    actions:
+      - name: CheckLoginBody
+        input: a|body
+        assert:
+          http_code_on_error: 403 # if any assertion fails return this error
+          # the http_code_on_error of the first action will be taken
+          tests:
+            - value: email
+              is_not_null: true
+            - value: pass
+              is_not_null: true
+
+      - name: CheckSomeOtherData
+        run_when_succeeded:
+          - CheckLoginBody
+        input: a|body
+        assert:
+          http_code_on_error: 500 # if any assertion fails return this error
+          tests:
+            - value: something
+              is_not_null: true

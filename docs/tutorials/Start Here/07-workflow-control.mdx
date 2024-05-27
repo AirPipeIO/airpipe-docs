@@ -1,0 +1,201 @@
+---
+sidebar_position: 2
+slug: /tutorial/workflow-control
+---
+
+# 07 - Workflow Control
+
+When defining your configuration, you also define a set of actions that can be controlled depending on your defined conditions.
+
+In some of the prior examples you would have noticed these being used.
+
+### Behaviour & Rules
+ - Actions by default execute asynchronously.
+    - This means if you have multiple actions defined under one interface with no controls they will all execute at the same time.
+ - Actions can execute sequentially when using the appropriate workflow controls.
+    - Actions do not necessarily need to be in the order they execute although it is recommended for a logical approach and that shortcuts can be used.
+ - The action **`name`** should be unique so controls can be used appropriately.
+ - Actions can be retried on failure.
+ - Actions should only have one input, this could be defined with **`input: something`** or a via defining a particular functional input such as a database query or http request etc.
+
+## depends_on
+
+To control your actions to execute sequential, you can use the `depends_on` workflow control.
+
+`depends_on` just requires the defined list of actions to complete whether success or failure.
+
+### Basic Example
+
+```yml
+name: Tutorial - depends_on - 1
+description: Workflow control
+
+  tutorial/workflow-depends-on:
+    output: http
+    method: POST
+
+    actions:
+      - name: CheckLoginBody
+        input: a|body
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+
+      - name: CheckSomeOtherData
+        depends_on:
+          - CheckLoginBody # wait for this action to finish before continuing
+        input: a|body
+        assert:
+          tests:
+            - value: something
+              is_not_null: true
+```
+
+### Example with `previous` shortcut
+
+The `previous` keyword to refer to the previous action for the same behaviour
+
+```yml
+name: Tutorial - depends_on - 2
+description: Workflow control
+
+interfaces:
+  tutorial/workflow-depends-on-2:
+    output: http
+    method: POST
+
+    actions:
+      - name: CheckLoginBody
+        input: a|body
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+
+      - name: CheckSomeOtherData
+        depends_on:
+          - previous # we can use the `previous` keyword to refer to the previous action for the same behaviour
+        input: a|body
+        assert:
+          tests:
+            - value: something
+              is_not_null: true
+```
+
+### Depending on multiple actions
+
+In this example the first and second action `CheckLoginBody` and `CheckParams` will run asynchronously, however the third action will wait on these two before running.
+
+```yml
+name: Tutorial - depends_on - 3
+description: Workflow control
+
+interfaces:
+  tutorial/workflow-depends-on-3:
+    output: http
+    method: POST
+
+    actions:
+      - name: CheckLoginBody
+        input: a|body
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+
+     - name: CheckParams
+        input: a|params
+        assert:
+          tests:
+            - value: something
+              is_not_null: true
+
+      - name: CheckSomeOtherData
+        depends_on:
+          - CheckLoginBody # we can define a list of actions here to wait on
+          - CheckParams
+        input: a|body
+        assert:
+          tests:
+            - value: something
+              is_not_null: true
+```
+
+## run_when_succeeded
+
+Run this action when the list of defined actions under `run_when_succeeded` has completed successfully.
+
+```yml
+name: Tutorial - run_when_succeeded - 1
+description: Workflow control
+
+interfaces:
+  tutorial/workflow-run-when-succeeded-1:
+    output: http
+    method: POST
+
+    actions:
+      - name: CheckLoginBody
+        input: a|body
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+
+     - name: CheckParams
+        input: a|params
+        assert:
+          tests:
+            - value: something
+              is_not_null: true
+
+      - name: RunOnSuccess
+        run_when_succeeded:
+          - CheckLoginBody # run this action if these have passed
+          - CheckParams
+        input: a|body
+        assert:
+          tests:
+            - value: something
+              is_not_null: true
+```
+
+## run_when_failed
+
+Run this action when the list of defined actions under `run_when_failed` has failed.
+
+```yml
+name: Tutorial - run_when_failed - 1
+description: Workflow control
+
+interfaces:
+  tutorial/workflow-run-when-failed-1:
+    output: http
+    method: POST
+
+    actions:
+      - name: CheckLoginBody
+        input: a|body
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+
+     - name: CheckParams
+        input: a|params
+        assert:
+          tests:
+            - value: something
+              is_not_null: true
+
+      - name: RunOnFailure
+        run_when_failed:
+          - CheckLoginBody # run this action if these two have failed
+          - CheckParams
+        input: a|body
+        assert:
+          tests:
+            - value: something
+              is_not_null: true
+```

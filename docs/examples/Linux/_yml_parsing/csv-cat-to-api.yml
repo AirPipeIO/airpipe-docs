@@ -1,0 +1,13 @@
+name: csv-cat-to-api
+description: run cat command to read csv file
+
+interfaces:
+  tutorial/csv-cat-to-api:
+    output: http # as we have not specified a method it will default to a GET route
+    
+    actions:
+      - name: RunCommand
+        command:
+          run: cat heroes.csv # this can be any command or script that outputs csv
+          parse:
+            data_type: csv # this will ensure it attempts to process the data as csv

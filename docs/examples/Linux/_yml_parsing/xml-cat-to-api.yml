@@ -1,0 +1,13 @@
+name: xml-cat-to-api
+description: run cat command to read xml file
+
+interfaces:
+  tutorial/xml-cat-to-api:
+    output: http # as we have not specified a method it will default to a GET route
+    
+    actions:
+      - name: RunCommand
+        command:
+          run: cat heroes.xml # this can be any command or script that outputs xml
+          parse:
+            data_type: xml # this will ensure it attempts to process the data as xml

@@ -1,0 +1,13 @@
+name: json-cat-to-api
+description: run cat command to read json file
+
+interfaces:
+  tutorial/json-cat-to-api:
+    output: http # as we have not specified a method it will default to a GET route
+    
+    actions:
+      - name: RunCommand
+        command:
+          run: cat heroes.json # this can be any command or script that outputs json
+          parse:
+            data_type: json # this will ensure it attempts to process the data as json
