@@ -1,0 +1,301 @@
+---
+sidebar_position: 2
+slug: /tutorial/variable-substitution
+---
+
+# 08 - Variable Substitutions
+
+There are several options available to substitute variables dynamically into your configuration file:
+  - [Static global variables](#1-setting-static-global-variables)
+  - From the results of your action data
+  - Query parameters
+  - Body payload
+  - Headers
+  - Environment variables
+
+We will utilize:
+  -  [Variable substitutions](/docs/configuration/substitutions) to dynamically adjust the configuration.
+  - `http` functionality to fetch the data, complete options [here](/docs/configuration/interfaces/actions/inputs/http).
+
+## Note!
+
+When substituting/interpolating complex data such as JSON or multiline data you should use a `literal scalar block` in your yaml configuration.
+
+This is to ensure it parses correctly and does not break your configuration file.
+
+### Before
+```yaml
+actions:
+    name: send data
+    http:
+        url: http://endpoint123.com/someroute
+        body: a|var::some_big_json| # assuming a variable called `some_big_json` is stored in the global variable store
+```
+
+### After
+```yaml
+actions:
+    name: send data
+    http:
+        url: http://endpoint123.com/someroute
+        body: | # <- literal scalar block used here, with the substitution is on the next line
+            a|var::some_big_json| # assuming a variable called `some_big_json` is stored in the global variable store
+```
+
+## Steps
+
+## 1. Setting static global variables
+
+In this simple example we define a set of variables under the global section of our configuration file.
+
+### Deploy via Hosted / Managed
+- Ensure you are logged into https://app.airpipe.io
+- Click <a target="_blank" and rel="noopener noreferrer" href="https://app.airpipe.io/configuration/load?yml=https://raw.githubusercontent.com/AirPipeIO/airpipe-docs/main/docs/tutorials/_yml/08-http-variable-subtitutions-global.yml" style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px', marginBottom:"5px" }}>Deploy</a>
+ to load the below [example config](#example-config-1) into your account
+    - Alternatively, go to Configurations > Add New, and copy and paste the example
+
+### Deploy via Self Hosted / Unmanaged
+- A `configs` directory should have been created automatically for you, else create one.
+- Copy the below [example config](#example-config-1) into your `configs` directory, eg.
+    ```
+        configs/08-http-variable-subtitutions-global.yml
+    ```
+- Stop/Start `airpipe` eg.
+    ```
+    ./airpipe server --api-key your-api-key --config-dir configs
+    ```
+
+### Example Config 1
+
+Here we've set the variable **`fixed_post_id`** to **`5`** this will then be substituted into the below url to fetch the 5th comment.
+
+<a target="_blank" and rel="noopener noreferrer" href="https://app.airpipe.io/configuration/load?yml=https://raw.githubusercontent.com/airpipeio/airpipe-docs/main/docs/tutorials/_yml/08-http-variable-subtitutions-global.yml" style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px', marginBottom:"5px" }}>Deploy</a>
+```yml reference title="HTTP GET API"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/tutorials/_yml/08-http-variable-subtitutions-global
+```
+
+### Test
+
+#### Hosted mode, either navigate to or curl:
+- The load configuration UI will automatically show you what your detected routes are, you can copy this for the next steps.
+
+- The link is automatically built with your organization uuid and environment, your API endpoints can be found here if required https://app.airpipe.io/configurations.
+
+- Update the route as necessary
+
+```sh
+curl https://app.airpipe.io/your_org_uuid/staging/tutorial/variable-substitute-global
+```
+
+#### Self hosted mode, either navigate to or curl:
+http://0.0.0.0:4111/tutorial/variable-substitute-global
+```
+curl http://0.0.0.0:4111/tutorial/variable-substitute-global
+```
+
+### Response
+```json
+{
+    "data": {
+        "GetData": {
+            "data": {
+                "body": {
+                    "body": "harum non quasi et ratione\ntempore iure ex voluptates in ratione\nharum architecto fugit inventore cupiditate\nvoluptates magni quo et",
+                    "email": "Hayden@althea.biz",
+                    "id": 5,
+                    "name": "vero eaque aliquid doloribus et culpa",
+                    "postId": 1
+                },
+                "headers": {
+                    "accept-ranges": "bytes",
+                    "access-control-allow-credentials": "true",
+                    "age": "6935",
+                    "alt-svc": "h3=\":443\"; ma=86400",
+                    "cache-control": "max-age=43200",
+                    "cf-cache-status": "HIT",
+                    "cf-ray": "88d81da728c0dfb9-SYD",
+                    "content-length": "260",
+                    "content-type": "application/json; charset=utf-8",
+                    "date": "Sun, 02 Jun 2024 14:25:58 GMT",
+                    "etag": "W/\"104-cDWxPpdnlz4RLovlbex/FGgIZek\"",
+                    "expires": "-1",
+                    "nel": "{\"report_to\":\"heroku-nel\",\"max_age\":3600,\"success_fraction\":0.005,\"failure_fraction\":0.05,\"response_headers\":[\"Via\"]}",
+                    "pragma": "no-cache",
+                    "report-to": "{\"group\":\"heroku-nel\",\"max_age\":3600,\"endpoints\":[{\"url\":\"https://nel.heroku.com/reports?ts=1717331423&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&s=O%2BeTaI4bAN43lDayyXrVxXhtUXkePw7NLRXTha7t8Xk%3D\"}]}",
+                    "reporting-endpoints": "heroku-nel=https://nel.heroku.com/reports?ts=1717331423&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&s=O%2BeTaI4bAN43lDayyXrVxXhtUXkePw7NLRXTha7t8Xk%3D",
+                    "server": "cloudflare",
+                    "vary": "Origin, Accept-Encoding",
+                    "via": "1.1 vegur",
+                    "x-content-type-options": "nosniff",
+                    "x-powered-by": "Express",
+                    "x-ratelimit-limit": "1000",
+                    "x-ratelimit-remaining": "999",
+                    "x-ratelimit-reset": "1717331481"
+                },
+                "status": 200
+            },
+            "time.ms": 35
+        }
+    }
+}
+```
+
+## 2. From action data
+
+In this example we first query for a particular post, the, take the **`userId`** from the body of the **GetPost** payload with **`a|GetPost::body.userId|`**.
+
+### Deploy via Hosted / Managed
+- Ensure you are logged into https://app.airpipe.io
+- Click <a target="_blank" and rel="noopener noreferrer" href="https://app.airpipe.io/configuration/load?yml=https://raw.githubusercontent.com/airpipeio/airpipe-docs/main/docs/tutorials/_yml/08-http-variable-subtitutions-action.yml" style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px', marginBottom:"5px" }}>Deploy</a>
+ to load the below [example config](#example-config) into your account
+    - Alternatively, go to Configurations > Add New, and copy and paste the example
+
+### Deploy via Self Hosted / Unmanaged
+- A `configs` directory should have been created automatically for you, else create one.
+- Copy the below [example config](#example-config) into your `configs` directory, eg.
+    ```
+        configs/03-http-post-data.yml
+    ```
+- Stop/Start `airpipe` eg.
+    ```
+    ./airpipe server --api-key your-api-key --config-dir configs
+    ```
+
+### Example Config
+<a target="_blank" and rel="noopener noreferrer" href="https://app.airpipe.io/configuration/load?yml=https://raw.githubusercontent.com/airpipeio/airpipe-docs/main/docs/tutorials/_yml/08-http-variable-subtitutions-action.yml" style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px', marginBottom:"5px" }}>Deploy</a>
+```yml reference title="HTTP POST API"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/tutorials/_yml/08-http-variable-subtitutions-action.yml
+```
+
+### Test
+
+#### Hosted mode, curl or use your preferred API testing tool:
+- The load configuration UI will automatically show you what your detected routes are, you can copy this for the next steps.
+
+- The link is automatically built with your organization uuid and environment, your API endpoints can be found here if required https://app.airpipe.io/configurations.
+
+- Update the route as necessary
+
+```
+curl --location 'https://api.airpipe.io/your-org-uuid/staging/tutorial/variable-substitute-action' \
+--header 'Content-Type: application/json' \
+--data '{
+    "id": 1
+}'
+```
+
+#### Self hosted mode, curl or use your preferred API testing tool:
+```
+curl --location 'http://0.0.0.0:4111/tutorial/variable-substitute-action' \
+--header 'Content-Type: application/json' \
+--data '{
+    "id": 1
+}'
+```
+
+### Response
+```json
+{
+    "data": {
+        "GetPost": {
+            "data": {
+                "body": {
+                    "body": "eos voluptas et aut odit natus earum\naspernatur fuga molestiae ullam\ndeserunt ratione qui eos\nqui nihil ratione nemo velit ut aut id quo",
+                    "id": 17,
+                    "title": "fugit voluptas sed molestias voluptatem provident",
+                    "userId": 2
+                },
+                "headers": {
+                    "accept-ranges": "bytes",
+                    "access-control-allow-credentials": "true",
+                    "age": "208",
+                    "alt-svc": "h3=\":443\"; ma=86400",
+                    "cache-control": "max-age=43200",
+                    "cf-cache-status": "HIT",
+                    "cf-ray": "88d962367daba89e-SYD",
+                    "content-length": "246",
+                    "content-type": "application/json; charset=utf-8",
+                    "date": "Sun, 02 Jun 2024 18:07:32 GMT",
+                    "etag": "W/\"f6-Y7y9zgdEq0WndoXZmQZBsN4+z14\"",
+                    "expires": "-1",
+                    "nel": "{\"report_to\":\"heroku-nel\",\"max_age\":3600,\"success_fraction\":0.005,\"failure_fraction\":0.05,\"response_headers\":[\"Via\"]}",
+                    "pragma": "no-cache",
+                    "report-to": "{\"group\":\"heroku-nel\",\"max_age\":3600,\"endpoints\":[{\"url\":\"https://nel.heroku.com/reports?ts=1717294800&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&s=oasLgQSV%2FNWbX9qMGa1VrL9Tu0RPBaIMWGSiTCiCWAw%3D\"}]}",
+                    "reporting-endpoints": "heroku-nel=https://nel.heroku.com/reports?ts=1717294800&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&s=oasLgQSV%2FNWbX9qMGa1VrL9Tu0RPBaIMWGSiTCiCWAw%3D",
+                    "server": "cloudflare",
+                    "vary": "Origin, Accept-Encoding",
+                    "via": "1.1 vegur",
+                    "x-content-type-options": "nosniff",
+                    "x-powered-by": "Express",
+                    "x-ratelimit-limit": "1000",
+                    "x-ratelimit-remaining": "984",
+                    "x-ratelimit-reset": "1717294832"
+                },
+                "status": 200
+            },
+            "time.ms": 32
+        },
+        "GetUser": {
+            "data": {
+                "body": {
+                    "address": {
+                        "city": "Wisokyburgh",
+                        "geo": {
+                            "lat": "-43.9509",
+                            "lng": "-34.4618"
+                        },
+                        "street": "Victor Plains",
+                        "suite": "Suite 879",
+                        "zipcode": "90566-7771"
+                    },
+                    "company": {
+                        "bs": "synergize scalable supply-chains",
+                        "catchPhrase": "Proactive didactic contingency",
+                        "name": "Deckow-Crist"
+                    },
+                    "email": "Shanna@melissa.tv",
+                    "id": 2,
+                    "name": "Ervin Howell",
+                    "phone": "010-692-6593 x09125",
+                    "username": "Antonette",
+                    "website": "anastasia.net"
+                },
+                "headers": {
+                    "accept-ranges": "bytes",
+                    "access-control-allow-credentials": "true",
+                    "age": "19303",
+                    "alt-svc": "h3=\":443\"; ma=86400",
+                    "cache-control": "max-age=43200",
+                    "cf-cache-status": "HIT",
+                    "cf-ray": "88d96236a944aae9-SYD",
+                    "content-length": "509",
+                    "content-type": "application/json; charset=utf-8",
+                    "date": "Sun, 02 Jun 2024 18:07:32 GMT",
+                    "etag": "W/\"1fd-XTG63SYhaP/Uo6/vgmARnL3rpBk\"",
+                    "expires": "-1",
+                    "nel": "{\"report_to\":\"heroku-nel\",\"max_age\":3600,\"success_fraction\":0.005,\"failure_fraction\":0.05,\"response_headers\":[\"Via\"]}",
+                    "pragma": "no-cache",
+                    "report-to": "{\"group\":\"heroku-nel\",\"max_age\":3600,\"endpoints\":[{\"url\":\"https://nel.heroku.com/reports?ts=1711426039&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&s=WuH79u4cBxOZVc3ecpk4gs62nuRM2zxwcCK7ogIfMRU%3D\"}]}",
+                    "reporting-endpoints": "heroku-nel=https://nel.heroku.com/reports?ts=1711426039&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&s=WuH79u4cBxOZVc3ecpk4gs62nuRM2zxwcCK7ogIfMRU%3D",
+                    "server": "cloudflare",
+                    "vary": "Origin, Accept-Encoding",
+                    "via": "1.1 vegur",
+                    "x-content-type-options": "nosniff",
+                    "x-powered-by": "Express",
+                    "x-ratelimit-limit": "1000",
+                    "x-ratelimit-remaining": "999",
+                    "x-ratelimit-reset": "1711426065"
+                },
+                "status": 200
+            },
+            "time.ms": 33
+        }
+    }
+}
+```
+
+## 3. Environment variables
+
+Environment variables are only available for use in self hosted mode.
+
+Simply use **`a|env::<SOME_ENV_VAR>|`** anywhere in your configuration.

@@ -1,0 +1,20 @@
+name: Tutorial - HTTP variable substitutions - Input Data
+description: Input data substitute
+
+interfaces:
+  tutorial/param-substitute:
+    output: http
+    actions:
+      - name: GetData
+        http:
+          # we can access a query parameter using a|params::id| which will read the `id` query paramater -> tutorial/getdata?id=1
+          # you could alternatively change it to a|params::commentId| then change your query parameter too -> tutorial/getdata?commentId=1
+          url: https://jsonplaceholder.typicode.com/comments/a|params::id| 
+
+  tutorial/body-substitute :
+    output: http
+    actions:
+      - name: GetData
+        http:
+          # we can access a body attribute using a|body::id| which will read the `id` attribute field within the body payload
+          url: https://jsonplaceholder.typicode.com/comments/a|body::id| 

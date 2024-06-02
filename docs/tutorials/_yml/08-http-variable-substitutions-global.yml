@@ -1,0 +1,16 @@
+name: Tutorial - HTTP variable substitutions - Global
+description: Global variable substitute
+
+global:
+  variables: # define your global static variables here
+    company: superstar
+    fixed_post_id: 5 # see the usage further below
+
+interfaces:
+  tutorial/variable-substitute-global: 
+    output: http
+    actions:
+      - name: GetData
+        http:
+          # we can access global variables using a|var::<name of your variable defined above>| <- don't forget the end | pipe character
+          url: https://jsonplaceholder.typicode.com/comments/a|var::fixed_post_id| 

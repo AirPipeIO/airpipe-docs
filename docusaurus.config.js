@@ -13,7 +13,7 @@ const baseUrl = `/${projectName}/`;
 const config = {
   title: "AirPipe Docs",
   tagline: "",
-  favicon: "img/ap-resize.png",
+  favicon: "img/ap-logo-512x512.png",
   organizationName,
   projectName,
   // Set the production url of your site here

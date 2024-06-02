@@ -1,0 +1,15 @@
+name: Tutorial - HTTP variable substitutions - Action
+description: Action variable substitute
+
+interfaces:
+  tutorial/variable-substitute-action: 
+    output: http
+    actions:
+      - name: GetPost
+        http:
+          url: https://jsonplaceholder.typicode.com/posts/17
+      - name: GetUser
+        depends_on:
+          - previous
+        http:
+          url: https://jsonplaceholder.typicode.com/users/a|GetPost::body.userId|
