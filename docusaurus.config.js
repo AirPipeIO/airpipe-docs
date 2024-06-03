@@ -144,10 +144,10 @@ const config = {
           {
             title: "Community",
             items: [
-              // {
-              //   label: "Discord",
-              //   href: "https://discordapp.com/invite/docusaurus",
-              // },
+              {
+                label: "Discord",
+                href: "https://discord.gg/krnMAYe4",
+              },
               {
                 label: "Twitter",
                 href: "https://twitter.com/airpipeio",
