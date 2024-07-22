@@ -1,0 +1,42 @@
+name: openai
+version: 0.0.1
+description: OpenAI AssistantsAPI
+
+interfaces:
+  assistants/create:
+    output: http
+    method: POST
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: API_KEY
+              is_not_null: true
+            - value: instructions
+              is_not_null: true
+            - value: model
+              is_not_null: true
+            - value: name
+              is_not_null: true
+
+      - name: CreateAssistant
+        run_when_succeeded:
+          - previous
+        command:
+          run: |
+              curl -s "https://api.openai.com/v1/assistants" -H "Content-Type: application/json" -H "Authorization: Bearer a|CheckBody::API_KEY|" -H "OpenAI-Beta: assistants=v2" --data @/dev/stdin<<EOF
+                  {
+                    "instructions": "a|CheckBody::instructions|",
+                    "name": "a|CheckBody::name|",
+                    "tools": [{"type": "code_interpreter"}],
+                    "model": "a|CheckBody::model|"
+                  }
+              EOF
+          parse:
+            data_type: json
+          assert:
+            tests:
+              - value: body.id
+                is_not_null: true
