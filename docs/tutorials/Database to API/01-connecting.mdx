@@ -12,6 +12,7 @@ However the recommended place to define your database is in the **globals** sect
  - If you are running in self-hosted mode ensure you do not have different database connections using the same identifier
     - eg. do **not** have multiple **different** connections defined as **main** or other
     - if they are the same connection then it is okay to have the same name
+ - You can also supply your connection string via environment variables, a secrets system, or even use our managed variables and secrets system
 
 You can connect with two formats depending on your usecase, [`conn_string`](#connecting-with-a-connection-string) or defining the connection parameters. 
 

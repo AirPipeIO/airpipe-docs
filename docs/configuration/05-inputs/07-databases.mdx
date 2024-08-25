@@ -20,10 +20,23 @@ Any database config defined with a matching name will have its existing connecti
 | `pass`        | string (optional) | database password                                   |
 | `host`        | string (optional) | database host                                       |
 | `dbname`      | string (optional) | name of the db                                      |
-| `params`      | array             | optional paramaters for the database                |
+| `params`      | array             | optional parameters for the database                |
+| [`document_operation`](#document_operation)| object      | required for NoSQL operations eg. MongoDB           |
 
 > note if the `conn_string` is used only the driver needs to be supplied <br />
 > note if using user, pass, host, dbname is supplied do not use `conn_string`
+
+## document_operation
+
+| Name          | Type              | Description                                         |
+| ------------- | ----------------- | --------------------------------------------------- |
+| `database`    | string            | the database to select   |
+| `collection`  | string            | the collection to target |
+| `operation`   | string | [find](#mongodb-find-example), find_one, find_one_and_delete, find_one_and_replace, delete_one, delete_many, update_one, update_many, insert_one, insert_many, [aggregate](#mongodb-aggregate-example) |
+| `filter`      | string (optional) | required for any of the above operations except [aggregate](#mongodb-aggregate-example), supply JSON document as a string |
+| `pipeline`    | string (optional)| required if operation is set to [aggregate](#mongodb-aggregate-example), supply JSON document as a string        |
+| `update`      | string (optional) | document as a JSON string                                      |
+| `options`     | string (optional) | options as a JSON string                                     |
 
 ### Global Example
 
@@ -40,7 +53,7 @@ version: 0.0.1
 
 ### Action Example
 
-**Note** the `query` option is for relational based databased, and not used for NoSQL/Document Store type databases such as MongoDB, Azure Cosmos DB, Amazon DocumentDB.
+**Note** the `query` option is for relational based database, and not used for NoSQL/Document Store type databases such as MongoDB, Azure Cosmos DB, Amazon DocumentDB.
 
 ```yml
 name: database
@@ -60,4 +73,100 @@ interfaces:
             postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
         query: |
           SELECT * FROM Users;
+```
+
+### MongoDB Find Example
+
+Example to send a HTTP POST with a JSON payload eg. `{"name": "test"}` to find a document with username called test.
+
+```yml
+name: mongodb-find-example
+version: 0.0.1
+
+global:
+  databases:
+    main: 
+      driver: mongodb
+      conn_string: |
+        mongodb+srv://someUser:somePass@bob-perf.hello.mongodb.net/?retryWrites=true&w=majority&appName=my-test
+
+interfaces:
+  mongodb/find:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: name
+              is_not_null: true
+
+      - name: MongoQuery
+        run_when_succeeded:
+          - previous
+        database: main
+        document_operation:
+          database: perf-testing
+          collection: users
+          operation: find
+          filter: '{"username": "a|CheckBody::name|"}'
+```
+
+### MongoDB Aggregate Example
+
+Example to send a HTTP POST with a JSON payload eg. `{"starts_with": "test"}` to find documents using regex and limiting the result set to 30.
+
+```yml
+name: mongodb-aggregate-example
+version: 0.0.1
+
+global:
+  databases:
+    main: 
+      driver: mongodb
+      conn_string: |
+        mongodb+srv://someUser:somePass@bob-perf.hello.mongodb.net/?retryWrites=true&w=majority&appName=my-test
+
+interfaces:
+  mongodb/aggregate-test:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: starts_with
+              is_not_null: true
+
+      - name: MongoQuery
+        run_when_succeeded:
+          - previous
+        database: main
+        document_operation:
+          database: perf-testing
+          collection: users
+          operation: aggregate
+          pipeline: |
+            [ {
+                "$match": {
+                  "username": { "$regex": "^a|CheckBody::starts_with|", "$options": "i" }
+                }
+              },
+              {
+                "$project": {
+                  "_id": 1,
+                  "username": 1,
+                  "email": 1
+                }
+              },
+              {
+               "$limit": 30
+              }
+            ]
 ```

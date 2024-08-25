@@ -1,0 +1,29 @@
+---
+sidebar_position: 1
+slug: /examples/mongodb
+---
+
+# MongoDB / Azure Cosmos DB / Amazon DocumentDB
+
+Our current [quickstart tutorial](/docs/tutorial/nosql-database-to-api) covers this in further detail.
+
+## Defining the database
+
+1. Define a `globals` section
+2. Add the `databases` field
+3. Add a database identifier
+4. Set the driver to `mongodb` (you will use the same driver for Azure Cosmos DB and Amazon DocumentDB)
+5. Add the connection string
+
+For all available `database`  and `document_operation` options see [database inputs](/docs/configuration/interfaces/actions/inputs/databases)
+
+## Adding the database to your action
+
+1. Add a `database` input to your action
+2. Pass the `database` identifier from the globals section `main` if defined or redefine a new database
+
+View the steps in the quickstart tutorial on adding a connection [here.](/docs/tutorial/nosql-database-to-api-connecting)
+
+## Using Operations
+
+View the quickstart tutorial [here.](/docs/tutorial/nosql-database-to-api-querying)

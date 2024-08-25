@@ -1,0 +1,104 @@
+---
+sidebar_position: 1
+slug: /tutorial/nosql-database-to-api-querying
+---
+
+# 02 - Using Operations
+
+See all the available operations under [`document_operation`](/docs/configuration/interfaces/actions/inputs/databases#document_operation).
+
+### Find Operation
+
+Send a HTTP POST with a JSON payload eg. `{"name": "test"}` to find a document with username called test.
+
+```yml
+name: mongodb-find-example
+version: 0.0.1
+
+global:
+  databases:
+    main: 
+      driver: mongodb
+      conn_string: |
+        mongodb+srv://someUser:somePass@bob-perf.hello.mongodb.net/?retryWrites=true&w=majority&appName=my-test
+
+interfaces:
+  mongodb/find:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: name
+              is_not_null: true
+
+      - name: MongoQuery
+        run_when_succeeded:
+          - previous
+        database: main
+        document_operation:
+          database: perf-testing
+          collection: users
+          operation: find
+          filter: '{"username": "a|CheckBody::name|"}'
+```
+
+### Aggregate Operation
+
+Example to send a HTTP POST with a JSON payload eg. `{"starts_with": "test"}` to find documents using regex and limiting the result set to 30.
+
+```yml
+name: mongodb-aggregate-example
+version: 0.0.1
+
+global:
+  databases:
+    main: 
+      driver: mongodb
+      conn_string: |
+        mongodb+srv://someUser:somePass@bob-perf.hello.mongodb.net/?retryWrites=true&w=majority&appName=my-test
+
+interfaces:
+  mongodb/aggregate-test:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: starts_with
+              is_not_null: true
+
+      - name: MongoQuery
+        run_when_succeeded:
+          - previous
+        database: main
+        document_operation:
+          database: perf-testing
+          collection: users
+          operation: aggregate
+          pipeline: |
+            [ {
+                "$match": {
+                  "username": { "$regex": "^a|CheckBody::starts_with|", "$options": "i" }
+                }
+              },
+              {
+                "$project": {
+                  "_id": 1,
+                  "username": 1,
+                  "email": 1
+                }
+              },
+              {
+               "$limit": 30
+              }
+            ]
+```
