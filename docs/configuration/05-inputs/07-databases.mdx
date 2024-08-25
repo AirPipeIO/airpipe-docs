@@ -14,7 +14,7 @@ Any database config defined with a matching name will have its existing connecti
 
 | Name          | Type              | Description                                         |
 | ------------- | ----------------- | --------------------------------------------------- |
-| `driver`      | string            | the database driver to use i.e. postgres, mysql     |
+| `driver`      | string            | the database driver to use i.e. postgres, mongodb   |
 | `conn_string` | string (optional) | the full connection string to connect to a database |
 | `user`        | string (optional) | database user                                       |
 | `pass`        | string (optional) | database password                                   |
@@ -39,6 +39,8 @@ version: 0.0.1
 ```
 
 ### Action Example
+
+**Note** the `query` option is for relational based databased, and not used for NoSQL/Document Store type databases such as MongoDB, Azure Cosmos DB, Amazon DocumentDB.
 
 ```yml
 name: database

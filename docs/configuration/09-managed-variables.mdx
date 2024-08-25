@@ -1,0 +1,47 @@
+---
+sidebar_position: 1
+slug: /configuration/managed-variables
+displayed_sidebar: configurationSidebar
+---
+
+# Managed Variables & Secrets
+
+The Air Pipe platform allows you to store common variables and encrypted variables or secrets to be used across your hosted and self-hosted configurations.
+
+## Usecases
+    - Common variables such as endpoint addresses eg. `https://commonThirdPartyService.com/api/`
+    - Database connection strings ***(encrypted mode)***
+    - Credentials ***(encrypted mode)***
+
+## How
+
+### Adding
+
+1. Login to the platform -> https://app.airpipe.io
+2. Select the appropriate organization
+3. Click on `Variables` in the menu
+4. Click `Add New`
+    - Enter a name and description (it is recommended to avoid overlapping names)
+    - The `Value` is the content of your variable
+    - Only select `Encrypt` if you are storing a sensitive variable eg. secret
+        - Note: as with all encryption related tasks they will carry a performance overhead when used during the access and decryption process
+    - Select the appropriate permission
+        - If you are using role based permissions note that the hosted `configuration` or `api key` being used must also have the matching role to access this variable
+
+
+### Accessing
+To substitute a managed variable the following convention is followed `a|ap_var::<NameOfTheVariable>|`.
+
+- Assume we have stored a variable called `MyThirdPartyService` with the value off `https://something.com/api/`.
+- This means we can access the variable with `a|ap_var::MyThirdPartyService|`
+- We can place this for substitution in nearly any area of your configuration file
+- If you have selected to `encrypt` the decryption process will be handled seamlessly for you
+
+### Access a query parameter
+  ```yml title="Access a query parameter"
+  actions:
+      name: doSomething
+      http:
+          url: a|ap_var::MyThirdPartyService|/someroute?id=a|params::id| 
+          # ^^ access the value of `MyThirdPartyService` to build the complete url ^^
+  ```
