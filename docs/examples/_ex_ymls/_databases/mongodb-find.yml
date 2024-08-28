@@ -1,0 +1,33 @@
+name: mongodb-find-example
+version: 0.0.1
+
+global:
+  databases:
+    main: 
+      driver: mongodb
+      conn_string: |
+        mongodb+srv://someUser:somePass@bob-perf.hello.mongodb.net/?retryWrites=true&w=majority&appName=my-test
+
+interfaces:
+  mongodb/find:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: name
+              is_not_null: true
+
+      - name: MongoQuery
+        run_when_succeeded:
+          - previous
+        database: main
+        document_operation:
+          database: perf-testing
+          collection: users
+          operation: find
+          filter: '{"username": "a|CheckBody::name|"}'

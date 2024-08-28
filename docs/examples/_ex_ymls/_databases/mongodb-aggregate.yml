@@ -1,0 +1,49 @@
+name: mongodb-aggregate-example
+version: 0.0.1
+
+global:
+  databases:
+    main: 
+      driver: mongodb
+      conn_string: |
+        mongodb+srv://someUser:somePass@bob-perf.hello.mongodb.net/?retryWrites=true&w=majority&appName=my-test
+
+interfaces:
+  mongodb/aggregate-test:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: starts_with
+              is_not_null: true
+
+      - name: MongoQuery
+        run_when_succeeded:
+          - previous
+        database: main
+        document_operation:
+          database: perf-testing
+          collection: users
+          operation: aggregate
+          pipeline: |
+            [ {
+                "$match": {
+                  "username": { "$regex": "^a|CheckBody::starts_with|", "$options": "i" }
+                }
+              },
+              {
+                "$project": {
+                  "_id": 1,
+                  "username": 1,
+                  "email": 1
+                }
+              },
+              {
+               "$limit": 30
+              }
+            ]

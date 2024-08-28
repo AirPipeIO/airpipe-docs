@@ -1,0 +1,27 @@
+## test database
+# docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=Passw0rd" \
+# -p 1433:1433 --name sql1 -d mcr.microsoft.com/mssql/server:2019-latest && \
+# curl -L -o AdventureWorks.bak https://github.com/Microsoft/sql-server-samples/releases/download/adventureworks/AdventureWorks2019.bak && \
+# docker exec -u 0 -it sql1 mkdir -p /var/opt/mssql/backup && \
+# docker cp AdventureWorks.bak sql1:/var/opt/mssql/backup/AdventureWorks.bak && \
+# docker exec -u 0 -it sql1 /bin/bash -c "mkdir -p /var/lib/apt/lists/partial && apt-get update && apt-get install -y curl apt-transport-https gnupg && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | tee /etc/apt/sources.list.d/msprod.list && apt-get update && ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev" && \
+# docker exec -it sql1 /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P Passw0rd \
+# -Q "RESTORE DATABASE AdventureWorks FROM DISK = '/var/opt/mssql/backup/AdventureWorks.bak' WITH MOVE 'AdventureWorks2019' TO '/var/opt/mssql/data/AdventureWorks2019.mdf', MOVE 'AdventureWorks2019_log' TO '/var/opt/mssql/data/AdventureWorks2019_log.ldf';"
+
+name: person_api
+description: get postcodes
+
+global:
+  databases:
+    main:
+      driver: mssql
+      conn_string: jdbc:sqlserver://localhost:1433;databaseName=AdventureWorks;user=SA;password=Passw0rd;trustServerCertificate=true;
+
+interfaces:
+  person/postcodes:
+    output: http
+
+    actions:
+      - name: CheckPerson
+        database: main
+        query: SELECT TOP 10 PostalCode FROM Person.Address;

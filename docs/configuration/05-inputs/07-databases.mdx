@@ -14,8 +14,8 @@ Any database config defined with a matching name will have its existing connecti
 
 | Name          | Type              | Description                                         |
 | ------------- | ----------------- | --------------------------------------------------- |
-| `driver`      | string            | the database driver to use i.e. postgres, mongodb   |
-| `conn_string` | string (optional) | the full connection string to connect to a database |
+| `driver`      | string            | the database driver (postgres, mysql, mssql, sqlite, mongodb)   |
+| [`conn_string`](#connection-strings) | string (optional) | the full connection string to connect to a database |
 | `user`        | string (optional) | database user                                       |
 | `pass`        | string (optional) | database password                                   |
 | `host`        | string (optional) | database host                                       |
@@ -23,7 +23,6 @@ Any database config defined with a matching name will have its existing connecti
 | `params`      | array             | optional parameters for the database                |
 | [`document_operation`](#document_operation)| object      | required for NoSQL operations eg. MongoDB           |
 
-> note if the `conn_string` is used only the driver needs to be supplied <br />
 > note if using user, pass, host, dbname is supplied do not use `conn_string`
 
 ## document_operation
@@ -38,7 +37,46 @@ Any database config defined with a matching name will have its existing connecti
 | `update`      | string (optional) | document as a JSON string                                      |
 | `options`     | string (optional) | options as a JSON string                                     |
 
-### Global Example
+## Connection Strings
+
+Below are example connection strings, please adjust the parameters to your own requirements.
+
+- ### Postgres
+    - #### CockroachDB
+    - #### YugabyteDB
+    - #### Timescale
+    - #### Any postgres compatible databases
+
+      ```
+      postgresql://username:password@host:port/dbname[?paramspec]
+      ```
+    
+- ### MySQL
+    - #### MariaDB
+    - #### TiDB
+    - #### Any mysql compatible database
+
+      ```
+      mysql://root:college@localhost:3306/employees
+      ```
+
+- ### SQLite
+
+      ```
+      sqlite:///home/my-user/db-files/Sqlite-Car_Database.db
+      ```
+
+- ### MSSQL / SqlServer
+
+      ```
+      jdbc:sqlserver://localhost:1433;databaseName=AdventureWorks;user=SA;password=Passw0rd;trustServerCertificate=true;
+      ```
+
+- ### MongoDB
+    - #### Azure Cosmos DB
+    - #### Amazon DocumentDB
+
+## Global Example
 
 ```yml
 name: database
@@ -51,7 +89,7 @@ version: 0.0.1
         postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
 ```
 
-### Action Example
+## Action Example
 
 **Note** the `query` option is for relational based database, and not used for NoSQL/Document Store type databases such as MongoDB, Azure Cosmos DB, Amazon DocumentDB.
 
@@ -75,98 +113,19 @@ interfaces:
           SELECT * FROM Users;
 ```
 
-### MongoDB Find Example
+## MongoDB Find Example
 
 Example to send a HTTP POST with a JSON payload eg. `{"name": "test"}` to find a document with username called test.
 
-```yml
-name: mongodb-find-example
-version: 0.0.1
-
-global:
-  databases:
-    main: 
-      driver: mongodb
-      conn_string: |
-        mongodb+srv://someUser:somePass@bob-perf.hello.mongodb.net/?retryWrites=true&w=majority&appName=my-test
-
-interfaces:
-  mongodb/find:
-    method: POST
-    input: a|body
-    output: http
-
-    actions:
-      - name: CheckBody
-        input: a|body
-        assert:
-          tests:
-            - value: name
-              is_not_null: true
-
-      - name: MongoQuery
-        run_when_succeeded:
-          - previous
-        database: main
-        document_operation:
-          database: perf-testing
-          collection: users
-          operation: find
-          filter: '{"username": "a|CheckBody::name|"}'
+```yml reference title="MongoDB Find"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_databases_/mongodb-find.yml
 ```
 
-### MongoDB Aggregate Example
+
+## MongoDB Aggregate Example
 
 Example to send a HTTP POST with a JSON payload eg. `{"starts_with": "test"}` to find documents using regex and limiting the result set to 30.
 
-```yml
-name: mongodb-aggregate-example
-version: 0.0.1
-
-global:
-  databases:
-    main: 
-      driver: mongodb
-      conn_string: |
-        mongodb+srv://someUser:somePass@bob-perf.hello.mongodb.net/?retryWrites=true&w=majority&appName=my-test
-
-interfaces:
-  mongodb/aggregate-test:
-    method: POST
-    input: a|body
-    output: http
-
-    actions:
-      - name: CheckBody
-        input: a|body
-        assert:
-          tests:
-            - value: starts_with
-              is_not_null: true
-
-      - name: MongoQuery
-        run_when_succeeded:
-          - previous
-        database: main
-        document_operation:
-          database: perf-testing
-          collection: users
-          operation: aggregate
-          pipeline: |
-            [ {
-                "$match": {
-                  "username": { "$regex": "^a|CheckBody::starts_with|", "$options": "i" }
-                }
-              },
-              {
-                "$project": {
-                  "_id": 1,
-                  "username": 1,
-                  "email": 1
-                }
-              },
-              {
-               "$limit": 30
-              }
-            ]
+```yml reference title="MongoDB Aggregate Pipeline"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_databases_/mongodb-aggregate.yml
 ```

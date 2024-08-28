@@ -1,0 +1,32 @@
+# /// Options and flags which can be used to configure a SQLite connection.
+# ///
+# /// A value of `SqliteConnectOptions` can be parsed from a connection URI,
+# /// as described by [SQLite](https://www.sqlite.org/uri.html).
+# ///
+# /// | URI | Description |
+# /// | -- | -- |
+# /// `sqlite::memory:` | Open an in-memory database. |
+# /// `sqlite:data.db` | Open the file `data.db` in the current directory. |
+# /// `sqlite://data.db` | Open the file `data.db` in the current directory. |
+# /// `sqlite:///data.db` | Open the file `data.db` from the root (`/`) directory. |
+# /// `sqlite://data.db?mode=ro` | Open the file `data.db` for read-only access. |
+# ///
+
+name: user_api
+description: find a custom
+
+global:
+  databases:
+    main:
+      driver: sqlite
+      conn_string: sqlite:///home/kav/dev/airpipe/Sqlite-Car_Database.db
+
+
+interfaces:
+  customers/list:
+    output: http
+
+    actions:
+      - name: CheckCustomer
+        database: main
+        query: SELECT * FROM Customers LIMIT 10;

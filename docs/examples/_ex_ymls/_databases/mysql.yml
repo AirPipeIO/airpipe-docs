@@ -1,0 +1,26 @@
+# test database
+# docker run -d \
+#   --name mysql-employees \
+#   -p 3306:3306 \
+#   -e MYSQL_ROOT_PASSWORD=college \
+#   -v $PWD/data:/var/lib/mysql \
+#   genschsa/mysql-employees
+
+name: list employees
+description: list
+
+global:
+  databases:
+    main:
+      driver: mysql
+      conn_string: mysql://root:college@localhost:3306/employees
+
+
+interfaces:
+  employees/list:
+    output: http
+
+    actions:
+      - name: CheckEmployees
+        database: main
+        query: SELECT * FROM employees LIMIT 10;
