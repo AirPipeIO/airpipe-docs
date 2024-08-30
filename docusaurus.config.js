@@ -11,7 +11,7 @@ const baseUrl = `/${projectName}/`;
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: "AirPipe Docs",
+  title: "Air Pipe Docs",
   tagline: "",
   favicon: "img/ap-logo-512x512.png",
   organizationName,
@@ -146,7 +146,7 @@ const config = {
             items: [
               {
                 label: "Discord",
-                href: "https://discord.gg/krnMAYe4",
+                href: "https://discord.gg/b8mFtjWXZj",
               },
               {
                 label: "Twitter",
