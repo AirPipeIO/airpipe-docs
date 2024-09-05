@@ -1,0 +1,20 @@
+name: nested-transforms
+
+interfaces:
+  users/nested-transforms:
+    output: http
+    method: GET
+
+    actions:
+      - name: NestedTransforms
+        http:
+          url: https://jsonplaceholder.typicode.com/users
+        post_transforms:
+          - extract_value: .body
+          - rename_attributes:
+              $[*].username: USER
+          - nested_transforms:
+              $[*].address:
+                - remove_attributes:
+                    - $.geo
+                    - $.suite
