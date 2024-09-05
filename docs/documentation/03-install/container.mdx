@@ -1,0 +1,51 @@
+---
+sidebar_position: 6
+displayed_sidebar: documentationSidebar
+slug: /install/container
+---
+
+# Container
+
+### Retrieve API Key
+
+Log in and retrieve an API key from https://app.airpipe.io/apikeys
+
+### Create a configs directory
+
+Supply any number of configuration files in this directory, and then ensure they are targeted.
+
+Your structure could look something similar as below:
+
+```
+├── configs
+│   ├── infoAPI.yml
+│   ├── accountsAPI.yml
+│   ├── backupAPI.yml
+│   └── service1.yml
+└── Dockerfile
+```
+
+
+### Adjust Dockerfile as appropriate
+
+Use the below Dockerfile as a starting point.
+
+```docker reference title="Dockerfile"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/documentation/03-install/Dockerfile
+```
+
+### Build Image
+
+Name the image to something you prefer for your purpose.
+
+By default Air Pipe runs on port `4111` you can adjust this if required.
+
+```
+docker build -t my-airpipe-image .
+```
+
+### Running on Docker
+
+```
+docker run -d -p 4111:4111 my-airpipe-image
+```
