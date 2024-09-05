@@ -1,0 +1,15 @@
+name: rename-attributes-array
+
+interfaces:
+  users/rename-array:
+    output: http
+    method: GET
+
+    actions:
+      - name: RemoveKeys
+        http:
+          url: https://jsonplaceholder.typicode.com/users
+        post_transforms:
+          - extract_value: .body
+          - rename_attributes:
+              $[*].name: fullName

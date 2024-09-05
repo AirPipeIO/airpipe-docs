@@ -1,0 +1,105 @@
+## Remove Attributes
+
+
+Remove attributes allows you to remove attributes in an object, or multiple attributes in an array of objects.
+
+This leverages JSONPath for selection and intends to adhered to the RFC 9535 standard.
+
+For examples see:
+- https://support.smartbear.com/alertsite/docs/monitors/api/endpoint/jsonpath.html
+- https://docs.rs/serde_json_path/latest/serde_json_path/
+
+
+<h3> Usage </h3>
+
+
+```yaml
+# remove username attribute in a returned object
+post_transforms:
+  - rename_attributes:
+      - $.username
+```
+
+```yaml
+# wildcard match to remove username attribute in an array of objects
+post_transforms:
+  - remove_attributes:
+      - $[*].username
+```
+
+<details>
+
+<summary>Single Object Example</summary>
+
+### Single object example
+Input
+```json
+  {
+    "id": 1,
+    "name": "Leanne Graham",
+    "username": "Bret",
+    "email": "Sincere@april.biz"
+  }
+```
+
+```yml reference title="Rename Attributes Object"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_transforms_/remove_attributes-object.yml
+```
+
+Result
+```json
+  {
+    "id": 1,
+    "name": "Leanne Graham",
+    "email": "Sincere@april.biz"
+  }
+```
+
+</details>
+
+<details>
+
+<summary>Array of objects example</summary>
+
+### Array of objects example
+Input
+```json
+[
+  {
+    "id": 1,
+    "name": "Leanne Graham",
+    "username": "Bret",
+    "email": "Sincere@april.biz"
+  },
+  {
+    "id": 2,
+    "name": "Ervin Howell",
+    "username": "Antonette",
+    "email": "Shanna@melissa.tv"
+  }
+]
+```
+
+```yml reference title="Remove Attributes Array"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_transforms_/remove_attributes-array.yml
+```
+
+Result
+```json
+[
+  {
+    "id": 1,
+    "fullName": "Leanne Graham",
+    "email": "Sincere@april.biz"
+  },
+  {
+    "id": 2,
+    "fullName": "Ervin Howell",
+    "email": "Shanna@melissa.tv"
+  }
+]
+```
+
+---
+
+</details>

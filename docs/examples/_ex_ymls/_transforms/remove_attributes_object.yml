@@ -1,0 +1,15 @@
+name: remove-values
+
+interfaces:
+  users/remove-object:
+    output: http
+    method: GET
+
+    actions:
+      - name: RemoveKeys
+        http:
+          url: https://jsonplaceholder.typicode.com/users/1
+        post_transforms:
+          - extract_value: .body
+          - remove_attributes:
+              - $.username
