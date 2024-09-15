@@ -6,7 +6,7 @@ WORKDIR /app
 
 # check https://download.airpipe.io/ for which version you require
 RUN apk add --no-cache curl && \
-    curl -o /app/agent https://download.airpipe.io/0.2.0/linux/x86_64/airpipe && \
+    curl -o /app/agent https://download.airpipe.io/0.3.0/linux/x86_64/airpipe && \
     chmod +x /app/agent
 
     # UPDATE to your config directory

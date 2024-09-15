@@ -31,7 +31,7 @@ Any database config defined with a matching name will have its existing connecti
 | ------------- | ----------------- | --------------------------------------------------- |
 | `database`    | string            | the database to select   |
 | `collection`  | string            | the collection to target |
-| `operation`   | string | [find](#mongodb-find-example), find_one, find_one_and_delete, find_one_and_replace, delete_one, delete_many, update_one, update_many, insert_one, insert_many, [aggregate](#mongodb-aggregate-example) |
+| `operation`   | string | [find](#mongodb-find-example), findOne, findOneAndDelete, findOneAndReplace, deleteOne, deleteMany, updateOne, updateMany, insertOne, insertMany, [aggregate](#mongodb-aggregate-example) |
 | `filter`      | string (optional) | required for any of the above operations except [aggregate](#mongodb-aggregate-example), supply JSON document as a string |
 | `pipeline`    | string (optional)| required if operation is set to [aggregate](#mongodb-aggregate-example), supply JSON document as a string        |
 | `update`      | string (optional) | document as a JSON string                                      |
