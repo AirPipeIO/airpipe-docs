@@ -11,7 +11,6 @@ global:
 interfaces:
   mongodb/aggregate-test:
     method: POST
-    input: a|body
     output: http
 
     actions:

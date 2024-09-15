@@ -102,3 +102,13 @@ interfaces:
               }
             ]
 ```
+
+### Combined find and update
+
+- Send a HTTP POST with a JSON payload eg. `{"name": "something"}` to `mongodb/find` to find a document with a matching name.
+- Send a HTTP POST with a JSON payload eg. `{"name": "something", "status": false}` to `mongodb/update` to find a document with a matching name and update the status value accordingly.
+
+
+```yml reference title="MongoDB Find and update"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_databases/mongodb-find-update.yml
+```

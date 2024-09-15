@@ -17,6 +17,9 @@ Our current [quickstart tutorial](/docs/tutorial/nosql-database-to-api) covers t
 
 For all available `database`  and `document_operation` options see [database inputs](/docs/configuration/interfaces/actions/inputs/databases)
 
+See all the available operations under [`document_operation`](/docs/configuration/interfaces/actions/inputs/databases#document_operation).
+
+
 ## Adding the database to your action
 
 1. Add a `database` input to your action
@@ -44,4 +47,14 @@ Example to send a HTTP POST with a JSON payload eg. `{"starts_with": "test"}` to
 
 ```yml reference title="MongoDB Aggregate Pipeline"
 https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_databases/mongodb-aggregate.yml
+```
+
+## MongoDB Combined find and update
+
+- Send a HTTP POST with a JSON payload eg. `{"name": "something"}` to `mongodb/find` to find a document with a matching name.
+- Send a HTTP POST with a JSON payload eg. `{"name": "something", "status": false}` to `mongodb/update` to find a document with a matching name and update the status value accordingly.
+
+
+```yml reference title="MongoDB Find and update"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_databases/mongodb-find-update.yml
 ```
