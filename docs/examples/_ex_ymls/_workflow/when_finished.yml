@@ -1,0 +1,33 @@
+name: when_finished
+description: If CheckBody finishes whether it succeeds or fails, then allow GetUser1 action to run
+
+interfaces:
+  run_condition/when_finished:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: message
+              is_not_null: true
+            - value: name
+              is_not_null: true
+
+      - name: GetUser1
+        run_condition:
+          when_finished:
+            actions: [previous]
+        http: 
+          url: https://jsonplaceholder.typicode.com/users/1
+          headers:
+            content-type: application/json
+        assert:
+          tests:
+            - value: .body.name
+              is_not_null: true
+        post_transforms:
+          - extract_value: .body

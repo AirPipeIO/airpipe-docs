@@ -1,0 +1,59 @@
+name: worklow_assert
+description: |
+  if CheckBody fails, GetUser1 will be fetched as it depends on its failure
+  if GetUser1 succeeds, then GetUser2 will be fetched
+  if GetUser2 finishes whether it succeeds or fails AND the assertion passes then GetUser3 will be fetcched
+
+interfaces:
+  run_condition/workflow_assert:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: message
+              is_not_null: true
+            - value: name
+              is_not_null: true
+
+      - name: GetUser1
+        run_condition:
+          when_failed:
+            actions: [previous]
+        http: 
+          url: https://jsonplaceholder.typicode.com/users/1
+          headers:
+            content-type: application/json
+        assert:
+          tests:
+            - value: .body.name
+              is_not_null: true
+        post_transforms:
+          - extract_value: .body
+
+      - name: GetUser2
+        run_condition:
+          when_succeeded:
+            actions: [previous]
+        http: 
+          url: https://jsonplaceholder.typicode.com/users/2
+          headers:
+            content-type: application/json
+      
+      - name: GetUser3
+        run_condition:
+          when_finished:
+            actions: [previous]
+          assert:
+            tests:
+              - action: GetUser2
+                value: .body.name
+                is_equal_to: "Ervin Howell"
+        http: 
+          url: https://jsonplaceholder.typicode.com/users/3
+          headers:
+            content-type: application/json

@@ -1,0 +1,52 @@
+---
+sidebar_position: 7
+slug: /configuration/interfaces/actions/run-conditions
+displayed_sidebar: configurationSidebar
+---
+
+# Run Conditions
+
+Are a way to control whether or not you want to run an action.
+
+View complete examples [here](/docs/configuration/interfaces/actions/run-conditions/examples).
+
+```yaml
+run_condition:
+  when_succeeded:
+    actions: [previous, anotherAction]
+```
+
+
+
+## Run Condition
+
+| Name                 | Type   | Description                                       |
+| -------------------- | ------ | ------------------------------------------------- |
+| `when_finished`      | object | if the defined actions have finished then proceed |
+| `when_succeeded`     | object | if the defined actions have succeeded then proceed |
+| `when_failed`        | object | if the defined actions have failed then proceed     |
+| `assert`             | assert | use the [assertion system](/docs/configuration/interfaces/actions/asserts) to determine whether or not to run      |
+
+## When
+
+```yaml
+run_condition:
+  when_succeeded:
+    actions: [previous, anotherAction]
+    at_least: 1
+```
+```yaml
+run_condition:
+  when_finished:
+    actions: [previous]
+  assert:
+    tests:
+      - action: GetUser2
+        value: .body.name
+        is_equal_to: "Ervin Howell"
+```
+
+| Name                 | Type   | Description                                       |
+| -------------------- | ------ | ------------------------------------------------- |
+| `actions`      | array | Array of action names |
+| `at_least`     | int (optional) | the number of actions that should pass, if not defined expects all defined to pass |
