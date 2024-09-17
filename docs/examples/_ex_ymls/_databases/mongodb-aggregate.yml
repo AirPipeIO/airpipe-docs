@@ -1,5 +1,5 @@
 name: mongodb-aggregate-example
-version: 0.0.1
+description: use any mongodb operation
 
 global:
   databases:
@@ -26,8 +26,8 @@ interfaces:
           - previous
         database: main
         document_operation:
-          database: perf-testing
-          collection: users
+          database: sample_analytics
+          collection: customers
           operation: aggregate
           pipeline: |
             [ {
