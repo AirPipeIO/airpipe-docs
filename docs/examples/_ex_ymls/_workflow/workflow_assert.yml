@@ -13,7 +13,7 @@ interfaces:
     actions:
       - name: CheckBody
         input: a|body
-        assert:
+        assert: # not referring to this, this asserts the current action
           tests:
             - value: message
               is_not_null: true
@@ -26,7 +26,7 @@ interfaces:
           url: https://jsonplaceholder.typicode.com/users/1
           headers:
             content-type: application/json
-        assert:
+        assert: # not referring to this, this asserts the current action
           tests:
             - value: .body.name
               is_not_null: true
@@ -44,7 +44,7 @@ interfaces:
       
       - name: GetUser3
         run_when_finished: [previous]
-        run_on_assertion:
+        run_on_assertion: # <-----!!! this can be used to assert and check data in any of the prior actions before running this action
           tests:
             - action: GetUser2
               value: .body.name
