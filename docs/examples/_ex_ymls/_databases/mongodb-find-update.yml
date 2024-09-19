@@ -9,6 +9,19 @@ global:
         mongodb+srv://someUser:somePass@bob-perf.hello.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
 
 interfaces:
+  mongodb/find:
+    method: POST
+    output: http
+
+    actions:
+      - name: MongoQuery
+        database: main
+        document_operation:
+          database: sample_analytics
+          collection: customers
+          operation: findOne
+          filter: '{"name": "a|body::name|"}'
+
   mongodb/update:
     method: POST
     output: http
@@ -22,16 +35,3 @@ interfaces:
           operation: updateOne
           filter: '{"name": "a|body::name|"}'
           update: '{"$set": {"active": a|body::status|}}'
-
-  mongodb/find:
-    method: POST
-    output: http
-
-    actions:
-      - name: MongoQuery
-        database: main
-        document_operation:
-          database: sample_analytics
-          collection: customers
-          operation: findOne
-          filter: '{"name": "a|body::name|"}'

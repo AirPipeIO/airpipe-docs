@@ -18,9 +18,7 @@ interfaces:
               is_not_null: true
 
       - name: GetUser1
-        run_condition:
-          when_finished:
-            actions: [previous]
+        run_when_finished: [previous]
         http: 
           url: https://jsonplaceholder.typicode.com/users/1
           headers:

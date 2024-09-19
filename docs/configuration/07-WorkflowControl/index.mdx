@@ -1,0 +1,53 @@
+---
+sidebar_position: 7
+slug: /configuration/interfaces/actions/workflow-control
+displayed_sidebar: configurationSidebar
+---
+
+# Workflow Control
+
+Are a way to control whether or not you want to run an action. 
+
+### View complete examples [here](/docs/configuration/interfaces/actions/workflow-control/examples).
+
+
+There are 4 key options:
+ - run_when_succeeded
+ - run_when_failed
+ - run_when_finished` (alias `depends_on`)
+ - run_on_assertion
+---
+
+For the first 3 options you can define this in one of two ways:
+
+```yaml
+run_when_succeeded: [previous, anotherAction]
+```
+
+```yaml
+run_when_succeeded: 
+  at_least: 1
+  actions: [previous, anotherAction]
+```
+---
+For `run_on_assertion` this uses uses the identical `assert` system used for validating actions, see [here](/docs/configuration/interfaces/actions/asserts).
+
+```yaml
+  - name: GetUser2
+    run_when_finished: [GetUser1] # you should typically ensure the actions that run_on_assertion depends on are finished 
+    run_on_assertion: #<---! this is used for asserting any of the prior actions before starting this one
+      tests:
+        - action: GetUser1
+          value: .name
+          is_equal_to: "Ervin Howell"
+    http: 
+      url: https://jsonplaceholder.typicode.com/users/2
+      headers:
+        content-type: application/json
+    assert: # this is used for asserting the data you fetched from this action itself
+      tests:
+        - value: .body.name
+          is_not_null: true
+```
+
+

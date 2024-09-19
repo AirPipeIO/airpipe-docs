@@ -21,9 +21,7 @@ interfaces:
               is_not_null: true
 
       - name: GetUser1
-        run_condition:
-          when_failed:
-            actions: [previous]
+        run_when_failed: [previous]
         http: 
           url: https://jsonplaceholder.typicode.com/users/1
           headers:
@@ -36,23 +34,21 @@ interfaces:
           - extract_value: .body
 
       - name: GetUser2
-        run_condition:
-          when_succeeded:
-            actions: [previous]
+        run_when_succeeded:
+          at_least: 2 # this parameter is optional
+          actions: [previous,ActionTwo,ActionThree,ActionFour]
         http: 
           url: https://jsonplaceholder.typicode.com/users/2
           headers:
             content-type: application/json
       
       - name: GetUser3
-        run_condition:
-          when_finished:
-            actions: [previous]
-          assert:
-            tests:
-              - action: GetUser2
-                value: .body.name
-                is_equal_to: "Ervin Howell"
+        run_when_finished: [previous]
+        run_on_assertion:
+          tests:
+            - action: GetUser2
+              value: .body.name
+              is_equal_to: "Ervin Howell"
         http: 
           url: https://jsonplaceholder.typicode.com/users/3
           headers:

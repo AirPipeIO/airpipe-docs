@@ -1,5 +1,5 @@
 name: when_failed
-description: If CheckBody fails, then allow GetUser1 action to run
+description: If CheckBody fails, then allow GetUser1 action to run, and if both CheckBody and GetUser1 fail, then GetUser2
 
 interfaces:
   run_condition/when_failed:
@@ -18,11 +18,24 @@ interfaces:
               is_not_null: true
 
       - name: GetUser1
-        run_condition:
-          when_failed:
-            actions: [previous]
+        run_when_failed: [previous]
         http: 
           url: https://jsonplaceholder.typicode.com/users/1
+          headers:
+            content-type: application/json
+        assert:
+          tests:
+            - value: .body.name
+              is_null: true
+        post_transforms:
+          - extract_value: .body
+
+      - name: GetUser2
+        run_when_failed: 
+          # at_least: 1 (could optionally set this value, in the case of 1, at least one of the below actions must fail for this action (GetUser2) to run)
+          actions: [CheckBody, GetUser1]
+        http: 
+          url: https://jsonplaceholder.typicode.com/users/2
           headers:
             content-type: application/json
         assert:
