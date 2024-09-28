@@ -1,0 +1,14 @@
+name: example-get-users
+version: 0.0.1
+
+interfaces:
+  example/users:
+    method: GET
+    output: http
+
+    actions:
+      - name: GetUsers
+        http: 
+          url: https://jsonplaceholder.typicode.com/users/
+          headers:
+            content-type: application/json

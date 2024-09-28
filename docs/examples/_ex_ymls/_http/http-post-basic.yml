@@ -1,0 +1,32 @@
+name: example-create-post
+version: 0.0.1
+
+interfaces:
+  example/posts:
+    method: POST
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body # target the body of the incoming post payload
+        assert: # check if it has the required variables
+          tests:
+            - value: title
+              is_not_null: true
+            - value: body
+              is_not_null: true
+            - value: userId
+              is_not_null: true
+
+      - name: CreatePost
+        run_when_succeeded: [previous] # do not run this action unless the previous has succeeded (you can also use simply define 'CheckBody' instead of 'previous' to be explicit)
+        http: 
+          url: https://jsonplaceholder.typicode.com/posts
+          headers:
+            content-type: application/json
+          body: | # substite variables into post payload
+            {
+              "title": "a|CheckBody::title|",
+              "body": "a|CheckBody::body|",
+              "userId": a|CheckBody::userId|,
+            }
