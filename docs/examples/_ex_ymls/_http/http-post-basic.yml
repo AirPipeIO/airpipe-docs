@@ -24,9 +24,9 @@ interfaces:
           url: https://jsonplaceholder.typicode.com/posts
           headers:
             content-type: application/json
-          body: | # substite variables into post payload
+          body: | # substitute variables into post payload
             {
               "title": "a|CheckBody::title|",
               "body": "a|CheckBody::body|",
-              "userId": a|CheckBody::userId|,
+              "userId": a|CheckBody::userId|
             }
