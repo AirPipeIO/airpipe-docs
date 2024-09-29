@@ -1,0 +1,26 @@
+name: AskGemini
+
+interfaces:
+  gemini/query:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: text
+              is_not_null: true
+              is_less_than: 20 # limit the amount of characters
+
+      - name: QueryGemini
+        run_when_succeeded: [previous] # only run after CheckBody succeeds
+        http: 
+          url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=a|ap_var::gemini-key|
+          method: POST
+          headers:
+            content-type: application/json
+          body: | # substitute the 'text' we just validated in 'CheckBody' into the body payload
+            {"contents":[{"parts":[{"text":"a|CheckBody::text|"}]}]}

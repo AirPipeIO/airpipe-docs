@@ -1,0 +1,166 @@
+---
+sidebar_position: 2
+slug: /examples/google/gemini-ai
+---
+
+# Gemini AI
+
+### Requirements
+- Generate an API Key from https://aistudio.google.com/app/apikey
+
+
+## Query and retrieve full Gemini Response
+#### Expects Post Payload
+
+```json
+{
+    "text": "tell me about dogs"
+}
+```
+
+```yml reference title="Query and retrieve full Gemini Response"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/google/configs/gemini-query-full-payload.yml
+```
+
+<details>
+    <summary>Example Response</summary>
+    ```json
+    {
+        "data": {
+            "CheckBody": {
+                "time.ms": 0,
+                "data": {
+                    "text": "tell me about dogs"
+                },
+                "message": "success"
+            },
+            "QueryGemini": {
+                "time.ms": 4180,
+                "data": {
+                    "status": 200,
+                    "headers": {
+                        "content-type": "application/json; charset=UTF-8",
+                        "vary": "Origin,Accept-Encoding",
+                        "date": "Sun, 29 Sep 2024 15:40:42 GMT",
+                        "server": "scaffolding on HTTPServer2",
+                        "cache-control": "private",
+                        "x-xss-protection": "0",
+                        "x-frame-options": "SAMEORIGIN",
+                        "x-content-type-options": "nosniff",
+                        "server-timing": "gfet4t7; dur=4016",
+                        "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+                        "accept-ranges": "none"
+                    },
+                    "body": {
+                        "candidates": [
+                            {
+                                "content": {
+                                    "parts": [
+                                        {
+                                            "text": "## Dogs: Man's Best Friend, and More!\n\nDogs, those furry, wagging companions, have been by our side for thousands of years. They're more than just pets; they're loyal friends, helpful assistants, and sometimes even family members. Let's delve into what makes dogs so special:\n\n**Origins and History:**\n\n* **Wolf Ancestry:** Domestic dogs are descended from wolves, with the earliest evidence of domestication dating back 15,000 years.\n* **Evolution:** Over time, dogs evolved to work alongside humans in various roles like hunting, herding, and guarding. This led to the development of different breeds, each with unique physical and behavioral characteristics.\n\n**Breed Diversity:**\n\n* **Over 300 Breeds:** The world boasts a fascinating variety of dog breeds, each with a distinct appearance, temperament, and purpose.\n* **Classifications:** Breeds are categorized based on their size, coat type, and intended roles, like working, herding, sporting, and companion dogs. \n* **Unique Traits:** From tiny Chihuahuas to massive Great Danes, each breed has its own personality and quirks.\n\n**Personality and Behavior:**\n\n* **Social Creatures:** Dogs are highly social animals, forming strong bonds with their human families.\n* **Intelligence and Trainability:** Many dogs are incredibly intelligent and capable of learning complex commands and tricks. \n* **Emotionally Expressive:** Dogs communicate their emotions through body language, vocalizations, and facial expressions.\n* **Individual Differences:**  While certain breeds tend to have specific temperament traits, each dog is an individual with their own unique personality.\n\n**Health and Care:**\n\n* **Lifespan:** Depending on the breed, dogs can live anywhere from 10 to 20 years.\n* **Nutrition and Exercise:** Dogs require a balanced diet and regular exercise to stay healthy and happy.\n* **Grooming:** Different breeds have different grooming needs, ranging from occasional brushing to daily baths.\n* **Veterinary Care:** Regular checkups, vaccinations, and preventative measures are crucial for maintaining good health.\n\n**Beyond Companionship:**\n\n* **Working Dogs:** Dogs play vital roles in various professions, including law enforcement, search and rescue, assistance for individuals with disabilities, and therapy work.\n* **Emotional Support:** Dogs provide emotional support, reduce stress, and improve mental well-being.\n* **Family Members:** For many families, dogs become cherished members, offering unconditional love, companionship, and joy.\n\n**Getting a Dog:**\n\n* **Research:** Before getting a dog, consider your lifestyle, living situation, and the breed's temperament and care requirements.\n* **Adopting:** Consider adopting a dog from a shelter or rescue organization, giving a loving home to a dog in need.\n* **Responsible Ownership:** Be prepared to provide a dog with a safe, loving environment, proper care, and training.\n\nDogs enrich our lives in countless ways. They offer companionship, loyalty, and unconditional love, making them truly deserving of their title: \"Man's Best Friend.\" \n"
+                                        }
+                                    ],
+                                    "role": "model"
+                                },
+                                "finishReason": "STOP",
+                                "index": 0,
+                                "safetyRatings": [
+                                    {
+                                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                        "probability": "NEGLIGIBLE"
+                                    },
+                                    {
+                                        "category": "HARM_CATEGORY_HATE_SPEECH",
+                                        "probability": "NEGLIGIBLE"
+                                    },
+                                    {
+                                        "category": "HARM_CATEGORY_HARASSMENT",
+                                        "probability": "NEGLIGIBLE"
+                                    },
+                                    {
+                                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                        "probability": "NEGLIGIBLE"
+                                    }
+                                ]
+                            }
+                        ],
+                        "usageMetadata": {
+                            "promptTokenCount": 4,
+                            "candidatesTokenCount": 642,
+                            "totalTokenCount": 646
+                        }
+                    }
+                }
+            }
+        }
+    }
+    ```
+</details>
+
+## Query and extract the main text response
+#### Expects Post Payload
+
+```json
+{
+    "text": "tell me about dogs"
+}
+```
+
+```yml reference title="List Assistants"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/google/configs/gemini-query-extract-value.yml
+```
+
+<details>
+    <summary>Example Response</summary>
+    ```json
+        {
+            "data": {
+                "CheckBody": {
+                    "time.ms": 0,
+                    "data": {
+                        "text": "tell me about dogs"
+                    },
+                    "message": "success"
+                },
+                "QueryGemini": {
+                    "time.ms": 4111,
+                    "data": "## Dogs: The Best Friends of Humans\n\nDogs, also known as **Canis lupus familiaris**, are domesticated mammals that have been companions to humans for thousands of years. Their loyalty, intelligence, and playful nature have made them beloved pets worldwide.\n\n**Here's a breakdown of some key aspects of dogs:**\n\n**Physical Characteristics:**\n\n* **Size:** Dogs come in a wide range of sizes, from tiny Chihuahuas to massive Great Danes.\n* **Coat:** Dog coats vary in length, texture, and color. Some have short, smooth coats, while others have long, fluffy fur.\n* **Tail:** Most dogs have tails that wag when they are happy. Tail length and shape can vary depending on the breed.\n* **Ears:** Dog ears come in various shapes and sizes, from floppy to erect.\n* **Snout:** Dogs have a strong sense of smell, which is aided by their long, pointed snouts.\n\n**Behavior:**\n\n* **Intelligence:** Dogs are highly intelligent animals, capable of learning complex commands and tasks.\n* **Socialization:** Dogs are social animals that thrive on interaction with humans and other dogs.\n* **Loyalty:** Dogs are known for their loyalty and devotion to their owners.\n* **Playfulness:** Dogs are playful animals that enjoy games and activities.\n* **Training:** Dogs are highly trainable, and with proper training, they can learn a wide range of behaviors.\n\n**Breeds:**\n\nThere are over 300 recognized dog breeds, each with its own unique physical characteristics and temperament. Some popular breeds include:\n\n* **Golden Retriever:** Friendly, intelligent, and eager to please.\n* **Labrador Retriever:** Loyal, playful, and known for their love of water.\n* **German Shepherd:** Intelligent, loyal, and protective.\n* **Poodle:** Intelligent, hypoallergenic, and known for their curly coats.\n* **French Bulldog:** Affectionate, playful, and known for their bat ears.\n\n**Health:**\n\n* **Lifespan:** The average lifespan of a dog is 10-13 years, but some breeds can live longer.\n* **Diet:** Dogs need a balanced diet that is rich in protein, carbohydrates, and essential nutrients.\n* **Exercise:** Most dogs need regular exercise to stay healthy and happy.\n* **Veterinary care:** Regular veterinary checkups and vaccinations are essential for maintaining a dog's health.\n\n**Benefits of Owning a Dog:**\n\n* **Companionship:** Dogs provide companionship and unconditional love.\n* **Stress relief:** Owning a dog can help reduce stress and anxiety.\n* **Exercise and activity:** Dogs encourage their owners to be more active.\n* **Improved mental health:** Studies have shown that owning a dog can improve mental health.\n* **Protection:** Some breeds are known for their protective instincts.\n\n**Conclusion:**\n\nDogs are wonderful companions that offer many benefits to their owners. Whether you're looking for a loyal friend, a playful companion, or a furry family member, there's a dog breed out there for everyone."
+                }
+            }
+        }
+    ```
+</details>
+
+## Query and set a prefix to limit the response
+#### Expects Post Payload
+
+```json
+{
+    "text": "tell me about dogs"
+}
+```
+
+```yml reference title="List Assistants"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/google/configs/gemini-query-with-prefix.yml
+```
+
+<details>
+    <summary>Example Response</summary>
+    ```json
+        {
+            "data": {
+                "CheckBody": {
+                    "time.ms": 0,
+                    "data": {
+                        "text": "tell me about dogs"
+                    },
+                    "message": "success"
+                },
+                "QueryGemini": {
+                    "time.ms": 1907,
+                    "data": "Dogs are loyal, furry companions known for their intelligence and love. 🐶 \n"
+                }
+            }
+        }
+    ```
+</details>

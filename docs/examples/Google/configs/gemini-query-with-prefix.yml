@@ -1,0 +1,28 @@
+name: AskGemini
+
+interfaces:
+  gemini/query:
+    method: POST
+    input: a|body
+    output: http
+
+    actions:
+      - name: CheckBody
+        input: a|body
+        assert:
+          tests:
+            - value: text
+              is_not_null: true
+              is_less_than: 20 # limit the amount of input characters
+
+      - name: QueryGemini
+        run_when_succeeded: [previous] # only run after CheckBody succeeds
+        http: # store your gemini key in the hosted variables or substitute a|ap_var::gemini-key| with your key if testing # https://aistudio.google.com/app/apikey
+          url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=a|ap_var::gemini-key|
+          method: POST
+          headers:
+            content-type: application/json
+          body: | # substitute the 'text' we just validated in 'CheckBody' into the body payload
+            {"contents":[{"parts":[{"text":"Your response to the following question should be less than 100 characters: a|CheckBody::text|"}]}]} 
+        post_transforms:
+          - extract_value: ".body.candidates[0].content.parts[0].text"
