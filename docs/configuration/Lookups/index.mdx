@@ -1,0 +1,206 @@
+---
+sidebar_position: 6
+slug: /configuration/interfaces/actions/lookups
+displayed_sidebar: configurationSidebar
+---
+
+# Lookups / Loops
+
+Lookups are a way to loop through an array of data and perform actions for each element.
+
+Requirements:
+    - Supply the `lookup` value which is an array of elements
+    - Nested set of `actions` which will be performed against each element from the array
+
+## Get posts per user
+
+The below example makes a request to get an array of users from https://jsonplaceholder.typicode.com/users .
+Each user has an ID, email and various other attributes. 
+
+- We can then pass this data to the second action with `lookup: a|GetUsers` which will allow us to use a nested set of actions.
+- To access data from each user / element we can use `a|body::<some variable>|`
+    - We substitute the user ID into the next http request with `https://jsonplaceholder.typicode.com/posts?userId=a|body::id|`
+- The loop will query for all the posts of each user asynchronously
+- We also then use `add_attribute` to inject some additional variables to each post
+
+```yml title="Get posts per user"
+name: http-lookup
+
+interfaces:
+  LookupUserPosts:
+    output: http
+    route: tests/lookup
+
+    actions:
+      - name: GetUsers
+        hide_data_on_success: true # hide the data from this action if successful as we don't need all of it
+        http:
+          url: https://jsonplaceholder.typicode.com/users
+        post_transforms:
+          - extract_value: body
+
+      - name: GetPostsPerUser
+        run_when_succeeded: [GetUsers]
+        lookup: a|GetUsers
+        actions:
+          - name: GetPosts
+            http:
+              url: https://jsonplaceholder.typicode.com/posts?userId=a|body::id| # pass the users ID to the userId parameter
+            post_transforms:
+              - extract_value: body
+              - add_attribute: # inject the users email and website to each post
+                  email: a|body::email|
+                  website: a|body::website|
+```
+
+<details>
+
+<summary>Example response</summary>
+
+```json
+{
+    "data": {
+        "GetUsers": {
+            "time.ms": 36
+        },
+        "GetPostsPerUser": {
+            "time.ms": 114,
+            "data": [
+                {
+                    "data": {
+                        "GetPosts": {
+                            "time.ms": 103,
+                            "data": [
+                                {
+                                    "userId": 1,
+                                    "id": 1,
+                                    "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+                                    "body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto",
+                                    "website": "hildegard.org",
+                                    "email": "Sincere@april.biz"
+                                },
+                                {
+                                    "userId": 1,
+                                    "id": 2,
+                                    "title": "qui est esse",
+                                    "body": "est rerum tempore vitae\nsequi sint nihil reprehenderit dolor beatae ea dolores neque\nfugiat blanditiis voluptate porro vel nihil molestiae ut reiciendis\nqui aperiam non debitis possimus qui neque nisi nulla",
+                                    "website": "hildegard.org",
+                                    "email": "Sincere@april.biz"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "data": {
+                        "GetPosts": {
+                            "time.ms": 102,
+                            "data": [
+                                {
+                                    "userId": 2,
+                                    "id": 11,
+                                    "title": "et ea vero quia laudantium autem",
+                                    "body": "delectus reiciendis molestiae occaecati non minima eveniet qui voluptatibus\naccusamus in eum beatae sit\nvel qui neque voluptates ut commodi qui incidunt\nut animi commodi",
+                                    "website": "anastasia.net",
+                                    "email": "Shanna@melissa.tv"
+                                },
+                                {
+                                    "userId": 2,
+                                    "id": 12,
+                                    "title": "in quibusdam tempore odit est dolorem",
+                                    "body": "itaque id aut magnam\npraesentium quia et ea odit et ea voluptas et\nsapiente quia nihil amet occaecati quia id voluptatem\nincidunt ea est distinctio odio",
+                                    "website": "anastasia.net",
+                                    "email": "Shanna@melissa.tv"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}
+```
+
+</details>
+
+## Insert multiple products into Postgres
+
+The below example expects an array of products posted to the configured route `/product/create` .
+
+```json title="Example post payload"
+[
+    {
+        "name": "something",
+        "description": "",
+        "price": 1,
+        "featured_images": [],
+        "sequence": 1,
+        "subcategory": "food",
+        "store_id": "some-uuid"
+    },
+    {
+        "name": "another",
+        "description": "",
+        "price": 2,
+        "featured_images": [],
+        "sequence": 1,
+        "subcategory": "clothes",
+        "store_id": "some-uuid"
+    }
+]
+```
+
+```yml title="Insert multiple products into Postgres"
+---
+name: products - Create Product
+description: /product/create
+
+global:
+  databases:
+    main:
+      driver: postgres
+      host: my-database.ap-southeast-1.rds.amazonaws.com
+      port: 5432
+      pass: SomePass1234
+      user: SomeUser
+      dbname: postgres
+      params: connect_timeout=10&sslmode=require
+
+interfaces:
+  product/create:
+    output: http
+    method: POST
+
+    actions:
+      - name: Input 
+        lookup: a|body
+        hide_data_on_empty: true
+
+        run_when_succeeded:
+          - previous
+        actions:
+          - name: InsertProduct
+            database: main
+            query: |
+              INSERT INTO products (name, description, price, featured_images, sequence, subcategory_id, store_id) 
+              VALUES ($1, $2, $3::decimal(10, 2), $4::jsonb,
+                CASE WHEN $5 = '' THEN NULL ELSE $5::integer END, 
+                CASE WHEN $6 = '' THEN NULL ELSE $6::uuid END, $7::uuid);    
+            params:
+              - a|body::name|
+              - a|body::description|
+              - a|body::price|
+              - | # literal block scalar used to safely insert jsonb data, else the substitution will break the yaml
+                a|body::featured_images|
+              - a|body::sequence|
+              - a|body::subcategory_id|
+              - a|body::store_id|
+
+            assert:
+              success_message: "Product created"
+              error_message: "Product cannot be created"
+              tests:
+                - value: count()
+                  is_equal_to: 0
+```
