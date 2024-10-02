@@ -1,0 +1,15 @@
+name: keep-attributes-object
+
+interfaces:
+  users/keep-object:
+    output: http
+    method: GET
+
+    actions:
+      - name: KeepAttributes
+        http:
+          url: https://jsonplaceholder.typicode.com/users/1
+        post_transforms:
+          - extract_value: .body
+          - keep_attributes:
+              - $.username

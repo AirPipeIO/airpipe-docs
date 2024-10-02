@@ -1,0 +1,17 @@
+name: keep-attributes-array
+
+interfaces:
+  users/keep-array:
+    output: http
+    method: GET
+
+    actions:
+      - name: KeepAttributes
+        http:
+          url: https://jsonplaceholder.typicode.com/users
+        post_transforms:
+          - extract_value: .body
+          - keep_attributes:
+              - $[*].username
+              - $[*].address.city
+              - $[*].address.geo.lat

@@ -1,0 +1,151 @@
+## Keep Attributes
+
+
+Keep attributes allows you to keep specific attributes attributes in an object, or multiple attributes in an array of objects while removing the rest.
+
+This leverages JSONPath for selection and intends to adhered to the RFC 9535 standard.
+
+For examples see:
+- https://support.smartbear.com/alertsite/docs/monitors/api/endpoint/jsonpath.html
+- https://docs.rs/serde_json_path/latest/serde_json_path/
+
+
+<h3> Usage </h3>
+
+
+```yaml
+# keep only the username attribute in a returned object
+post_transforms:
+  - keep_attributes:
+      - $.username
+      - $.address.city
+```
+
+```yaml
+# wildcard match to keep only the username, city, and latitude attributes in an array of objects
+post_transforms:
+  - keep_attributes:
+      - $[*].username
+      - $[*].address.city
+      - $[*].address.geo.lat
+```
+
+### Single object example | keep
+
+
+<details>
+
+<summary>Single Object Example</summary>
+
+Input
+```json
+  {
+    "id": 1,
+    "name": "Leanne Graham",
+    "username": "Bret",
+    "email": "Sincere@april.biz"
+  }
+```
+
+```yml reference title="Rename Attributes Object"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_transforms/keep_attributes_object.yml
+```
+
+Result
+```json
+  {
+    "username": "Bret"
+  }
+```
+
+</details>
+
+### Array of objects example | keep
+
+<details>
+
+<summary>Array of objects example</summary>
+
+Input
+```json
+[
+  {
+    "id": 1,
+    "name": "Leanne Graham",
+    "username": "Bret",
+    "email": "Sincere@april.biz",
+    "address": {
+      "street": "Kulas Light",
+      "suite": "Apt. 556",
+      "city": "Gwenborough",
+      "zipcode": "92998-3874",
+      "geo": {
+        "lat": "-37.3159",
+        "lng": "81.1496"
+      }
+    },
+    "phone": "1-770-736-8031 x56442",
+    "website": "hildegard.org",
+    "company": {
+      "name": "Romaguera-Crona",
+      "catchPhrase": "Multi-layered client-server neural-net",
+      "bs": "harness real-time e-markets"
+    }
+  },
+  {
+    "id": 2,
+    "name": "Ervin Howell",
+    "username": "Antonette",
+    "email": "Shanna@melissa.tv",
+    "address": {
+      "street": "Victor Plains",
+      "suite": "Suite 879",
+      "city": "Wisokyburgh",
+      "zipcode": "90566-7771",
+      "geo": {
+        "lat": "-43.9509",
+        "lng": "-34.4618"
+      }
+    },
+    "phone": "010-692-6593 x09125",
+    "website": "anastasia.net",
+    "company": {
+      "name": "Deckow-Crist",
+      "catchPhrase": "Proactive didactic contingency",
+      "bs": "synergize scalable supply-chains"
+    }
+  }
+]
+```
+
+```yml reference title="Remove Attributes Array"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_transforms/keep_attributes_array.yml
+```
+
+Result
+```json
+[
+        {
+          "username": "Bret",
+          "address": {
+            "geo": {
+              "lat": "-37.3159"
+            },
+            "city": "Gwenborough"
+          }
+        },
+        {
+          "username": "Antonette",
+          "address": {
+            "geo": {
+              "lat": "-43.9509"
+            },
+            "city": "Wisokyburgh"
+          }
+        }
+]
+```
+
+---
+
+</details>
