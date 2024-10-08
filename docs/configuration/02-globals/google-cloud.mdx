@@ -1,0 +1,68 @@
+---
+sidebar_position: 6
+slug: /configuration/globals/google-cloud
+displayed_sidebar: configurationSidebar
+---
+
+# Google Cloud
+
+You can define a Google Cloud credential in several ways.
+- Supplying the path to a credential json file
+- Putting the json credential inline in the configs
+- Manually defining the required attributes
+
+
+## Using complete Credential JSON
+
+| Name          | Type              | Description                                                                                                                       |
+| ------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `json`     | string (optional) | If using the json credential file inline                                                                                   |
+| `file`     | string (optional) | Path to google credential file                                                                                 |
+
+### Manual
+
+**Note** think about utilizing our encrypted variable store or your own secrets management.
+
+
+| Name          | Type              | 
+| ------------- | ----------------- | 
+| `type`      | string (optional) |    
+| `client_email`      | string (optional) |                         
+| `private_key_id`       | string (optional) |  
+| `private_key`        | string (optional)  |          
+| `auth_uri`     | string (optional)  |                                    
+| `token_uri`     | string (optional)  |                                    
+| `project_id`     | string (optional)  |                
+| `location_id`     | string (optional)  |                      
+
+## JSON credential file path example
+
+
+```yaml title="Google Cloud credential file example"
+global:
+  google_credentials:
+    main: 
+      file: /path/to/credentials.json
+```
+
+## JSON credential inline example
+
+```yaml title="Google Cloud credential inline json example"
+global:
+  google_credentials:
+    main: 
+      json: |
+        {
+          "type": "service_account",
+          "project_id": "someproject",
+          "private_key_id": "123456",
+          "private_key": "-----BEGIN BLAH KEY-----\nMaaaaaaBADANBgkqhkiG9w0BAQEFAASCBKYwggSEW8+Basas==\n-----END BLAH KEY-----\n",
+          "client_email": "someproject@someproject.iam.gserviceaccount.com",
+          "client_id": "100876872413513798695",
+          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+          "token_uri": "https://oauth2.googleapis.com/token",
+          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/someproject%40someproject.iam.gserviceaccount.com",
+          "universe_domain": "googleapis.com"
+        }
+```

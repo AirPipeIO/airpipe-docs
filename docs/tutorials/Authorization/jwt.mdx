@@ -1,0 +1,142 @@
+---
+sidebar_position: 1
+slug: /tutorial/authorization/jwt
+---
+
+# JWT (JSON Web Tokens)
+
+We can validate JWT tokens before performing subsequent actions.
+
+**Note** for your JWT secret, consider using our encrypted variable store, your own secrets management system or environment variables.
+
+You can use https://jwt.io/ to test or modify a JWT bearer token.
+
+## Validating a JWT bearer token
+
+Consider we have the following bearer token
+
+```
+Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk5OTk5OTk5OTk5OSwidXNlcklkIjoxfQ.kCf_Xf8bvjFuGCkZAt_SQNevRmkY3InRhX28Co4j5i4
+```
+
+```json title="Token Value"
+{
+  "sub": "1234567890",
+  "name": "John Doe",
+  "iat": 1516239022,
+  "exp": 999999999999, 
+  "userId": 1
+}
+```
+
+We can validate the bearer token, and also access data from the `jwt_claims` to pass to the subsequent action.
+
+**Note** if your token does not begin with **"Bearer"** then you do not need to set `is_authorization: true` .
+
+```yaml
+name: validate-jwt
+
+interfaces: 
+  jwtauth/user:
+    output: http
+    method: GET
+
+    actions:
+      - name: CheckHeaderToken
+        input: a|headers #acccess the token from the headers
+        assert:
+          tests:
+            - value: authorization # note header names are all lowercase regardless of how they are sent to comply with http/2 encoding
+              is_authorization: true # if value starts with "Bearer" or "Basic" etc. this should be set to true
+              is_valid_jwt: your-256-bit-secret # update secret to your own
+              is_not_null: true
+
+      - name: GetUser
+        run_when_succeeded: [previous]
+         # get the userId from the prior action to pass to the url
+        http:
+          url: https://jsonplaceholder.typicode.com/users/a|CheckHeaderToken::jwt_claims.userId|
+        post_transforms:
+          - extract_value: body
+```
+
+```sh title="Example curl"
+curl --location 'http://your.ip.address:4111/jwtauth/user' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk5OTk5OTk5OTk5OSwidXNlcklkIjoxfQ.kCf_Xf8bvjFuGCkZAt_SQNevRmkY3InRhX28Co4j5i4'
+```
+
+## Generating a JWT Token
+
+The typical scenario for generating a JWT token is when someone performs a login authentication.
+
+We will use the [add_jwt](/docs/configuration/interfaces/actions/transforms/functions#add-jwt) functionality.
+
+**Note** we are also using blowfish encryption in this example to validate the password, see [bcrypt_verify](/docs/configuration/interfaces/actions/asserts/functions#bcrypt-verify).
+
+```yaml title="Postgres database login example with JWT generation"
+name: login_user # unique name within your organization
+
+global:
+  variables: 
+    JWT_SECRET: your-256-bit-secret # update to your own secret
+
+  databases:
+    main: 
+      driver: postgres
+      conn_string: | # update to your own connection string
+        postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+interfaces:
+  user/login:
+    output: http
+    method: POST
+
+    response:
+      http_code_on_error: 403
+
+    actions:
+      - name: LoginBody
+        input: a|body
+        hide_data_on_success: true
+        hide_data_on_error: true
+        assert:
+          tests:
+            - value: email
+              is_not_null: true
+            - value: pass
+              is_not_null: true
+
+      - name: GetUserDetails
+        run_when_succeeded: [ LoginBody ]
+        database: main
+        query: SELECT email, password, verified FROM users WHERE email = $1;
+        params: [a|LoginBody::email|] 
+        assert:
+          error_message: "Authentication failed"
+          tests:
+              - value: count()
+                is_equal_to: 1
+              - value: '[0]verified'
+                is_equal_to: true
+                error_message: user not verified
+        post_transforms:
+          - extract_value: '[0]'
+
+      - name: VerifyPassword
+        input: a|LoginBody
+        hide_data_on_error: true
+        run_when_succeeded: [ GetUserDetails ]
+        assert:
+          error_message: "Authentication failed"
+          tests:
+              - value: pass
+                bcrypt_verify: a|GetUserDetails::password|
+        post_transforms:
+          - remove_attributes:
+              - $.pass
+          - add_jwt:
+              key: jwt
+              secret: a|var::JWT_SECRET|
+              exp: 1d
+              data: [email]
+```

@@ -1,0 +1,150 @@
+---
+sidebar_position: 2
+slug: /tutorial/authorization/basic-auth
+---
+
+# Basic Auth
+
+While we recommened JWTs, [Basic Auth](https://en.wikipedia.org/wiki/Basic_access_authentication) some may still desire to use this mechanism.
+
+## Accessing the basic auth values
+
+Consider the following:
+
+This basic auth is passed in the `Authorization` header
+```
+Basic U2luY2VyZUBhcHJpbC5iaXo6bXlwYXNzd29yZA==
+```
+Which is:
+```
+Sincere@april.biz:mypassword
+```
+
+```yaml
+name: get-basic-token-1
+
+interfaces: 
+  auth/basic:
+    output: http
+    method: GET
+
+    actions:
+      - name: CheckHeaderToken
+        input: a|headers
+        assert:
+          tests:
+            - value: authorization
+              is_authorization: true
+              is_not_null: true
+
+      - name: GetUser
+        run_when_succeeded: [previous] #enforce requirement of basic auth before this action can run
+         # get the username from the prior action to pass to the url
+        http:
+          url: https://jsonplaceholder.typicode.com/users?email=a|CheckHeaderToken::Basic.username|
+        post_transforms:
+          - extract_value: body
+```
+
+Example response
+```json
+{
+    "data": {
+        "CheckHeaderToken": {
+            "time.ms": 0,
+            "data": {
+                "authorization": "Basic U2luY2VyZUBhcHJpbC5iaXo6bXlwYXNzd29yZA==",
+                "Basic": {
+                    "username": "Sincere@april.biz",
+                    "password": "mypassword"
+                }
+            },
+            "message": "success"
+        },
+        "GetUser": {
+            "time.ms": 153,
+            "data": [
+                {
+                    "id": 1,
+                    "name": "Leanne Graham",
+                    "username": "Bret",
+                    "email": "Sincere@april.biz",
+                    "address": {
+                        "street": "Kulas Light",
+                        "suite": "Apt. 556",
+                        "city": "Gwenborough",
+                        "zipcode": "92998-3874",
+                        "geo": {
+                            "lat": "-37.3159",
+                            "lng": "81.1496"
+                        }
+                    },
+                    "phone": "1-770-736-8031 x56442",
+                    "website": "hildegard.org",
+                    "company": {
+                        "name": "Romaguera-Crona",
+                        "catchPhrase": "Multi-layered client-server neural-net",
+                        "bs": "harness real-time e-markets"
+                    }
+                }
+            ]
+        }
+    }
+}
+```
+
+## Verify credentials against your own database 
+
+```yaml title="Verify basic auth credentials against postgres database example"
+name: get-basic-token-and-verify
+
+global:
+  databases:
+    main: 
+      driver: postgres
+      conn_string: | # update to your own connection string
+        postgresql://a|env::POSTGRES_USER|:a|env::POSTGRES_PASS|@a|env::POSTGRES_HOST|?connect_timeout=10"
+
+interfaces: 
+  auth/basic:
+    output: http
+    method: GET
+
+    actions:
+      - name: CheckHeaderToken
+        input: a|headers
+        assert:
+          tests:
+            - value: authorization
+              is_authorization: true
+              is_not_null: true
+
+      - name: GetUserDetails
+        run_when_succeeded: [ LoginBody ]
+        database: main
+        query: SELECT email, password, verified FROM users WHERE email = $1;
+        params: [a|CheckHeaderToken::Basic.username|] 
+        assert:
+          error_message: "Authentication failed"
+          tests:
+              - value: count()
+                is_equal_to: 1
+              - value: '[0]verified'
+                is_equal_to: true
+                error_message: user not verified
+        post_transforms:
+          - extract_value: '[0]'
+
+      - name: VerifyPassword
+        input: a|LoginBody
+        hide_data_on_error: true
+        run_when_succeeded: [ GetUserDetails ]
+        assert:
+          error_message: "Authentication failed"
+          tests:
+              - value: Basic.password
+                bcrypt_verify: a|GetUserDetails::password|
+        post_transforms:
+          - remove_attributes:
+              - $.Basic.password
+```
