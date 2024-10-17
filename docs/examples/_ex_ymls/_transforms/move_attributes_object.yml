@@ -1,0 +1,17 @@
+name: move-attributes-object
+
+interfaces:
+  move/object:
+    output: http
+    method: GET
+
+    actions:
+      - name: MoveAttr
+        http:
+          url: https://jsonplaceholder.typicode.com/users/1
+        post_transforms:
+          - extract_value: .body
+          - move_attributes: 
+              $.company.name: "$.address.geo.companyName"
+              $.company.bs: "hello"
+              $.company.catchPhrase: "$."

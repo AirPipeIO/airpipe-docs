@@ -1,0 +1,227 @@
+## Move Attributes
+
+Move attributes allows you to move attributes in an object, or array to another place within that array or object.
+
+This leverages JSONPath for selection and intends to adhered to the RFC 9535 standard.
+
+For examples see:
+- https://support.smartbear.com/alertsite/docs/monitors/api/endpoint/jsonpath.html
+- https://docs.rs/serde_json_path/latest/serde_json_path/
+
+
+<h3> Usage </h3>
+
+**Note**: `move_attributes` expects a map, and not an array/list like the other attribute related features eg.
+
+#### Correct:
+```
+something: another
+hello: bye
+```
+
+#### INCORRECT:
+```
+[something:another, hello: bye] # not in array brackets
+or
+- something: another # no hyphens
+- hello: bye
+```
+
+#### Example
+```yaml
+# move attributes to a different location
+
+post_transforms:
+  - extract_value: .body
+  - move_attributes: 
+      # move company>name under the geo attribute under a new attribute under address>geo>companyName
+      $.company.name: "$.address.geo.companyName" 
+      # move company>bs attribute under a new attribute called hello under the root
+      $.company.bs: "hello"
+      # move company>catchPhrase under the root
+      $.company.catchPhrase: "$."
+```
+
+
+### Single object example | move
+
+<details>
+
+<summary>Single Object Example</summary>
+
+Input
+```json
+{
+  "id": 1,
+  "name": "Leanne Graham",
+  "username": "Bret",
+  "email": "Sincere@april.biz",
+  "address": {
+    "street": "Kulas Light",
+    "suite": "Apt. 556",
+    "city": "Gwenborough",
+    "zipcode": "92998-3874",
+    "geo": {
+      "lat": "-37.3159",
+      "lng": "81.1496"
+    }
+  },
+  "phone": "1-770-736-8031 x56442",
+  "website": "hildegard.org",
+  "company": {
+    "name": "Romaguera-Crona",
+    "catchPhrase": "Multi-layered client-server neural-net",
+    "bs": "harness real-time e-markets"
+  }
+}
+```
+
+```yml reference title="Move Attributes Object"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_transforms/move_attributes_object.yml
+```
+
+Result
+```json
+{
+  "id": 1,
+  "name": "Leanne Graham",
+  "username": "Bret",
+  "email": "Sincere@april.biz",
+  "address": {
+      "street": "Kulas Light",
+      "suite": "Apt. 556",
+      "city": "Gwenborough",
+      "zipcode": "92998-3874",
+      "geo": {
+          "lat": "-37.3159",
+          "lng": "81.1496",
+          "companyName": "Romaguera-Crona"
+      }
+  },
+  "phone": "1-770-736-8031 x56442",
+  "website": "hildegard.org",
+  "company": {},
+  "hello": "harness real-time e-markets",
+  "catchPhrase": "Multi-layered client-server neural-net"
+}
+```
+
+</details>
+
+### Array of objects example | move
+
+<details>
+
+<summary>Array of objects example</summary>
+
+Input
+```json
+[
+  {
+    "id": 1,
+    "name": "Leanne Graham",
+    "username": "Bret",
+    "email": "Sincere@april.biz",
+    "address": {
+      "street": "Kulas Light",
+      "suite": "Apt. 556",
+      "city": "Gwenborough",
+      "zipcode": "92998-3874",
+      "geo": {
+        "lat": "-37.3159",
+        "lng": "81.1496"
+      }
+    },
+    "phone": "1-770-736-8031 x56442",
+    "website": "hildegard.org",
+    "company": {
+      "name": "Romaguera-Crona",
+      "catchPhrase": "Multi-layered client-server neural-net",
+      "bs": "harness real-time e-markets"
+    }
+  },
+  {
+    "id": 2,
+    "name": "Ervin Howell",
+    "username": "Antonette",
+    "email": "Shanna@melissa.tv",
+    "address": {
+      "street": "Victor Plains",
+      "suite": "Suite 879",
+      "city": "Wisokyburgh",
+      "zipcode": "90566-7771",
+      "geo": {
+        "lat": "-43.9509",
+        "lng": "-34.4618"
+      }
+    },
+    "phone": "010-692-6593 x09125",
+    "website": "anastasia.net",
+    "company": {
+      "name": "Deckow-Crist",
+      "catchPhrase": "Proactive didactic contingency",
+      "bs": "synergize scalable supply-chains"
+    }
+  }
+]
+```
+
+```yml reference title="Move Attributes Array"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_transforms/move_attributes_array.yml
+```
+
+Result
+```json
+[
+  {
+      "id": 1,
+      "name": "Leanne Graham",
+      "username": "Bret",
+      "email": "Sincere@april.biz",
+      "address": {
+          "street": "Kulas Light",
+          "suite": "Apt. 556",
+          "city": "Gwenborough",
+          "zipcode": "92998-3874",
+          "geo": {
+              "lat": "-37.3159",
+              "lng": "81.1496",
+              "companyName": "Romaguera-Crona"
+          }
+      },
+      "phone": "1-770-736-8031 x56442",
+      "website": "hildegard.org",
+      "company": {
+          "catchPhrase": "Multi-layered client-server neural-net"
+      },
+      "hello": "harness real-time e-markets"
+  },
+  {
+      "id": 2,
+      "name": "Ervin Howell",
+      "username": "Antonette",
+      "email": "Shanna@melissa.tv",
+      "address": {
+          "street": "Victor Plains",
+          "suite": "Suite 879",
+          "city": "Wisokyburgh",
+          "zipcode": "90566-7771",
+          "geo": {
+              "lat": "-43.9509",
+              "lng": "-34.4618",
+              "companyName": "Deckow-Crist"
+          }
+      },
+      "phone": "010-692-6593 x09125",
+      "website": "anastasia.net",
+      "company": {
+          "catchPhrase": "Proactive didactic contingency"
+      },
+      "hello": "synergize scalable supply-chains"
+  }
+]
+```
+
+---
+
+</details>
