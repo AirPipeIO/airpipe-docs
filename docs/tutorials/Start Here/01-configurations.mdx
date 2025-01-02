@@ -5,9 +5,10 @@ slug: /tutorial/configurations
 
 # 01 - Configurations
 
-Configurations are a key component to using the platform. 
+Configurations are a key component to using the platform.
 
 They are:
+
 - Simple `YAML` files that can be deployed in hosted and self hosted modes
 - Can contain multiple interfaces, and each interface can have multiple actions
 - Interfaces can serve outputs such as `HTTP` commonly
@@ -19,7 +20,7 @@ Proceed with the steps under managed or unmanaged depending on your preferences,
     <summary>Hosted / Managed</summary>
 
     In the web interface you can simply upload your config files, and choose to deploy it to `staging` or `production`, revision control is also available.
-    
+
     - Log in -> https://app.airpipe.io/
     - Navigate to -> https://app.airpipe.io/configurations
         - This lists all your currently deployed (hosted) configurations and their deployment status
@@ -27,11 +28,11 @@ Proceed with the steps under managed or unmanaged depending on your preferences,
             -  `https://api.airpipe.io/<org_uuid>/<environment>/<your_route>`
     - Click `Add New` under `Configurations` in the left hand menu, or navigate to -> https://app.airpipe.io/configuration/add
         - This is where you can optionally paste in and edit any configuration you like
+
 </details>
 
 <details>
     <summary>Self Hosted / Unmanaged</summary>
-
 
     You can tell the `airpipe` binary to target any directory to serve/run these configs.
 
@@ -39,9 +40,9 @@ Proceed with the steps under managed or unmanaged depending on your preferences,
     - Create a configs directory if necessary
     - Construct the following command, substituting your API key from the prior step, and your configs directory path
         ```sh
-        ./airpipe --api-key enter-your-api-key --config-dir /path/to/configs
+        ./airpipe server --api-key enter-your-api-key --config-dir /path/to/configs
         ```
-        - These can also be supplied as environment variables that you can see by running the help command 
+        - These can also be supplied as environment variables that you can see by running the help command
             ```
             ./airpipe server --help
             ```
