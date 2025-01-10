@@ -2,6 +2,7 @@
 
 
 Filter allows you to provide a `target` being a JSONPath to an array of elements.
+If target is undefined it will work with the root element else you can set "$" if you want to be explicit.
 
 You can then provide many [conditions to test](/docs/configuration/interfaces/actions/asserts/functions) if they are valid and filter down the data set.
 This is useful to act as a search mechanism, and it leverages the existing [assertion test system](/docs/configuration/interfaces/actions/asserts/) allowing all that functionality to be available here too.
@@ -45,11 +46,10 @@ post_transforms:
 ```
 
 
-### Example
 
 <details>
 
-<summary>Example Data</summary>
+<summary>Filter Example</summary>
 
 See: https://jsonplaceholder.typicode.com/posts
 

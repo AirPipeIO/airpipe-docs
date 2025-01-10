@@ -1,0 +1,117 @@
+## Math
+
+This function is used to perform math calculations and expressions. <br />
+
+<h3>Usage</h3>
+
+```yaml
+post_transforms:
+  - math:
+      target: $.prices
+      expressions:
+        hourly_gpu_price: target.hourly_gpu_price * 1.2
+        hourly_server_price: target.hourly_server_price * 2.1
+        yearly_gpu_price: target.hourly_gpu_price * a|var::margin| * a|Input::servers| * 24 * 365 # using variables
+        yearly_server_price: target.hourly_server_price * a|var::margin| * a|Input::servers| * 24 * 365
+```
+
+<details>
+
+<summary>Math Example</summary>
+
+<br />
+Adjusting the server pricing list to add margins and new pricing.
+
+Example data set
+```json
+[
+        {
+            "hourly_gpu_price": "3.180",
+            "hourly_server_price": "25.440",
+            "gpu_type": "NVIDIA H200 SXM",
+            "gpu_type_display_name": "NVIDIA H200 SXM",
+            "gpu_count": 8,
+            "cpu_count": 2,
+            "cpu_model": "Intel(R) Xeon(R) Platinum 8568Y+",
+            "cpu_model_display_name": "Intel Xeon 8568Y+ 48-Core",
+            "cpu_speed_ghz": "2.30",
+            "ram_gb": 2048,
+            "storage_gb": 30720,
+            "bandwidth_gbps": 200,
+            "nic_type": "ConnectX-7",
+            "nic_type_display_name": "ConnectX-7"
+        },
+        {
+            "hourly_gpu_price": "3.180",
+            "hourly_server_price": "25.440",
+            "gpu_type": "NVIDIA H200 SXM 141GB",
+            "gpu_type_display_name": "NVIDIA H200 SXM 141GB",
+            "gpu_count": 8,
+            "cpu_count": 2,
+            "cpu_model": "INTEL(R) XEON(R) PLATINUM 8568Y+",
+            "cpu_model_display_name": "Intel Xeon 8568Y+ 48-Core",
+            "cpu_speed_ghz": "4.00",
+            "ram_gb": 2048,
+            "storage_gb": 30720,
+        }
+]
+```
+
+This example also leverages the [filter](#filter) functionality.
+
+```yml
+name: gpu-prices
+
+global:
+  variables: 
+    margin: 1.5
+
+interfaces:
+  v1/gpu-prices:
+    output: http
+    method: GET
+
+    actions:
+      - name: Input
+        input: a|params
+        assert:
+          tests:
+            - value: servers
+              is_greater_than: 0
+              is_not_null: true
+            - value: gpu_type
+              is_not_null: true
+            - value: gpu_count
+              is_greater_than: 0
+              is_not_null: true
+
+      - name: GpuPrices
+        run_when_succeeded: [Input]
+        http:
+          url: https://something.com/api/gpu-prices
+          headers:
+            user-agent: curl/7.81.0
+            content-type: application/json
+        post_transforms:
+          - extract_value: .body
+          - math:
+              target: $.prices
+              expressions:
+                hourly_gpu_price: target.hourly_gpu_price * a|var::margin| * a|Input::servers|
+                hourly_server_price: target.hourly_server_price * a|var::margin| * a|Input::servers|
+                yearly_gpu_price: target.hourly_gpu_price * a|var::margin| * a|Input::servers| * 24 * 365
+                yearly_server_price: target.hourly_server_price * a|var::margin| * a|Input::servers| * 24 * 365
+          - filter_search:
+              target: $.prices
+              conditions:
+                $.gpu_type:
+                  contains_value: a|Input::gpu_type|
+                  case_insensitive: true
+                $.gpu_count:
+                  is_greater_than_or_equal_to: a|Input::gpu_count|
+```
+
+
+---
+
+</details>
