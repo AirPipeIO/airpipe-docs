@@ -186,8 +186,8 @@ interfaces:
 | `is_not_empty`                | checks if one value is not empty                           | <ul> <li> `value exists` PASS </li><li>`value does not exist` Fail</li></ul> |
 | `is_uuid`                     | checks if one value is a uuid                              | <ul> <li> `value == uuid` PASS </li><li>`value != uuid` Fail</li></ul>       |
 | `is_valid_jwt`                | checks if one value is a valid jwt                         |                                                                              |
-| `contains_value`              | checks if one value contains another value                 |                                                                              |
-| `not_contains_value`          | checks if one value does not contain another value         |                                                                              |
+| `contains`              | checks if one value contains another value                 |                                                                              |
+| `not_contains`          | checks if one value does not contain another value         |                                                                              |
 | `starts_with`                 | checks if one value starts with a value                    |                                                                              |
 | `ends_with`                   | check of one value ends with a value                       |                                                                              |
 
@@ -231,8 +231,8 @@ interfaces:
               is_not_equal_to: bob
               is_not_null: true
               is_not_empty: true
-              contains_value: to
-              not_contains_value: v
+              contains: to
+              not_contains: v
               starts_with: t
               ends_with: m
             - value: num
@@ -292,7 +292,7 @@ In the event of failures.
       },
       "errors": [
         "firstname::is_equal_to: expected tom, got bob",
-        "firstname::contains_value: expected target bob does not contain to",
+        "firstname::contains: expected target bob does not contain to",
         "t::starts_with: expected target bob to end with t",
         "m::ends_with: expected target bob to end with m",
         "isNull::is_null: expected to be null",

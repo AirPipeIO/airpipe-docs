@@ -1,0 +1,28 @@
+name: search-posts
+interfaces:
+  search/posts:
+    output: http
+    method: GET
+
+    actions:
+      - name: Input
+        input: a|params # expects query parameters with title and body, eg. search/posts?title=eum&body=corp
+        assert:
+          tests:
+            - value: title
+              is_not_null: true
+            - value: body
+              is_not_null: true
+
+      - name: GetPosts
+        run_when_succeeded: [Input]
+        http: 
+          url: https://jsonplaceholder.typicode.com/posts
+        post_transforms:
+          - extract_value: .body
+          - filter:
+              target: $
+              conditions:
+                $.title: 
+                  contains: a|Input::title|
+                $.body: a|Input::body|

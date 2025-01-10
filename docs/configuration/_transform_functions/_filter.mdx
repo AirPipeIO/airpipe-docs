@@ -1,0 +1,80 @@
+## Filter
+
+
+Filter allows you to provide a `target` being a JSONPath to an array of elements.
+
+You can then provide many [conditions to test](/docs/configuration/interfaces/actions/asserts/functions) if they are valid and filter down the data set.
+This is useful to act as a search mechanism, and it leverages the existing [assertion test system](/docs/configuration/interfaces/actions/asserts/) allowing all that functionality to be available here too.
+
+This leverages JSONPath for selection and intends to adhered to the RFC 9535 standard.
+
+For examples see:
+- https://support.smartbear.com/alertsite/docs/monitors/api/endpoint/jsonpath.html
+- https://docs.rs/serde_json_path/latest/serde_json_path/
+
+
+<h3> Usage </h3>
+
+Filtering posts with title and body returned by https://jsonplaceholder.typicode.com/posts endpoint.
+
+```yaml
+post_transforms:
+  - extract_value: .body
+  - filter:
+      target: $
+      conditions:
+        $.title: 
+          contains: a|Input::title|
+        $.body: 
+          contains: a|Input::body|
+```
+
+Filtering a price list
+```yaml
+post_transforms:
+  - filter:
+    target: $.prices
+    conditions:
+      $.gpu_type:
+        contains: a|Input::gpu_type|
+        case_insensitive: true
+      $.gpu_count:
+        is_greater_than_or_equal_to: a|Input::gpu_count|
+      $.server_type:
+        not_contains: OLD
+```
+
+
+### Example
+
+<details>
+
+<summary>Example Data</summary>
+
+See: https://jsonplaceholder.typicode.com/posts
+
+Input
+```json
+[
+  {
+    "userId": 1,
+    "id": 1,
+    "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+    "body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto"
+  },
+  {
+    "userId": 1,
+    "id": 2,
+    "title": "qui est esse",
+    "body": "est rerum tempore vitae\nsequi sint nihil reprehenderit dolor beatae ea dolores neque\nfugiat blanditiis voluptate porro vel nihil molestiae ut reiciendis\nqui aperiam non debitis possimus qui neque nisi nulla"
+  }
+]
+```
+
+```yml reference title="Search posts"
+https://github.com/airpipeio/airpipe-docs/blob/main/docs/examples/_ex_ymls/_transforms/filter_posts.yml
+```
+
+---
+
+</details>
