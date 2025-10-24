@@ -34,7 +34,9 @@ Any database config defined with a matching name will have its existing connecti
 | `operation`   | string | [find](#mongodb-find-example), findOne, findOneAndDelete, findOneAndReplace, deleteOne, deleteMany, updateOne, updateMany, insertOne, insertMany, [aggregate](#mongodb-aggregate-example) |
 | `filter`      | string (optional) | required for any of the above operations except [aggregate](#mongodb-aggregate-example), supply JSON document as a string |
 | `pipeline`    | string (optional)| required if operation is set to [aggregate](#mongodb-aggregate-example), supply JSON document as a string        |
+| `insert`      | string (optional) | document as a JSON string                                      |
 | `update`      | string (optional) | document as a JSON string                                      |
+| `delete`      | string (optional) | document as a JSON string                                      |
 | `options`     | string (optional) | options as a JSON string                                     |
 
 ## Connection Strings
