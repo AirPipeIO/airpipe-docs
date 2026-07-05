@@ -7,12 +7,12 @@ description: |
 interfaces:
   run_condition/workflow_assert:
     method: POST
-    input: a|body
+    input: a|body|
     output: http
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert: # not referring to this, this asserts the current action
           tests:
             - value: message

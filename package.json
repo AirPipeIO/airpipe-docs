@@ -4,6 +4,12 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
+    "gen:refresh": "node scripts/refresh-snapshots.mjs",
+    "gen:config": "node scripts/gen-config-reference.mjs",
+    "gen:marketplace": "node scripts/gen-marketplace.mjs",
+    "gen": "npm run gen:config && npm run gen:marketplace",
+    "prestart": "npm run gen",
+    "prebuild": "npm run gen",
     "start": "docusaurus start --host 0.0.0.0",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",

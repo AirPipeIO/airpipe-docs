@@ -4,12 +4,12 @@ description: If CheckBody finishes whether it succeeds or fails, then allow GetU
 interfaces:
   run_condition/when_finished:
     method: POST
-    input: a|body
+    input: a|body|
     output: http
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: message

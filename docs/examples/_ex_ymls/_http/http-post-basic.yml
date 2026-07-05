@@ -8,7 +8,7 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body # target the body of the incoming post payload
+        input: a|body| # target the body of the incoming post payload
         assert: # check if it has the required variables
           tests:
             - value: title

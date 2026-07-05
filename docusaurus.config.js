@@ -26,8 +26,9 @@ const config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
 
-  // onBrokenLinks: 'throw',
-  // onBrokenMarkdownLinks: 'warn',
+  onBrokenLinks: "throw",
+  onBrokenMarkdownLinks: "warn",
+  onBrokenAnchors: "warn",
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -83,6 +84,18 @@ const config = {
             sidebarId: "configurationSidebar",
             position: "left",
             label: "Configuration",
+          },
+          {
+            type: "docSidebar",
+            sidebarId: "featuresSidebar",
+            position: "left",
+            label: "Features",
+          },
+          {
+            type: "docSidebar",
+            sidebarId: "referenceSidebar",
+            position: "left",
+            label: "Reference",
           },
           {
             type: "docSidebar",
@@ -168,7 +181,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © 2024 Air Pipe`,
+        copyright: `Copyright © ${new Date().getFullYear()} Air Pipe`,
       },
       prism: {
         theme: prismThemes.github,
@@ -186,6 +199,10 @@ const config = {
     }),
   markdown: {
     mermaid: true,
+    // .md -> CommonMark (lenient), .mdx -> MDX (strict). Generated marketplace
+    // pages are .md so external pack READMEs (full of `{` and `<`) don't break
+    // the MDX parser.
+    format: "detect",
   },
   themes: [
     "docusaurus-theme-github-codeblock",

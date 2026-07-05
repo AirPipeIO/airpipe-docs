@@ -1,0 +1,67 @@
+---
+sidebar_position: 5
+displayed_sidebar: featuresSidebar
+slug: /otel-tracing
+---
+
+# OpenTelemetry tracing
+
+Air Pipe emits distributed traces with zero code when run as the self-hosted
+binary. Point it at any OTLP collector and you get spans for every request,
+interface, action and lookup, with W3C trace-context propagation to upstreams.
+
+## Enable it
+
+Supply your collector endpoint via env var or flag:
+
+```bash
+AIRPIPE_OTEL_ENDPOINT="http://localhost:4318/v1/traces" ./airpipe server
+# or
+./airpipe server --otel-endpoint "http://localhost:4318/v1/traces"
+```
+
+:::warning
+The exporter uses **OTLP over HTTP/protobuf**, not gRPC. Point it at your
+collector's HTTP port (commonly **4318**, path `/v1/traces`) — not the gRPC
+`4317` port, or no traces will arrive. An unreachable endpoint fails **silently**,
+so verify spans land in your backend.
+:::
+
+## Configuration
+
+| Env var | Purpose | Default |
+|---|---|---|
+| `AIRPIPE_OTEL_ENDPOINT` | OTLP HTTP endpoint | (disabled) |
+| `AIRPIPE_OTEL_HDR_<NAME>` | Add header `<name>` to exports (e.g. `AIRPIPE_OTEL_HDR_AUTHORIZATION`) | — |
+| `AIRPIPE__OTEL_SAMPLE_RATIO` | Sampling ratio 0.0–1.0 (note the **double** underscore) | `1.0` |
+| `AIRPIPE__OTEL_EXPORT_TIMEOUT_SECS` | Export timeout | `30` |
+
+```bash
+AIRPIPE_OTEL_ENDPOINT="https://otel.example.com/v1/traces" \
+AIRPIPE_OTEL_HDR_AUTHORIZATION="Basic 123==" \
+AIRPIPE__OTEL_SAMPLE_RATIO=0.25 \
+./airpipe server
+```
+
+Resource identity is `service.name=airpipe-api` with the binary's
+`service.version`.
+
+## What gets traced
+
+- **HTTP root span** per request — attributes `http.method`, `url.path`,
+  `server.address`, `http.route`, `http.response.status_code`.
+- **Interface span** — with `interface` and `action_count`.
+- **Action spans** — one per action, plus `<action>::lookup` spans for fan-out.
+
+Trace context is propagated to `http` actions, so upstream services on the same
+standard continue the trace.
+
+## Quick local test (Jaeger)
+
+```bash
+docker run --rm -p 16686:16686 -p 4318:4318 jaegertracing/all-in-one
+AIRPIPE_OTEL_ENDPOINT="http://localhost:4318/v1/traces" ./airpipe server
+# open http://localhost:16686
+```
+
+See also [Metrics](/docs/configuration/metrics) for Prometheus.

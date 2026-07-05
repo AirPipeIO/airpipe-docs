@@ -15,7 +15,7 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: starts_with

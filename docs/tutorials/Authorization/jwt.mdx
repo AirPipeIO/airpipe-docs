@@ -43,7 +43,7 @@ interfaces:
 
     actions:
       - name: CheckHeaderToken
-        input: a|headers #acccess the token from the headers
+        input: a|headers| #acccess the token from the headers
         assert:
           tests:
             - value: authorization # note header names are all lowercase regardless of how they are sent to comply with http/2 encoding
@@ -71,7 +71,7 @@ The typical scenario for generating a JWT token is when someone performs a login
 
 We will use the [add_jwt](/docs/configuration/interfaces/actions/transforms/functions#add-jwt) functionality.
 
-**Note** we are also using blowfish encryption in this example to validate the password, see [bcrypt_verify](/docs/configuration/interfaces/actions/asserts/functions#bcrypt-verify).
+**Note** we are also using blowfish encryption in this example to validate the password, see [verify_bcrypt](/docs/configuration/interfaces/actions/asserts/functions#bcrypt-verify).
 
 ```yaml title="Postgres database login example with JWT generation"
 name: login_user # unique name within your organization
@@ -96,7 +96,7 @@ interfaces:
 
     actions:
       - name: LoginBody
-        input: a|body
+        input: a|body|
         hide_data_on_success: true
         hide_data_on_error: true
         assert:
@@ -123,14 +123,14 @@ interfaces:
           - extract_value: '[0]'
 
       - name: VerifyPassword
-        input: a|LoginBody
+        input: a|LoginBody|
         hide_data_on_error: true
         run_when_succeeded: [ GetUserDetails ]
         assert:
           error_message: "Authentication failed"
           tests:
               - value: pass
-                bcrypt_verify: a|GetUserDetails::password|
+                verify_bcrypt: a|GetUserDetails::password|
         post_transforms:
           - remove_attributes:
               - $.pass

@@ -36,7 +36,7 @@ description: Workflow control
 
     actions:
       - name: CheckLoginBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: email
@@ -45,7 +45,7 @@ description: Workflow control
       - name: CheckSomeOtherData
         depends_on:
           - CheckLoginBody # wait for this action to finish before continuing
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: something
@@ -67,7 +67,7 @@ interfaces:
 
     actions:
       - name: CheckLoginBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: email
@@ -76,7 +76,7 @@ interfaces:
       - name: CheckSomeOtherData
         depends_on:
           - previous # we can use the `previous` keyword to refer to the previous action for the same behaviour
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: something
@@ -98,14 +98,14 @@ interfaces:
 
     actions:
       - name: CheckLoginBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: email
               is_not_null: true
 
      - name: CheckParams
-        input: a|params
+        input: a|params|
         assert:
           tests:
             - value: something
@@ -115,7 +115,7 @@ interfaces:
         depends_on:
           - CheckLoginBody # we can define a list of actions here to wait on
           - CheckParams
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: something
@@ -137,14 +137,14 @@ interfaces:
 
     actions:
       - name: CheckLoginBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: email
               is_not_null: true
 
      - name: CheckParams
-        input: a|params
+        input: a|params|
         assert:
           tests:
             - value: something
@@ -154,7 +154,7 @@ interfaces:
         run_when_succeeded:
           - CheckLoginBody # run this action if these have passed
           - CheckParams
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: something
@@ -176,14 +176,14 @@ interfaces:
 
     actions:
       - name: CheckLoginBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: email
               is_not_null: true
 
      - name: CheckParams
-        input: a|params
+        input: a|params|
         assert:
           tests:
             - value: something
@@ -193,7 +193,7 @@ interfaces:
         run_when_failed:
           - CheckLoginBody # run this action if these two have failed
           - CheckParams
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: something

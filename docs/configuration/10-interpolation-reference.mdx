@@ -1,0 +1,89 @@
+---
+sidebar_position: 10
+slug: /configuration/interpolation
+displayed_sidebar: configurationSidebar
+---
+
+# Interpolation reference
+
+Air Pipe interpolates values into your config at runtime using the `a|…|` marker.
+This page is the full grammar reference — for a gentle introduction see
+[Variable substitutions](/docs/configuration/substitutions).
+
+Every marker has the form:
+
+```
+a|<root>::<path>->filter1->filter2|
+```
+
+- `<root>` selects a data source (see below).
+- `::<path>` optionally drills into it (dotted path, or `jq::<expr>` for jq).
+- `->filter` optionally transforms the resolved value; filters chain left to right.
+
+## Roots
+
+**Request data** (available on HTTP interfaces):
+
+| Root | Resolves to |
+|---|---|
+| `body` | the request body (`a|body::user.email|`) |
+| `params` | route/query parameters (`a|params::id|`) |
+| `headers` | request headers (`a|headers::authorization|`) |
+| `ip` | the resolved client IP |
+| `raw_body` | the exact request bytes |
+| `request` | the full request object |
+
+**Config & environment:**
+
+| Root | Resolves to |
+|---|---|
+| `var` / `ap_var` | a global variable — `a|var::api_base_url|` |
+| `secret` | a decrypted secret — `a|secret::stripe_key|` |
+| `env` | an environment variable — `a|env::HOME|` |
+| `template` | a named response template |
+| `state` | durable state — `a|state::last_seen|`, `a|state::NAMESPACE.KEY|` |
+| `uuid` | a freshly generated UUID |
+| `timestamp:<spec>` | a formatted timestamp |
+| `include` | file include (self-hosted) |
+
+**Action outputs:** any root that is not a built-in is treated as an **action
+name** — `a|FetchUser::email|` reads the `email` field from the `FetchUser`
+action's output. Use `jq::` for richer extraction: `a|FetchUser::jq::.items[0].id|`.
+
+## Filters
+
+Chain with `->`. Common filters:
+
+`to_string`, `to_number`, `upper`, `lower`, `length`, `single_quote`,
+`double_quote`, `json_esc`, `json_array`, `array_values`, `raw`, `some`,
+`map(...)`, `default(...)`, `wrap(...)`, `prefix(...)`, `suffix(...)`,
+`join(...)`, `access(...)`, `path(...)`.
+
+```yaml
+# Uppercase a param, defaulting when absent
+url: "https://api.example.com/a|params::region->upper->default(US)|"
+```
+
+## Function wrappers
+
+Wrap a marker to coerce its rendering: `single_quote(...)`, `double_quote(...)`,
+`json_esc(...)`, `json_stringify(...)`. These are useful when injecting values
+into SQL or JSON bodies.
+
+## Multi-line values
+
+For templates, HTML or JSON, use a YAML literal block so the marker expands
+inside the string:
+
+```yaml
+http:
+  url: https://example.com/webhook
+  body: |
+    a|var::some_big_json|
+```
+
+:::note
+Always close the marker with a trailing `|` — `input: a|body|`, not `input: a|body`.
+The open form without the trailing pipe is **deprecated**; older examples may still
+show it. The legacy `<OR>` fallback syntax is likewise deprecated — use `->default(...)`.
+:::

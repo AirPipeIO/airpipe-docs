@@ -17,7 +17,7 @@ Requirements:
 The below example makes a request to get an array of users from https://jsonplaceholder.typicode.com/users .
 Each user has an ID, email and various other attributes. 
 
-- We can then pass this data to the second action with `lookup: a|GetUsers` which will allow us to use a nested set of actions.
+- We can then pass this data to the second action with `lookup: a|GetUsers|` which will allow us to use a nested set of actions.
 - To access data from each user / element we can use `a|body::<some variable>|`
     - We substitute the user ID into the next http request with `https://jsonplaceholder.typicode.com/posts?userId=a|body::id|`
 - The loop will query for all the posts of each user asynchronously
@@ -41,7 +41,7 @@ interfaces:
 
       - name: GetPostsPerUser
         run_when_succeeded: [GetUsers]
-        lookup: a|GetUsers
+        lookup: a|GetUsers|
         actions:
           - name: GetPosts
             http:
@@ -174,7 +174,7 @@ interfaces:
 
     actions:
       - name: Input 
-        lookup: a|body
+        lookup: a|body|
         hide_data_on_empty: true
 
         run_when_succeeded:

@@ -28,37 +28,29 @@ interfaces:
               env: "production"
 ```
 
-import AddAttribute from "./_transform_functions/_add_attribute.mdx";
-import AddJWT from "./_transform_functions/_add_jwt.mdx";
-import AddBcrypt from "./_transform_functions/_add_bcrypt.mdx";
-import ExtractValue from "./_transform_functions/_extract_value.mdx";
-import GeneratePassword from "./_transform_functions/_generate_password.mdx";
-import GroupBy from "./_transform_functions/_group_by.mdx";
-import Numerics from "./_transform_functions/_numerics.mdx";
-import RemoveAttributes from "./_transform_functions/_remove_attributes.mdx"
-import RenameAttributes from "./_transform_functions/_rename_attributes.mdx"
-import RemoveKeys from "./_transform_functions/_remove_keys.mdx";
-import RenameKeys from "./_transform_functions/_rename_keys.mdx";
-import NestedTransforms from "./_transform_functions/_nested_transforms.mdx"
-import KeepAttributes from "./_transform_functions/_keep_attributes.mdx"
-import MoveAttributes from "./_transform_functions/_move_attributes.mdx"
-import Filter from "./_transform_functions/_filter.mdx"
-import Math from "./_transform_functions/_math.mdx"
+## Available transforms
 
+Air Pipe ships a large set of transform functions. The **[Transforms
+reference](/docs/reference/transforms)** documents every one with its fields and
+an example — it is generated directly from the engine schema, so it never drifts.
 
-<AddAttribute />
-<AddJWT />
-<AddBcrypt />
-<ExtractValue />
-<GeneratePassword />
-<GroupBy />
-<Numerics />
-<RemoveAttributes/>
-<RenameAttributes/>
-<KeepAttributes/>
-<MoveAttributes/>
-<NestedTransforms/>
-<RemoveKeys />
-<RenameKeys />
-<Filter />
-<Math />
+Common ones:
+
+| Transform | Does |
+|---|---|
+| `extract_value` / `extract_with_jq` / `extract_with_regex` | Pull a value or subset out of the data |
+| `add_attribute` / `rename_keys` / `remove_keys` | Reshape objects |
+| `keep_attributes` / `remove_attributes` / `move_attributes` | Allow/deny/relocate fields |
+| `filter` | Keep only elements matching [assertion conditions](/docs/configuration/interfaces/actions/asserts) |
+| `group_by` / `numerics` / `math` | Aggregate and compute |
+| `generate_password` / `generate_bytes` / `encrypt_value` | Secrets & crypto |
+| `add_jwt` / `bcrypt` | Auth helpers |
+| `nested_transforms` | Apply transforms per key |
+
+See the full list and fields in the [Transforms reference](/docs/reference/transforms).
+
+## Add JWT {#add-jwt}
+
+`add_jwt` signs a JWT from your data and adds it under a key. See the
+[AddJWT reference](/docs/reference/transforms#type-addjwt) for all fields and an
+example.

@@ -6,6 +6,11 @@ displayed_sidebar: configurationSidebar
 
 # Tests
 
+:::tip Full field reference
+Every assertion (comparison, string, JWT/HMAC, schema, crypto) with examples is
+in the **[Asserts & tests reference](/docs/reference/asserts)**, generated from the engine schema.
+:::
+
 To [assert](/docs/configuration/interfaces/actions/asserts) or validate the outcome of your input data, tests can be used.
 You can provide an array of tests to validate different input values.
 Each test can can contain one or many functions to validate the targetted value.
@@ -20,7 +25,7 @@ interfaces:
     show_error_detail: true
     actions:
       - name: Input
-        input: a|body
+        input: a|body|
         assert:
           error_message: "Password not strong enough"
           tests:
@@ -70,14 +75,14 @@ Take for example the below JSON data is sent to an API interface.
 }
 ```
 
-To access the this input we would use `a|body`
+To access the this input we would use `a|body|`
 
 <h3>Usage</h3>
 
 ```yml
 actions:
   - name: Input
-    input: a|body
+    input: a|body|
     assert:
       error_message: "First name not long enough"
       tests:
@@ -106,7 +111,7 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: firstname
@@ -158,7 +163,7 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: .info.thing1
@@ -224,7 +229,7 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: firstname
@@ -347,7 +352,7 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: pass
@@ -396,7 +401,7 @@ You should see a similar output if the regex does not match
 
 | Name     | Description          | Examples                |
 | -------- | -------------------- | ----------------------- |
-| `bcrypt` | verify bcrypt values | `bcrypt_verify: <hash>` |
+| `bcrypt` | verify bcrypt values | `verify_bcrypt: <hash>` |
 
 <h3> Usage </h3>
 
@@ -413,7 +418,7 @@ Consider the following payload
 ```
 
 ```yaml
-name: bcrypt_verifyexample
+name: verify_bcryptexample
 version: 0.0.1
 description: Bcrypt Verify Example
 metrics_enabled: true
@@ -426,12 +431,12 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: pass
               is_not_null: true
-              bcrypt_verify: $2y$10$ThgA0htLEcaJwOyLx33HZ.DdNolY6pjnXTtoG4fDVswXqepbSL9yu
+              verify_bcrypt: $2y$10$ThgA0htLEcaJwOyLx33HZ.DdNolY6pjnXTtoG4fDVswXqepbSL9yu
 ```
 
 If the verify is successful
@@ -462,7 +467,7 @@ If the verify is unsuccessful
       "data": {
         "pass": "airpi"
       },
-      "errors": ["pass::bcrypt_verify: false"],
+      "errors": ["pass::verify_bcrypt: false"],
       "time.ms": 44
     }
   },
@@ -494,7 +499,7 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: firstname
@@ -525,7 +530,7 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: firstname

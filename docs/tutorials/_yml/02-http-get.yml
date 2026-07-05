@@ -7,4 +7,4 @@ interfaces:
     # route: tutorial/customroute # if this was enabled, then the http route would be this, and not the interface name
     actions:
       - name: CheckQueryParams # every action should have a name
-        input: a|params # a|params is a special input to view the query parameters from the http request, a|body and a|headers are also options
+        input: a|params| # a|params| is a special input to view the query parameters from the http request, a|body| and a|headers| are also options

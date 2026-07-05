@@ -30,7 +30,7 @@ interfaces:
 
     actions:
       - name: CheckHeaderToken
-        input: a|headers
+        input: a|headers|
         assert:
           tests:
             - value: authorization
@@ -112,7 +112,7 @@ interfaces:
 
     actions:
       - name: CheckHeaderToken
-        input: a|headers
+        input: a|headers|
         assert:
           tests:
             - value: authorization
@@ -136,14 +136,14 @@ interfaces:
           - extract_value: '[0]'
 
       - name: VerifyPassword
-        input: a|LoginBody
+        input: a|LoginBody|
         hide_data_on_error: true
         run_when_succeeded: [ GetUserDetails ]
         assert:
           error_message: "Authentication failed"
           tests:
               - value: Basic.password
-                bcrypt_verify: a|GetUserDetails::password|
+                verify_bcrypt: a|GetUserDetails::password|
         post_transforms:
           - remove_attributes:
               - $.Basic.password

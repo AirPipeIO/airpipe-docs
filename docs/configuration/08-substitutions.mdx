@@ -16,7 +16,7 @@ Variable substitutions are used to dynamically inject data and modify your confi
 ## How
 To substitute variables the following convention is followed `a|<something>|`.
     - All substitutions must start with `a|` and end with a `|` 
-    - You may notice in configs, `input: a|body`, `input: a|params`, `input: a|headers` these are **not** substitutions, they are for accessing data when used in the `input` parameter, as such they do not have a trailing `|`.
+    - The same closed `a|…|` form is used in the `input:` parameter to select a data source, e.g. `input: a|body|`, `input: a|params|`, `input: a|headers|`. (Older docs showed these without the trailing `|`; that open form is deprecated — always close the marker.)
       - See [Input Variables](#input-variables) below on how to access values within the above mentioned.
     - Complicated substitutions such as `templates`, `HTML`, `JSON` etc. should use a literal scalar blocks eg.
 
@@ -60,7 +60,7 @@ This assumes that the input data for the `CheckBody` action contains a variable 
 ```yaml title="Access the variable named 'firstname' from the CheckBody action"
     actions:
       - name: CheckBody
-        input: a|body # <- NOT a variable substitution
+        input: a|body| # <- NOT a variable substitution
 
       - name: CheckUser
         run_when_succeeded:

@@ -3,3 +3,9 @@ node_modules
 build
 *ideas.md
 test-*
+
+# Generated docs (produced by `npm run gen` from data/*.snapshot.json).
+# The snapshots ARE committed; the generated MDX is not. These must be routed
+# dirs (no leading underscore) so Docusaurus includes them in the sidebar.
+docs/reference/
+docs/examples/marketplace/

@@ -1,0 +1,75 @@
+---
+sidebar_position: 3
+slug: /features/openapi
+displayed_sidebar: featuresSidebar
+---
+
+# Auto-generated API docs (OpenAPI)
+
+Air Pipe generates an **OpenAPI 3.0.3** spec and a **Swagger UI** for your HTTP
+interfaces automatically — no annotations, no separate spec file. Turn it on
+with one flag.
+
+## Enable it
+
+Set `docs: true` at the config root. It is **opt-in** — if you omit `docs`, the
+config is not included in the generated documentation.
+
+```yaml
+name: my-api
+docs: true
+interfaces:
+  # ...
+```
+
+## View it
+
+Self-hosted:
+
+| Path | What |
+|---|---|
+| `/documentation` | Swagger UI (interactive) |
+| `/docs.json` | The raw OpenAPI 3.0.3 spec |
+
+Managed: `/{org}/{env}/documentation` and `/{org}/{env}/docs.json`.
+
+These routes are public (no auth), so anyone who can reach the host can read the
+API docs.
+
+## What feeds the spec
+
+The spec is derived from your config — the more you describe an interface, the
+richer the docs:
+
+| Config field | Becomes |
+|---|---|
+| `route`, `method` | Path + operation |
+| `summary`, `description` | Operation summary/description |
+| `tags` | Grouping in Swagger UI |
+| `request_example` / `response_example` | Example payloads |
+| `assert` tests on `a|body|` / `a|params|` | Request schema + parameters |
+
+Because parameters and the request schema come from your **assertions**, writing
+good `assert` tests gives you an accurate API schema for free — the same
+mechanism that powers [MCP tool input schemas](/docs/configuration/mcp-tools).
+
+```yaml
+interfaces:
+  getUser:
+    method: GET
+    route: /users/:id
+    summary: Fetch a user by id
+    tags: [Users]
+    actions:
+      - name: Validate
+        input: a|params|
+        assert:
+          tests:
+            - value: id
+              is_uuid: true        # -> path param typed as uuid in OpenAPI
+```
+
+## Customize
+
+Set the documentation title and description at launch with `--docs-title` and
+`--docs-description` (default title: "API Documentation").

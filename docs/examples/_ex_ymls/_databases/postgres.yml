@@ -23,7 +23,7 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: firstname

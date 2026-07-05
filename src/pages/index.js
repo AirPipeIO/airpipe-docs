@@ -41,8 +41,8 @@ export default function Home() {
   const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
-      title={`v1`}
-      description="Description will go into a meta tag in <head />"
+      title="Air Pipe — Build APIs, integrations & workflows from YAML"
+      description="Air Pipe lets you build performant APIs, integrations and workflows declaratively in a single YAML file. Managed or self-hosted."
       className={styles.wrapper}
     >
       <HomepageHeader />

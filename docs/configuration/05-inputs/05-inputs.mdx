@@ -12,10 +12,10 @@ They can be incoming data, previous action data, or newly fetched data eg. datab
 Each action accepts **one** input only.
 
 You can either define in your action:
-- `input: a|body`
-- `input: a|headers`
-- `input: a|params`
-- `input: a|<action-name>`
+- `input: a|body|`
+- `input: a|headers|`
+- `input: a|params|`
+- `input: a|<action-name>|`
 
 Or alternatively, make a request to fetch data by defining one of the below options:
 - [`command`](/docs/configuration/interfaces/actions/inputs/command)
@@ -23,7 +23,8 @@ Or alternatively, make a request to fetch data by defining one of the below opti
 - [`http`](/docs/configuration/interfaces/actions/inputs/http)
 - [`email`](/docs/configuration/interfaces/actions/inputs/email)
 
-> Note **inputs** do not have trailing `|` Pipes
+> Close every marker with a trailing `|` (e.g. `a|body|`). The old open form
+> without the trailing pipe is deprecated.
 
 ```yml title="handling the input body from a http request"
 name: input-tests
@@ -34,7 +35,7 @@ interfaces:
 
     actions:
       - name: Inputs
-        input: a|body
+        input: a|body|
 ```
 
 

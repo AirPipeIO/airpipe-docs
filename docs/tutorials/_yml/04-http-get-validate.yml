@@ -7,7 +7,7 @@ interfaces:
     # route: tutorial/customvalidate # if this was enabled, then the http route would be this, and not the interface name
     actions:
       - name: CheckParams
-        input: a|params # we do not use a closing pipe here, as we want the input to access the data, and not replace the value here
+        input: a|params| # we do not use a closing pipe here, as we want the input to access the data, and not replace the value here
         assert:
           tests:
             - value: id # look for the `id` value in query parameters

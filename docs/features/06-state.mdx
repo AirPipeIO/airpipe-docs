@@ -1,0 +1,68 @@
+---
+sidebar_position: 13
+slug: /configuration/state
+displayed_sidebar: featuresSidebar
+---
+
+# Durable state
+
+Durable state is a key/value store for things that must survive across requests
+and runs — polling cursors, dedupe sets, idempotency keys and counters. It is
+distinct from `var::` variables, which are read-only config/secrets.
+
+State is backed by a pluggable backend selected by deployment: in-memory
+(single-node, ephemeral), Postgres (durable/shared, via `global.databases`), or
+the Air Pipe managed backend. Read it inline anywhere interpolation runs with
+`a|state::KEY|` or `a|state::NAMESPACE.KEY|` (default namespace = the config
+name). Full fields: [Durable state reference](../reference/09-state.md).
+
+## Operations
+
+Use a `state:` action with one of `get`, `set`, `advance`, `delete`, `seen`:
+
+```yaml
+actions:
+  - name: Cursor            # read the cursor (with a default)
+    state:
+      get:
+        key: last_seen
+        default: "1970-01-01T00:00:00Z"
+
+  - name: Fetch
+    http:
+      url: "https://api.example.com/items?since=a|state::last_seen|"
+
+  - name: SaveCursor        # advance monotonically: stores max(current, value)
+    state:
+      advance:
+        key: last_seen
+        value: a|Fetch::max_updated_at|
+```
+
+- **`get`** → `{ value, version, found }`; returns `default` when absent/expired.
+- **`set`** → upsert; pass `expected_version` for optimistic concurrency.
+- **`advance`** → monotonic cursor, never moves backwards.
+- **`delete`** → `{ deleted }`.
+- **`seen`** → check-and-add to a bounded dedupe set; returns `{ was_new }`.
+
+## Dedupe example
+
+`seen` records an id in a bounded set and reports whether it was new. Branch on
+`was_new` to skip already-processed events:
+
+```yaml
+- name: Dedupe
+  state:
+    seen:
+      key: processed_events
+      id: a|body::event_id|
+      ttl: "24h"
+- name: Handle
+  input: a|Dedupe::was_new|
+  assert:
+    tests:
+      - value: a|Dedupe::was_new|
+        is_equal_to: true
+  # ... process the new event
+```
+

@@ -1,0 +1,4532 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IntegrationConfig",
+  "description": "AirPipe integration configuration. Defines the structure for API configurations\nwith interfaces, actions, and global settings.\n\n## Example\n```yaml\nname: my-api-config           # Required: Name of the configuration\nversion: 0.1.0                # Optional: Version string\ndescription: My API config    # Optional: Description\n\nglobal:                       # Optional: Global settings\n  variables:                  # Global variables accessible in all interfaces\n    api_base_url: https://api.example.com\n  secrets:                    # Global secrets (values are encrypted)\n    my_secret:\n      value: secret_value\n  databases:                  # Global database connections\n    main_db:\n      connection_string: postgres://user:pass@localhost/db\n\ninterfaces:                   # Required: Map of interface definitions\n  myEndpoint:                 # Interface name (if http used as route, unless route itself is defined)\n    method: POST              # HTTP method\n    actions:                  # Actions to execute\n      - name: ValidateInput\n        input: a|body\n```",
+  "type": "object",
+  "properties": {
+    "expose_metrics": {
+      "description": "Expose a Prometheus `/metrics` endpoint for this config (self-hosted modes only).\nWhen true, interface and action-level metrics are emitted with `{config, interface}` labels.",
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "version": {
+      "description": "Version of the configuration (e.g., \"0.1.0\").",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "description": {
+      "description": "Human-readable description of what this configuration does.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "name": {
+      "description": "Name of configuration",
+      "type": "string"
+    },
+    "docs": {
+      "description": "Enable or disable auto-generated API documentation for this config's HTTP interfaces.\nDefaults to enabled (omit or set true). Set to false to exclude from docs.",
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "interfaces": {
+      "description": "Map of interface definitions. Keys are interface names (used as routes),\nvalues contain the interface configuration with actions and settings.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Interface"
+      }
+    },
+    "global": {
+      "description": "Global configuration shared across all interfaces including variables,\nsecrets, databases, templates, and HTTP defaults.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GlobalConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "network": {
+      "description": "Config-wide network access-control policy (IP/geo/ASN/rate-limit). Applies\nto every interface as a baseline; each interface inherits and tightens it\nvia its own `network` block (unless it sets `inherit: false`).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NetworkPolicy"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "interfaces"
+  ],
+  "$defs": {
+    "Interface": {
+      "description": "Air Pipe interface definition. An interface represents an endpoint that can be\ninvoked (via HTTP, schedule, etc.) and executes a chain of actions.\n\n## Example\n```yaml\nmyApiEndpoint:              # Interface name (can be used as route path)\n  summary: Get users        # Short description for documentation\n  description: |            # Long description (optional)\n    Retrieves a list of all\n    users in the organization.\n  method: POST              # HTTP method (for HTTP interfaces)\n  route: /users             # URL path (optional, defaults to interface name)\n  tags:                     # OpenAPI tags for grouping\n    - Users\n    - API\n  output: http              # Output type: http\n\n  templates:                # Interface-specific response templates\n    success_template: |\n      { \"status\": \"ok\" }\n\n  actions:                  # Ordered list of actions to execute\n    - name: ValidateJwt     # Action name (used for references)\n        input: a|headers    # Input source (a|headers, a|body, etc.)\n      - name: FetchData\n        database: main      # Database connection to use, assuming global is defined\n        query: SELECT * FROM users WHERE org_uuid = $1\n        params:\n          - a|CheckBody::organization_uuid|\n\n  assert:                   # Final assertion against action results\n    tests:\n      - value: count()\n        is_equal_to: 1\n\n  response:                 # Response configuration\n    http_code_on_error: 400 # HTTP status code on error\n    http_code_inherit_error: [FetchData]  # Inherit error code from action\n```",
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "log": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CustomLog"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tags": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "templates": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "schedule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Schedule"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "silence": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "method": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "route": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "show_error_detail": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "actions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/Action"
+          }
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conn_string": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "query": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "params": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/Param"
+          }
+        },
+        "tests": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/Test"
+          }
+        },
+        "assert": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Assert"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InterfaceOutput"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "response": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InterfaceResponse"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disable_fastpath": {
+          "description": "Opt this interface out of the compiled fast path (AP_FASTPATH), forcing every request through\nthe interpreter. The fast path is byte-identical, so this never changes output — it is an escape\nhatch for interfaces where the fast-path attempt's side effects matter on a fallback: a fast-path\nattempt that bails (an assert fails) has already fired its side-effecting actions (http requests,\nDB writes), and the interpreter then re-runs them, so those side effects fire twice. Set this on\nan interface where that double-fire is unacceptable (or, as here, on a test-harness interface\nthat deliberately fails tests so it would always bail). Default (unset) = fast path allowed.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "request_example": {
+          "description": "Example request body shown in generated API documentation."
+        },
+        "response_example": {
+          "description": "Example successful response body shown in generated API documentation."
+        },
+        "notes": {
+          "description": "Additional free-form documentation notes shown under the endpoint description.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "network": {
+          "description": "Network access-control policy for this interface (IP/geo/ASN/rate-limit).\nInherits and tightens the config-wide `network` policy unless `inherit: false`.\nEvaluated before any actions run; denied requests get the `on_deny` response.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NetworkPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mcp": {
+          "description": "Expose this interface as an MCP tool (opt-in). When set with `enabled: true`,\nthe interface is listed by the MCP server (`tools/list`) and callable via\n`tools/call`, reusing the interface's existing in-config auth assertions.\nAbsence = not exposed, so admin/sensitive interfaces simply omit this field.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/McpTool"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "CustomLog": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "body": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "params": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "headers": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Schedule": {
+      "description": "AirPipe schedule configuration. Defines when and how an interface should be\nexecuted automatically via the scheduler.\n\n## Example\n```yaml\nmyScheduledEndpoint:        # Interface name\n  method: POST\n  actions:\n    - name: MyAction\n      http:\n        url: https://api.example.com/trigger\n\n  schedule:                 # Schedule configuration (enables auto-execution)\n    cron: \"0 9 * * *\"       # Required: Cron expression (5 fields: minute-hour-day-month-weekday)\n    enabled: true           # Optional: Enable/disable the schedule (default: false)\n\n    # Retry configuration\n    max_attempts: 3         # Optional: Max retry attempts on failure (default: 1)\n    retry_backoff_seconds: 60    # Optional: Initial backoff in seconds (default: 60)\n    retry_backoff_multiplier: 2.0 # Optional: Backoff multiplier for exponential backoff (default: 2.0)\n    max_backoff_seconds: 3600    # Optional: Maximum backoff cap in seconds (default: 3600)\n```",
+      "type": "object",
+      "properties": {
+        "cron": {
+          "description": "Cron expression in 5-field format (minute hour day month weekday)",
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Whether the schedule is enabled",
+          "type": "boolean"
+        },
+        "max_attempts": {
+          "description": "Max retry attempts on failure",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32",
+          "default": 1
+        },
+        "retry_backoff_seconds": {
+          "description": "Initial retry backoff in seconds",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32",
+          "default": 60
+        },
+        "retry_backoff_multiplier": {
+          "description": "Exponential backoff multiplier",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "default": 2
+        },
+        "max_backoff_seconds": {
+          "description": "Maximum retry backoff cap in seconds",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32",
+          "default": 3600
+        },
+        "timezone": {
+          "description": "IANA timezone for cron interpretation (e.g. 'America/New_York'); defaults to UTC",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "cron",
+        "enabled"
+      ]
+    },
+    "Action": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "description": "Maximum execution time for this action in milliseconds.\n\n## Example\n```yaml\ntimeout: 5000    # 5 seconds\n```"
+        },
+        "input": {
+          "description": "Specify the input source for the action. Common sources:\n- `a|body|` - HTTP request body\n- `a|params|` - URL parameters\n- `a|action_name::field|` - Output from a previous action\n\n## Example\n```yaml\ninput: a|body\n```\n\n## Example\n```yaml\ninput: a|LoginBody::email\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "input_fallbacks": {
+          "description": "Alternative input sources to try if the primary input is not available.\n\n## Example\n```yaml\ninput_fallbacks:\n  - a|header::Authorization|\n  - a|params::token|\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "conditional_input": {
+          "description": "Define conditional input based on runtime conditions.\nUses Simple (list of input strings) or Complex (with tests).\n\n## Example - Simple\n```yaml\nconditional_input:\n  - a|body::premium|      # Try this first\n  - a|body::standard|     # Fallback\n```\n\n## Example - Complex\n```yaml\nconditional_input:\n  - input: a|body::type|\n    tests:\n      - is_equal_to: \"premium\"\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConditionalInput"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pre_log": {
+          "description": "Log messages before action execution.\n\n## Example\n```yaml\npre_log:\n  - msg: \"Starting validation\"\n    level: info\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/LogMessage"
+          }
+        },
+        "post_log": {
+          "description": "Log messages after successful action completion.\n\n## Example\n```yaml\npost_log:\n  - msg: \"Validation succeeded\"\n    level: info\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/LogMessage"
+          }
+        },
+        "error_log": {
+          "description": "Log messages when action fails.\n\n## Example\n```yaml\nerror_log:\n  - msg: \"Validation failed\"\n    level: error\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/LogMessage"
+          }
+        },
+        "success_log": {
+          "description": "Log messages when action succeeds.\n\n## Example\n```yaml\nsuccess_log:\n  - msg: \"Email sent\"\n    level: info\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/LogMessage"
+          }
+        },
+        "retry_log": {
+          "description": "Log messages when action retry is attempted.\n\n## Example\n```yaml\nretry_log:\n  - msg: \"Retrying...\"\n    level: warn\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/LogMessage"
+          }
+        },
+        "retry": {
+          "description": "Configure automatic retry behavior.\n\n## Example\n```yaml\nretry:\n  attempts: 3           # Number of retry attempts\n  delay: 1000           # Delay between retries (ms)\n  exponential_backoff: true\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Retry"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lookup": {
+          "description": "Name of a lookup configuration to use for pre-fetching data.\n\n## Example\n```yaml\nlookup: user_lookup\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "item_timeout": {
+          "description": "Per-item execution timeout for lookup iterations.\nControls how long each individual item in the lookup array is allowed to run.\nUse `timeout` to cap the total loop duration.\n\n## Example\n```yaml\nitem_timeout: 30s\n```"
+        },
+        "lookup_concurrency": {
+          "description": "Maximum number of lookup items to execute concurrently.\nDefaults to 10. Capped at 50 in managed run modes.\n\n## Example\n```yaml\nlookup_concurrency: 20\n```",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
+        },
+        "lookup_partition": {
+          "description": "Separate per-item successes from failures in the lookup output. When true, the\naction returns `{ \"succeeded\": [...item data...], \"failed\": [{ item, http_code?, error?, data? }] }`\ninstead of a flat array, so a poller can advance its cursor / mark items `seen`\nonly for successes and let failed items be retried on the next run. Failed items\nare those whose iteration returned an HTTP code >= 400 or timed out.\n\n## Example\n```yaml\nlookup_partition: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "lookup_inherit_jq": {
+          "description": "JQ transformations to apply to lookup results.\n\n## Example\n```yaml\nlookup_inherit_jq:\n  token: .result.token\n```",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "lookup_inherit": {
+          "description": "Fields to inherit from lookup results.\n\n## Example\n```yaml\nlookup_inherit:\n  api_key: lookup.api_key\n```",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "actions": {
+          "description": "Nested actions for lookup.\n\n## Example\n```yaml\nactions:\n  - name: GetToken\n    http:\n      url: https://auth.example.com\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/Action"
+          }
+        },
+        "json_output": {
+          "description": "Capture specific JSON values from output.\n\n## Example\n```yaml\njson_output:\n  user_id: .data.id\n```"
+        },
+        "command": {
+          "description": "Execute a system command.\n\n## Example\n```yaml\ncommand:\n  run: \"echo hello\"\n  shell: bash\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommandRun"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output_stdout": {
+          "description": "Include command stdout in output.\n\n## Example\n```yaml\noutput_stdout: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "http": {
+          "description": "HTTP request configuration.\n\n## Example\n```yaml\nhttp:\n  url: https://api.example.com\n  method: POST\n  headers:\n    Content-Type: application/json\n  body:\n    key: value\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpRequest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "database": {
+          "description": "Database name for SQL operations.\n\n## Example\n```yaml\ndatabase: main\nquery: SELECT * FROM users\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "google": {
+          "description": "Google API integration.\n\n## Example\n```yaml\ngoogle:\n  credential: my_google_cred\n  get_signed_upload_url:\n    bucket: my-bucket\n    key: file.txt\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Google"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "aws": {
+          "description": "AWS service integration.\n\n## Example\n```yaml\naws:\n  credential: my_aws_cred\n  get_signed_upload_url:\n    bucket: my-bucket\n    key: file.txt\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Aws"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "description": "Persistent state operation (durable key/value): polling cursors, dedupe sets,\nidempotency keys, counters. Backed by a pluggable backend (in-memory for local\nsingle-node, Postgres for durable/shared, the AirPipe backend in managed mode).\nRead state inline with `a|state::KEY|`.\n\n## Example\n```yaml\nstate:\n  advance:\n    key: last_seen\n    value: a|Fetch::max_updated_at|\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StateAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "delay": {
+          "description": "Pause for a fixed duration before continuing — pacing / throttling between steps.\nAccepts a duration string (`\"2s\"`, `\"500ms\"`, `\"1m\"`) or a number of milliseconds.\nBounded by `AIRPIPE__MAX_DELAY_SECS` (default 300s); longer values are rejected.\nThis is an in-process wait, not a durable long-running delay.\n\n## Example\n```yaml\ndelay: \"2s\"\n```"
+        },
+        "email": {
+          "description": "Email sending action.\n\n## Example\n```yaml\nemail:\n  from: noreply@example.com\n  to: user@example.com\n  subject: Hello\n  text: Body text\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Email"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "emit_metric": {
+          "description": "Emit a Prometheus metric as part of this action step.\nRequires `expose_metrics: true` on the parent config.\n\n## Example\n```yaml\n- name: TrackRevenue\n  emit_metric:\n    name: revenue_total\n    type: gauge\n    value: a|OrderAction::amount|\n    labels:\n      tier: a|OrderAction::tier|\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EmitMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "action": {
+          "description": "Action identifier for referencing outputs.\n\n## Example\n```yaml\naction: ValidateUser\n# Reference later: a|ValidateUser::result|\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "depends_on": {
+          "description": "Run this action when specified actions complete.\nCan be a list of action names or a RunCondition config.\n\n## Example - Simple list\n```yaml\ndepends_on:\n  - LoginBody\n  - InputValidation\n```\n\n## Example - Config with at_least\n```yaml\ndepends_on:\n  at_least: 1\n  actions:\n    - OptionalStep1\n    - OptionalStep2\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_when_succeeded": {
+          "description": "Run this action when specified actions succeed.\n\n## Example\n```yaml\nrun_when_succeeded:\n  - PreviousAction\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_when_failed": {
+          "description": "Run this action when specified actions fail.\n\n## Example\n```yaml\nrun_when_failed:\n  - MainAction\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_on_assertion": {
+          "description": "Run this action based on assertion results.\n\n## Example\n```yaml\nrun_on_assertion:\n  tests:\n    - jq: .valid\n      is_equal_to: true\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Assert"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "params": {
+          "description": "Parameters for SQL queries.\n\n## Example\n```yaml\nparams:\n  - a|body::user_id|\n  - \"pending\"\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": true
+        },
+        "post_transforms": {
+          "description": "Transformations to apply to action output.\n\n## Example\n```yaml\npost_transforms:\n  - extract_with_jq: \".[0]\"\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/Transform"
+          }
+        },
+        "name": {
+          "description": "Action identifier/name.\n\n## Example\n```yaml\nname: GetUserDetails\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "description": "Description of the action.\n\n## Example\n```yaml\ndescription: \"Fetches user details\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "query": {
+          "description": "SQL query for database actions.\n\n## Example\n```yaml\nquery: SELECT * FROM users WHERE id = $1\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "multi": {
+          "description": "Run this action's `query` as a multi-statement batch (Postgres only).\n\nThe native driver prepares every query, and a prepared statement can hold\nonly one command — so a `query` with several `;`-separated statements\n(e.g. a schema/seed block) normally fails with SQLSTATE 42601. Set\n`multi: true` to run it via the simple protocol instead, which executes\nall statements. Only valid for queries with **no** `params` (a batch\ncannot be parameterized); it returns an empty result set.\n\n## Example\n```yaml\nmulti: true\nquery: |\n  CREATE TABLE IF NOT EXISTS a (id int);\n  CREATE TABLE IF NOT EXISTS b (id int);\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "url": {
+          "description": "URL for HTTP actions.\n\n## Example\n```yaml\nurl: https://api.example.com/users\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conn_string": {
+          "description": "Database connection string override.\n\n## Example\n```yaml\nconn_string: postgresql://user:pass@host:5432/db\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output": {
+          "description": "Output destination handler.\n\n## Example\n```yaml\noutput: http\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "assert": {
+          "description": "Validation and response configuration.\n\n## Example\n```yaml\nassert:\n  tests:\n    - jq: .status\n      is_equal_to: \"success\"\n  success_message: \"OK\"\n  error_message: \"Failed\"\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Assert"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "document_operation": {
+          "description": "Document database operations.\n\n## Example\n```yaml\ndocument_operation:\n  database: users_db\n  collection: profiles\n  operation: insertOne\n  insert:\n    name: test\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DocumentOperation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hide_action": {
+          "description": "Hide entire action data.\n\n## Example\n```yaml\nhide_action: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "hide_data_on_success": {
+          "description": "Hide action data on success.\n\n## Example\n```yaml\nhide_data_on_success: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "hide_data_on_error": {
+          "description": "Hide action data on error.\n\n## Example\n```yaml\nhide_data_on_error: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "hide_data_on_empty": {
+          "description": "Hide action data when empty.\n\n## Example\n```yaml\nhide_data_on_empty: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "hide_errors": {
+          "description": "Hide error details.\n\n## Example\n```yaml\nhide_errors: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "hide_metrics": {
+          "description": "Disable metrics collection.\n\n## Example\n```yaml\nhide_metrics: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "response_on_success": {
+          "description": "Custom response on success.\n\n## Example\n```yaml\nresponse_on_success:\n  http_code: 200\n  body:\n    status: success\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActionResponse"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "response_on_error": {
+          "description": "Custom response on error.\n\n## Example\n```yaml\nresponse_on_error:\n  http_code: 500\n  body:\n    status: error\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActionResponse"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ConditionalInput": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConditionalInputConfig"
+          }
+        }
+      ]
+    },
+    "ConditionalInputConfig": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string"
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Test"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "input",
+        "tests"
+      ]
+    },
+    "Test": {
+      "description": "Test definition for asserting conditions against a resolved value.\nTests support value resolution (via `value`, `jq`, `pointer`, or `action`),\ntype-aware comparisons, pattern matching, and structural schema validation.\n\nWhen used inside an `assert` block, multiple tests run concurrently.\nWhen used inside `verify_schema` via `FieldType.validate`, the test\nruns against the leaf value at that schema path.\n\n## Example - Basic value checks\n```yaml\ntests:\n  - value: email\n    is_not_empty: true\n    regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n    error_message: \"Invalid email\"\n    http_code_on_error: 422\n```\n\n## Example - Numeric comparisons\n```yaml\ntests:\n  - value: age\n    is_greater_than: 0\n    is_less_than: 150\n  - value: count()\n    is_greater_than_or_equal_to: 1\n```\n\n## Example - Using jq for nested access\n```yaml\ntests:\n  - jq: \".data.users | length\"\n    is_greater_than: 0\n```\n\n## Example - Cross-action reference\n```yaml\ntests:\n  - action: FetchUser\n    value: email\n    is_not_null: true\n```\n\n## Example - Allowed/disallowed values\n```yaml\ntests:\n  - value: status\n    contains:\n      allowed:\n        - \"active\"\n        - \"pending\"\n        - \"suspended\"\n      disallowed:\n        - \"deleted\"\n```\n\n## Example - Schema validation with deep nested assertions\n```yaml\ntests:\n  - verify_schema:\n      disallow_unknown_keys: true\n      structure:\n        email:\n          type: String\n          validate:\n            is_not_empty: true\n            regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n        age:\n          type: Number\n          validate:\n            is_greater_than: 0\n        settings:\n          theme:\n            type: String\n          notifications:\n            type: Boolean\n```",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Human-readable name for identifying this test in logs and error output.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "description": "Description of what this test validates.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "description": "JSON path to the target value within the input data (e.g., `email`, `user.name`).\nAlso supports `count()` to get the length of an array.\n\n## Example\n```yaml\nvalue: email             # simple key\nvalue: user.address.city # nested path\nvalue: count()           # array length\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "action": {
+          "description": "Reference a previous action's output as the target value.\n\n## Example\n```yaml\naction: FetchUser\nvalue: email          # key within that action's output\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "action_value": {
+          "description": "Reference a previous action's output using interpolation syntax.\n\n## Example\n```yaml\naction_value: a|FetchUser::email|\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "custom_value": {
+          "description": "Override the target value with a custom literal string.\n\n## Example\n```yaml\ncustom_value: \"some_static_value\"\nis_equal_to: \"some_static_value\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "jq": {
+          "description": "Extract the target value using a jq filter expression.\n\n## Example\n```yaml\njq: \".users[0].email\"\nis_not_empty: true\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pointer": {
+          "description": "Extract the target value using a JSON pointer (RFC 6901).\n\n## Example\n```yaml\npointer: \"/data/0/email\"\nis_not_empty: true\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "http_code_on_error": {
+          "description": "HTTP status code to return when this specific test fails.\nTakes precedence over the parent `Assert.http_code_on_error`.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "success_message": {
+          "description": "Message returned when this test succeeds.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "error_message": {
+          "description": "Custom error message when this test fails. Replaces the default\nauto-generated error detail.\n\n## Example\n```yaml\nvalue: email\nis_not_empty: true\nerror_message: \"Email address is required\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hide_errors": {
+          "description": "Suppress error details from the response output for this test.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "http_response": {
+          "description": "Static HTTP response value to return when this test is evaluated."
+        },
+        "case_insensitive": {
+          "description": "Enable case-insensitive matching for `is_equal_to` and `contains` checks.\n\n## Example\n```yaml\nvalue: status\nis_equal_to: \"active\"\ncase_insensitive: true    # matches \"Active\", \"ACTIVE\", etc.\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_equal_to": {
+          "description": "Assert the value equals the expected value. Behavior varies by type:\nstrings compare as text, numbers as numeric value, booleans as bool,\narrays and objects compare as full JSON equality.\n\n## Example\n```yaml\nis_equal_to: \"active\"      # string\nis_equal_to: 42            # number\nis_equal_to: true          # boolean\n```"
+        },
+        "is_not_equal_to": {
+          "description": "Assert the value does not equal the expected value.\n\n## Example\n```yaml\nis_not_equal_to: \"deleted\"\n```"
+        },
+        "is_less_than": {
+          "description": "Assert the value is less than the threshold. For strings and arrays,\ncompares the length. For numbers, compares the numeric value.\n\n## Example\n```yaml\n# String: length < 256\nvalue: title\nis_less_than: 256\n\n# Number: value < 100\nvalue: percentage\nis_less_than: 100\n\n# Array: length < 10\nvalue: items\nis_less_than: 10\n```"
+        },
+        "is_less_than_or_equal_to": {
+          "description": "Assert the value is less than or equal to the threshold.\nSame type-dependent behavior as `is_less_than`."
+        },
+        "is_greater_than": {
+          "description": "Assert the value is greater than the threshold.\nSame type-dependent behavior as `is_less_than`.\n\n## Example\n```yaml\nvalue: age\nis_greater_than: 0\n```"
+        },
+        "is_greater_than_or_equal_to": {
+          "description": "Assert the value is greater than or equal to the threshold.\nSame type-dependent behavior as `is_less_than`."
+        },
+        "starts_with": {
+          "description": "Assert the string value starts with the given prefix.\n\n## Example\n```yaml\nvalue: url\nstarts_with: \"https://\"\n```"
+        },
+        "not_starts_with": true,
+        "ends_with": {
+          "description": "Assert the string value ends with the given suffix.\n\n## Example\n```yaml\nvalue: filename\nends_with: \".pdf\"\n```"
+        },
+        "not_ends_with": true,
+        "contains_text": {
+          "description": "Assert the string contains at least one alphabetic character.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "contains_number": {
+          "description": "Assert the string contains at least one numeric digit.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "contains_upper": {
+          "description": "Assert the string contains at least one uppercase letter.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "contains_lower": {
+          "description": "Assert the string contains at least one lowercase letter.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "contains_special": {
+          "description": "Assert the string contains at least one special character.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "contains": {
+          "description": "Assert containment. Behavior varies by target type:\n- **String**: substring match (or exact match in advanced/any mode)\n- **Number**: substring match against the string representation\n- **Array**: element membership\n- **Object**: key existence\n\nSupports three modes: standard (single value or array), advanced\n(with `at_least` threshold), and any (with `allowed`/`disallowed` lists).\n\n## Example - String substring\n```yaml\nvalue: email\ncontains: \"@\"\n```\n\n## Example - Array membership\n```yaml\nvalue: tags\ncontains: \"featured\"\n```\n\n## Example - Allowed values\n```yaml\nvalue: status\ncontains:\n  allowed:\n    - \"active\"\n    - \"pending\"\n  disallowed:\n    - \"deleted\"\n```\n\n## Example - At least N matches\n```yaml\nvalue: roles\ncontains:\n  values:\n    - \"admin\"\n    - \"editor\"\n    - \"viewer\"\n  at_least: 1\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContainOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "like": {
+          "description": "SQL LIKE-style pattern matching (case-sensitive). Uses `%` as wildcard.\n\n## Example\n```yaml\nvalue: name\nlike: \"John%\"         # starts with \"John\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ilike": {
+          "description": "SQL ILIKE-style pattern matching (case-insensitive). Uses `%` as wildcard.\n\n## Example\n```yaml\nvalue: email\nilike: \"%@gmail.com\"  # any Gmail address\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "not_contains": {
+          "description": "Inverse of `contains`. Assert the value does NOT contain the specified\ncontent. Same mode support as `contains` (standard, advanced, any).\n\n## Example\n```yaml\nvalue: content\nnot_contains: \"<script>\"\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContainOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "regex": {
+          "description": "Assert the string value matches a regular expression pattern.\n\n## Example\n```yaml\nvalue: phone\nregex: \"^\\\\+?[1-9]\\\\d{1,14}$\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_not_null": {
+          "description": "Assert the value is not null.\n\n## Example\n```yaml\nvalue: user_id\nis_not_null: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_not_empty": {
+          "description": "Assert the value is not empty. Checks strings, arrays, and objects.\n\n## Example\n```yaml\nvalue: name\nis_not_empty: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_null": {
+          "description": "Assert the value is null (when `true`) or is not null (when `false`).\n\n## Example\n```yaml\nvalue: deleted_at\nis_null: true         # must be null\n\nvalue: email\nis_null: false         # must not be null\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_uuid": {
+          "description": "Assert the value is a valid UUID string.\n\n## Example\n```yaml\nvalue: id\nis_uuid: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_array": {
+          "description": "Assert the value is a JSON array.\n\n## Example\n```yaml\nvalue: items\nis_array: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_valid_jwt": {
+          "description": "Validate the value as a JWT token using the provided secret.\nOn success, decoded claims are stored in `ok_data` under the\nkey specified by `result_key` (default: `jwt_claims`).\n\n## Example\n```yaml\nvalue: token\nis_valid_jwt: \"my_jwt_secret\"       # HS256 secret (bare string), or an object:\n# is_valid_jwt: { jwks_url: \"...\", alg: RS256, iss: \"...\", aud: \"...\" }\nresult_key: user_claims\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JwtConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_valid_hmac": {
+          "description": "Verify an HMAC signature. The `value` field should point to the signature\nreceived in the request (e.g. `x-hub-signature-256`). The assertion\nrecomputes HMAC over `body` using `secret` and compares against the target.\n\n## Example (GitHub webhook)\n```yaml\nvalue: x-hub-signature-256\nis_valid_hmac:\n  secret: a|env::GITHUB_WEBHOOK_SECRET|\n  body: a|raw_body|\n  algorithm: sha256   # sha1 | sha256 | sha512  (default: sha256)\n  prefix: \"sha256=\"   # stripped from target before comparison\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IsValidHmacConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_authorization": {
+          "description": "Parse an HTTP Authorization header value. Supports `Basic` (decodes\nbase64 username:password) and `Bearer` (extracts token). Decoded\ndata is stored in `ok_data` keyed by scheme name.\n\n## Example\n```yaml\nvalue: authorization\nis_authorization: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "result_key": {
+          "description": "Key name for storing extracted data (e.g., JWT claims) in the\naction's ok_data output.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expression": {
+          "description": "Evaluate a string expression as a boolean condition.\nSupports interpolation via `a|...|` syntax before evaluation.\n\n## Example\n```yaml\nexpression: \"a|body::count| > 0\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "compare_value": {
+          "description": "Compare the target value against another value or file for structural\ndifferences. Supports JSON, XML, and string comparison with optional\nfield exclusions.\n\n## Example - Compare against inline target\n```yaml\ncompare_value:\n  target: '{\"status\": \"ok\"}'\n  data_type: json\n  ignore_fields:\n    - timestamp\n```\n\n## Example - Compare against file\n```yaml\ncompare_value:\n  file_path: \"/path/to/expected.json\"\n  data_type: json\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CompareValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bcrypt_verify": {
+          "description": "Verify a plaintext value against a bcrypt hash. Deprecated: use `verify_bcrypt`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "verify_bcrypt": {
+          "description": "Verify a plaintext value against a bcrypt hash.\n\n## Example\n```yaml\nvalue: password\nverify_bcrypt: \"$2b$12$LJ3m...\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "verify_signature": {
+          "description": "Verify an Ed25519 signature against the target value.\n\n## Example\n```yaml\nvalue: request_body\nverify_signature:\n  public_key: \"a1b2c3...\"    # hex-encoded Ed25519 public key\n  signature: \"d4e5f6...\"     # hex-encoded signature\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VerifySignature"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verify_schema": {
+          "description": "Validate the value against a structural schema with recursive type\nchecking and optional per-field assertions. Supports nested objects,\narrays, and leaf-level validation via the `validate` field on each\n`FieldType`.\n\n## Example - Flat structure\n```yaml\nverify_schema:\n  disallow_unknown_keys: true\n  structure:\n    name:\n      type: String\n      validate:\n        is_not_empty: true\n    age:\n      type: Number\n      validate:\n        is_greater_than: 0\n    active:\n      type: Boolean\n```\n\n## Example - Nested objects with validation\n```yaml\nverify_schema:\n  structure:\n    user:\n      email:\n        type: String\n        validate:\n          is_not_empty: true\n          regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n      settings:\n        theme:\n          type: String\n          validate:\n            contains:\n              allowed:\n                - \"light\"\n                - \"dark\"\n                - \"system\"\n        notifications:\n          type: Boolean\n```\n\n## Example - Array with positional validation\n```yaml\nverify_schema:\n  structure:\n    - id:\n        type: Number\n        validate:\n          is_greater_than: 0\n      title:\n        type: String\n        validate:\n          is_not_empty: true\n          is_less_than: 256\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VerifySchema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semver_matches": {
+          "description": "Assert the string value satisfies a semver version constraint.\n\n## Example\n```yaml\nvalue: api_version\nsemver_matches: \">=1.0.0, <2.0.0\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "size_limit": {
+          "description": "Assert the serialized byte size of the value does not exceed a limit.\nAccepts human-readable sizes (e.g., `1 MB`, `500 KB`) or raw byte counts.\n\n## Example\n```yaml\nvalue: payload\nsize_limit: \"1 MB\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ContainOptions": {
+      "description": "Containment check options. Supports three modes depending on the YAML structure\nprovided: standard (single value or array), advanced (with `at_least` threshold),\nand any (with `allowed`/`disallowed` lists).\n\n## Example - Standard single value\n```yaml\ncontains: \"search_term\"\n```\n\n## Example - Standard array (match at least one)\n```yaml\ncontains:\n  - \"admin\"\n  - \"editor\"\n```\n\n## Example - Advanced (at least N matches)\n```yaml\ncontains:\n  values:\n    - \"read\"\n    - \"write\"\n    - \"delete\"\n  at_least: 2\n```\n\n## Example - Allowed/disallowed lists\n```yaml\ncontains:\n  allowed:\n    - \"active\"\n    - \"pending\"\n  disallowed:\n    - \"banned\"\n```",
+      "anyOf": [
+        {
+          "description": "Allowed/disallowed list mode. Target must match an allowed value\nand must not match any disallowed value.",
+          "$ref": "#/$defs/ContainsAny"
+        },
+        {
+          "description": "Advanced mode with explicit value list and minimum match threshold.",
+          "$ref": "#/$defs/ContainsAdv"
+        },
+        {
+          "description": "Standard mode: a single value or array of values to check for containment."
+        }
+      ]
+    },
+    "ContainsAny": {
+      "description": "Allowed/disallowed containment check. For strings, checks exact match against\neach list. For arrays, checks that all elements are in `allowed` and no\nelements are in `disallowed`.\n\n## Example\n```yaml\ncontains:\n  allowed:\n    - \"published\"\n    - \"draft\"\n    - \"archived\"\n  disallowed:\n    - \"deleted\"\n    - \"banned\"\n```",
+      "type": "object",
+      "properties": {
+        "allowed": {
+          "description": "Values the target is allowed to match.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": true
+        },
+        "disallowed": {
+          "description": "Values the target must not match.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "ContainsAdv": {
+      "description": "Advanced containment check with a minimum match threshold.\n\n## Example\n```yaml\ncontains:\n  values:\n    - \"read\"\n    - \"write\"\n    - \"admin\"\n  at_least: 2             # target must match at least 2 of the listed values\n```",
+      "type": "object",
+      "properties": {
+        "values": {
+          "description": "List of candidate values to check against.",
+          "type": "array",
+          "items": true
+        },
+        "at_least": {
+          "description": "Minimum number of values that must match for the check to pass.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "values",
+        "at_least"
+      ]
+    },
+    "JwtConfig": {
+      "description": "Configuration for the `is_valid_jwt` assertion.\n\nAccepts either a bare string (the HS256 shared secret — the original form,\nstill supported) or an object for asymmetric algorithms and OIDC providers:\n\n```yaml\n# HS256 (unchanged):\nis_valid_jwt: \"my-shared-secret\"\n\n# RS256/ES256 with a static PEM public key:\nis_valid_jwt:\n  alg: RS256\n  public_key: a|ap_var::IDP_PUBLIC_KEY|\n\n# RS256/ES256 verified against a provider's rotating JWKS (Auth0/Clerk/Cognito):\nis_valid_jwt:\n  jwks_url: https://YOUR.auth0.com/.well-known/jwks.json\n  alg: RS256          # optional; falls back to the token header's alg\n  iss: https://YOUR.auth0.com/\n  aud: https://your-api\n```",
+      "anyOf": [
+        {
+          "description": "Bare HS256 shared secret (back-compatible form).",
+          "type": "string"
+        },
+        {
+          "description": "Structured verification config for HS*/RS*/ES*/EdDSA and JWKS.",
+          "$ref": "#/$defs/JwtVerifyConfig"
+        }
+      ]
+    },
+    "JwtVerifyConfig": {
+      "description": "Structured form of [`JwtConfig`] — a symmetric secret, a static public key,\nor a JWKS URL, plus optional algorithm and issuer/audience checks.",
+      "type": "object",
+      "properties": {
+        "secret": {
+          "description": "HS256/384/512 shared secret. Mutually exclusive with `public_key`/`jwks_url`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "public_key": {
+          "description": "PEM-encoded public key for RS*/ES*/EdDSA verification (no network calls).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "jwks_url": {
+          "description": "URL of a JWKS document; the signing key is selected by the token's `kid`.\nFetched once and cached (with a short TTL), so provider key rotation is handled.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alg": {
+          "description": "Signature algorithm, e.g. `HS256`, `RS256`, `ES256`, `EdDSA`. Required for\n`public_key`; for `jwks_url` it defaults to the token header's `alg`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "iss": {
+          "description": "Expected `iss` claim. When set, tokens with a different issuer are rejected.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "aud": {
+          "description": "Expected `aud` claim. When set, tokens with a different audience are rejected.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "IsValidHmacConfig": {
+      "description": "Configuration for the `is_valid_hmac` assertion.",
+      "type": "object",
+      "properties": {
+        "secret": {
+          "description": "HMAC secret key. Supports interpolation: `a|env::MY_SECRET|`",
+          "type": "string"
+        },
+        "body": {
+          "description": "The message to authenticate. Use `a|raw_body|` for webhook signature\nverification so the bytes match exactly what the sender signed.",
+          "type": "string"
+        },
+        "algorithm": {
+          "description": "Hash algorithm: `sha1`, `sha256` (default), or `sha512`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prefix": {
+          "description": "Optional prefix to strip from the target value before comparing.\nGitHub uses `\"sha256=\"`, Stripe uses `\"v1=\"`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "secret",
+        "body"
+      ]
+    },
+    "CompareValue": {
+      "description": "Value comparison configuration for diffing against an expected value.\nSupports inline target strings or file paths, with optional field exclusions.\n\n## Example - Inline comparison\n```yaml\ncompare_value:\n  target: '{\"status\": \"ok\", \"code\": 200}'\n  data_type: json\n  ignore_fields:\n    - timestamp\n    - request_id\n```\n\n## Example - File comparison\n```yaml\ncompare_value:\n  file_path: \"./fixtures/expected_response.json\"\n  data_type: json\n```",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "target": {
+              "description": "Inline string value to compare against.",
+              "type": "string"
+            },
+            "data_type": {
+              "description": "Data format for comparison parsing: `json`, `xml`, or `string`.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CompareDataType"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "ignore_fields": {
+              "description": "Fields to exclude from the comparison.",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "target"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "file_path": {
+              "description": "Path to a file containing the expected value.",
+              "type": "string"
+            },
+            "data_type": {
+              "description": "Data format for comparison parsing: `json`, `xml`, or `string`.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CompareDataType"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "ignore_fields": {
+              "description": "Fields to exclude from the comparison.",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "file_path"
+          ]
+        }
+      ]
+    },
+    "CompareDataType": {
+      "type": "string",
+      "enum": [
+        "json",
+        "xml",
+        "string"
+      ]
+    },
+    "VerifySignature": {
+      "description": "Ed25519 signature verification parameters.\n\n## Example\n```yaml\nvalue: request_body\nverify_signature:\n  public_key: \"a1b2c3d4e5f6...\"     # hex-encoded Ed25519 public key\n  signature: \"f6e5d4c3b2a1...\"       # hex-encoded signature bytes\n```",
+      "type": "object",
+      "properties": {
+        "public_key": {
+          "description": "Hex-encoded Ed25519 public key.",
+          "type": "string"
+        },
+        "signature": {
+          "description": "Hex-encoded signature bytes to verify against the target value.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "public_key",
+        "signature"
+      ]
+    },
+    "VerifySchema": {
+      "description": "Schema validation configuration. Validates a JSON value against a recursive\ntype structure with optional per-field assertions and unknown key rejection.\n\n## Example - Basic object validation\n```yaml\nverify_schema:\n  disallow_unknown_keys: true\n  structure:\n    name:\n      type: String\n      validate:\n        is_not_empty: true\n    email:\n      type: String\n      validate:\n        regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n    age:\n      type: Number\n      validate:\n        is_greater_than: 0\n        is_less_than: 150\n```\n\n## Example - Nested with unknown key rejection\n```yaml\nverify_schema:\n  disallow_unknown_keys: true\n  structure:\n    user:\n      name:\n        type: String\n      role:\n        type: String\n        validate:\n          contains:\n            allowed:\n              - \"admin\"\n              - \"editor\"\n              - \"viewer\"\n    metadata:\n      created_at:\n        type: Number\n      version:\n        type: String\n        validate:\n          semver_matches: \">=1.0.0\"\n```\n\n## Example - Array of objects (positional)\n```yaml\nverify_schema:\n  structure:\n    - id:\n        type: Number\n        validate:\n          is_greater_than: 0\n      status:\n        type: String\n        validate:\n          is_not_empty: true\n      settings:\n        category:\n          type: String\n        featured:\n          type: Boolean\n```",
+      "type": "object",
+      "properties": {
+        "disallow_unknown_keys": {
+          "description": "When `true`, any keys present in the value but not defined in the schema\nare reported as errors. Applies recursively to all nested objects.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "structure": {
+          "description": "The expected structure definition. Can be a nested object map, a positional\narray, or a single leaf field type.",
+          "$ref": "#/$defs/ValueType"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "structure"
+      ]
+    },
+    "ValueType": {
+      "description": "Schema value type for recursive structural validation. Represents either\na leaf field with a type constraint, a nested object with named fields,\nor a positional array of typed elements.\n\n## Example - Leaf field\n```yaml\nemail:\n  type: String\n  validate:\n    is_not_empty: true\n```\n\n## Example - Nested object\n```yaml\nuser:\n  name:\n    type: String\n  settings:\n    theme:\n      type: String\n```\n\n## Example - Positional array\n```yaml\nstructure:\n  - name:\n      type: String\n    id:\n      type: Number\n```",
+      "anyOf": [
+        {
+          "description": "Leaf field with type constraint and optional validation.",
+          "$ref": "#/$defs/FieldType"
+        },
+        {
+          "description": "Nested object where each key maps to another `ValueType`.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ValueType"
+          }
+        },
+        {
+          "description": "Positional array where each index maps to a `ValueType`.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValueType"
+          }
+        }
+      ]
+    },
+    "FieldType": {
+      "description": "Leaf field definition within a `verify_schema` structure. Specifies the\nexpected data type and optional validation assertions that run against\nthe resolved value at this path.\n\nSupported types: `String`, `Number`, `Boolean`, `Array`, `Object`, `Null`, `Any`.\n\n## Example - Type check only\n```yaml\nemail:\n  type: String\n```\n\n## Example - Type check with assertions\n```yaml\nrating:\n  type: Number\n  validate:\n    is_greater_than_or_equal_to: 0\n    is_less_than_or_equal_to: 5\n```\n\n## Example - String with pattern and length\n```yaml\nslug:\n  type: String\n  validate:\n    is_not_empty: true\n    regex: \"^[a-z0-9]+(-[a-z0-9]+)*$\"\n    is_less_than: 128\n```\n\n## Example - Enum-like string constraint\n```yaml\nstatus:\n  type: String\n  validate:\n    contains:\n      allowed:\n        - \"published\"\n        - \"draft\"\n        - \"archived\"\n```",
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "Expected data type. One of: `String`, `Number`, `Boolean`, `Array`,\n`Object`, `Null`, `Any`.",
+          "type": "string"
+        },
+        "validate": {
+          "description": "Optional test assertions to run against the leaf value after the type\ncheck passes. Uses the same `Test` definition as the normal assertion\nsystem, giving full access to all checks (`is_equal_to`, `regex`,\n`contains`, `is_greater_than`, etc.).\n\n## Example\n```yaml\nvalidate:\n  is_not_empty: true\n  regex: \"^[a-z0-9-]+$\"\n  is_less_than: 64\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Test"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ]
+    },
+    "LogMessage": {
+      "type": "object",
+      "properties": {
+        "msg": {
+          "type": "string"
+        },
+        "level": {
+          "type": "string"
+        },
+        "json": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "msg",
+        "level"
+      ]
+    },
+    "Retry": {
+      "type": "object",
+      "properties": {
+        "attempts": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "delay": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32"
+        },
+        "exponential_backoff": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "attempts"
+      ]
+    },
+    "CommandRun": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "shell": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "run": {
+          "type": "string"
+        },
+        "parse": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommandParse"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parse_stderr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommandParse"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run"
+      ]
+    },
+    "CommandParse": {
+      "type": "object",
+      "properties": {
+        "data_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DataType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disable_auto_extract": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "delimiter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "split_start": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "split_end": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "line_start": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int64"
+        },
+        "line_end": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int64"
+        },
+        "keys": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "split_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "split_whitespace": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "matches": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/CommandRegex"
+          }
+        },
+        "ignore_output": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "DataType": {
+      "type": "string",
+      "enum": [
+        "text",
+        "json",
+        "csv",
+        "xml"
+      ]
+    },
+    "CommandRegex": {
+      "type": "object",
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "regex": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "split_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "split_whitespace": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "keys"
+      ]
+    },
+    "HttpRequest": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "digest_auth_user": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "digest_auth_pass": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "user": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pass": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "proxy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "headers": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "body": true,
+        "base64_bytes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "method": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "data_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DataType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bearer_auth": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "multipart": {
+          "description": "A flat list of parts for a `multipart/form-data` request.\n\nEach entry is one form part. Whether it is a text or binary part is determined\nimplicitly by which source field is provided:\n\n- `value` → plain text part\n- `b64` → binary part decoded from base64\n- `file_path` → binary part read from disk (not allowed in managed/hosted mode)\n\n`filename` and `mime` are always optional. When omitted on a binary part, `mime`\nis guessed from the `filename` extension, falling back to `application/octet-stream`.\n\n```yaml\nmultipart:\n  - name: image\n    b64: a|previous_action::body.image.data|\n    filename: photo.png   # optional — sent as Content-Disposition filename\n    mime: image/png       # optional — guessed from filename if absent\n  - name: model\n    value: gpt-image-1\n  - name: prompt\n    value: Transform into Studio Ghibli style\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/MultipartPart"
+          }
+        },
+        "multipart_form": {
+          "description": "Deprecated: use `multipart` instead.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "multipart_files": {
+          "description": "Deprecated: use `multipart` instead.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/MultipartData"
+          }
+        },
+        "accept_invalid_certs": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "ca": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "root_certificates": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "timeout": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "connect_timeout": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pagination": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pagination"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proxy_body": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "proxy_method": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "proxy_headers": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProxyHeaders"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proxy_query": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ]
+    },
+    "MultipartPart": {
+      "description": "A single part in a `multipart/form-data` request.\n\nExactly one of `value`, `b64`, or `file_path` must be provided per part.\nAll other fields are optional.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Form field name — the `name` attribute sent in `Content-Disposition`.",
+          "type": "string"
+        },
+        "value": {
+          "description": "Plain text value. Use this for non-binary form fields.\nMutually exclusive with `b64` and `file_path`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "b64": {
+          "description": "Base64-encoded binary data. Decoded before sending.\nMutually exclusive with `value` and `file_path`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file_path": {
+          "description": "Path to a file to read and send as binary data.\nNot permitted in managed/hosted mode — use `b64` instead.\nMutually exclusive with `value` and `b64`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "filename": {
+          "description": "Filename sent in the `Content-Disposition` header for this part (e.g. `photo.png`).\nOptional for binary parts; not meaningful for plain text parts.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mime": {
+          "description": "MIME type for this part (e.g. `image/png`, `application/pdf`).\nIf omitted on a binary part, guessed from `filename`'s extension.\nFalls back to `application/octet-stream` when neither is available.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "MultipartData": {
+      "description": "Deprecated: use [`MultipartPart`] via the `multipart` field instead.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MultipartFile"
+        },
+        {
+          "$ref": "#/$defs/MultipartText"
+        }
+      ]
+    },
+    "MultipartFile": {
+      "description": "Deprecated: use [`MultipartPart`] via the `multipart` field instead.",
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file_name": {
+          "type": "string"
+        },
+        "b64": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mime_str": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "part_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "file_name"
+      ]
+    },
+    "MultipartText": {
+      "description": "Deprecated: use [`MultipartPart`] via the `multipart` field instead.",
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "mime_str": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "Pagination": {
+      "type": "object",
+      "properties": {
+        "original_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "next_link": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "no_pages": {
+          "type": "integer",
+          "format": "int32",
+          "default": 0
+        },
+        "page_marker": {
+          "type": "integer",
+          "format": "int32",
+          "default": 0
+        },
+        "cursor_marker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "increment": {
+          "type": "integer",
+          "format": "int32",
+          "default": 1
+        },
+        "max_pages": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32"
+        },
+        "max_pages_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page_start": {
+          "type": "integer",
+          "format": "int32",
+          "default": 1
+        },
+        "page_next_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page_limit": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32"
+        },
+        "page_limit_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "payload_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "next_cursor_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_cursor_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "next_link_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "next_link_host": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ProxyHeaders": {
+      "description": "Controls which headers are passed through from the incoming request.",
+      "anyOf": [
+        {
+          "description": "When true, pass through all incoming headers",
+          "type": "boolean"
+        },
+        {
+          "description": "When a list, pass through only the specified headers; empty list means pass none",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "Google": {
+      "type": "object",
+      "properties": {
+        "credential": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "get_signed_upload_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GoogleGetSignedUploadUrl"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upload_object": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GoogleUploadObject"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "create_token": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CreateToken"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "create_token_raw": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CreateToken"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "GoogleGetSignedUploadUrl": {
+      "type": "object",
+      "properties": {
+        "bucket": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "bucket",
+        "key"
+      ]
+    },
+    "GoogleUploadObject": {
+      "type": "object",
+      "properties": {
+        "base64_bytes": {
+          "type": "string"
+        },
+        "bucket": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "base64_bytes",
+        "bucket",
+        "key"
+      ]
+    },
+    "CreateToken": {
+      "type": "object",
+      "properties": {
+        "audience": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scopes": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "sub": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "use_id_token": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Aws": {
+      "type": "object",
+      "properties": {
+        "credential": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "get_signed_upload_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AwsGetSignedUploadUrl"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upload_object": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AwsUploadObject"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "AwsGetSignedUploadUrl": {
+      "type": "object",
+      "properties": {
+        "bucket": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "acl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "bucket",
+        "key"
+      ]
+    },
+    "AwsUploadObject": {
+      "type": "object",
+      "properties": {
+        "base64_bytes": {
+          "type": "string"
+        },
+        "bucket": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "acl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "base64_bytes",
+        "bucket",
+        "key"
+      ]
+    },
+    "StateAction": {
+      "description": "A persistent state operation. State is durable key/value used for things like\npolling cursors, dedupe sets, idempotency keys and counters — distinct from\n`var::` variables, which are read-only config/secrets.\n\nIt is backed by a pluggable backend selected by deployment:\nin-memory (local single-node, ephemeral), Postgres (durable/shared, BYO via\n`global.databases`), or the AirPipe backend (managed). Redis is a planned backend.\n\nRead state inline anywhere interpolation runs with `a|state::KEY|` or\n`a|state::NAMESPACE.KEY|`. The default namespace is the config name.\n\n## Example — read a cursor, fetch since it, advance it\n```yaml\nactions:\n  - name: Cursor\n    state:\n      get:\n        key: last_seen\n        default: \"1970-01-01T00:00:00Z\"\n  - name: Fetch\n    http:\n      url: \"https://api.example.com/items?since=a|state::last_seen|\"\n  - name: SaveCursor\n    state:\n      advance:\n        key: last_seen\n        value: a|Fetch::max_updated_at|\n```",
+      "oneOf": [
+        {
+          "description": "Read a value by key. Output: `{ \"value\": <v>, \"version\": <n>, \"found\": <bool> }`.\nReturns `default` (or null) when the key is absent or expired.",
+          "type": "object",
+          "properties": {
+            "get": {
+              "$ref": "#/$defs/StateGet"
+            }
+          },
+          "required": [
+            "get"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "description": "Upsert a value. Last-write-wins unless `expected_version` is set (optimistic\nconcurrency — the write fails with a conflict if the stored version differs).\nOutput: `{ \"version\": <n> }`.",
+          "type": "object",
+          "properties": {
+            "set": {
+              "$ref": "#/$defs/StateSet"
+            }
+          },
+          "required": [
+            "set"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "description": "Monotonically advance a cursor: stores `max(current, value)`. Numeric values are\ncompared numerically; otherwise lexically (works for ISO-8601 timestamps).\nNever moves a cursor backwards, so it is safe without CAS. Output: `{ \"version\": <n>, \"value\": <v> }`.",
+          "type": "object",
+          "properties": {
+            "advance": {
+              "$ref": "#/$defs/StateSet"
+            }
+          },
+          "required": [
+            "advance"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "description": "Delete a key. Output: `{ \"deleted\": <bool> }`.",
+          "type": "object",
+          "properties": {
+            "delete": {
+              "$ref": "#/$defs/StateGet"
+            }
+          },
+          "required": [
+            "delete"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "description": "Check-and-add an id to a bounded dedupe set. Returns whether the id was new\n(i.e. not seen before). Output: `{ \"was_new\": <bool> }`.",
+          "type": "object",
+          "properties": {
+            "seen": {
+              "$ref": "#/$defs/StateSeen"
+            }
+          },
+          "required": [
+            "seen"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "StateGet": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "description": "State key.",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Optional namespace. Defaults to the config name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "default": {
+          "description": "Value to return when the key is absent or expired."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key"
+      ]
+    },
+    "StateSet": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "description": "State key.",
+          "type": "string"
+        },
+        "value": {
+          "description": "Value to store."
+        },
+        "namespace": {
+          "description": "Optional namespace. Defaults to the config name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ttl": {
+          "description": "Optional time-to-live, e.g. \"1h\", \"30m\", \"7d\". Omit for no expiry.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expected_version": {
+          "description": "Optimistic concurrency: only write when the stored version matches this value.\nUse `0` to require the key not to exist yet. Ignored by `advance`.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int64"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "StateSeen": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "description": "Key identifying the dedupe set (e.g. the trigger/source name).",
+          "type": "string"
+        },
+        "id": {
+          "description": "The id to check and record (e.g. a record id or content hash).",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Optional namespace. Defaults to the config name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ttl": {
+          "description": "Optional time-to-live for the set, e.g. \"7d\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "id"
+      ]
+    },
+    "Email": {
+      "type": "object",
+      "properties": {
+        "aws_ses": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "smtp": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EmailSmtp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "from": {
+          "type": "string"
+        },
+        "reply_to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": "string"
+        },
+        "cc": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bcc": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "subject": {
+          "type": "string"
+        },
+        "header": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "html": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "params": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "success_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "error_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to",
+        "subject"
+      ]
+    },
+    "EmailSmtp": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "string"
+        },
+        "server": {
+          "type": "string"
+        },
+        "port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "tls": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "user",
+        "pass",
+        "server"
+      ]
+    },
+    "EmitMetric": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Metric name (must be a valid Prometheus metric name).",
+          "type": "string"
+        },
+        "type": {
+          "description": "Metric type. Defaults to `counter`.",
+          "$ref": "#/$defs/MetricType",
+          "default": "counter"
+        },
+        "value": {
+          "description": "Value to record. Required for `gauge` and `histogram`; counters increment by 1 when omitted.\nAccepts a literal number or a standard interpolation expression (`a|ActionName::field|`).\nNumeric values resolved via interpolation retain their type — no string parsing required."
+        },
+        "labels": {
+          "description": "User-defined labels. `config`, `interface`, and `action` are always attached automatically.\nValues accept standard interpolation expressions. Resolved values are coerced to strings\nat emit time since Prometheus labels must be strings.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "MetricType": {
+      "description": "Metric type for `emit_metric` actions.",
+      "type": "string",
+      "enum": [
+        "counter",
+        "gauge",
+        "histogram"
+      ]
+    },
+    "RunCondition": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "$ref": "#/$defs/RunOnConfig"
+        }
+      ]
+    },
+    "RunOnConfig": {
+      "type": "object",
+      "properties": {
+        "at_least": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "http_code_on_error": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "actions"
+      ]
+    },
+    "Assert": {
+      "description": "Assertion block for validating action output or interface results.\nGroups one or more tests with shared error handling and HTTP response codes.\n\n## Example - Action-level assertion\n```yaml\nactions:\n  - name: ValidateBody\n    input: a|body|\n    assert:\n      tests:\n        - value: email\n          is_not_empty: true\n          regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n        - value: age\n          is_greater_than: 0\n      error_message: \"Validation failed\"\n      http_code_on_error: 400\n```\n\n## Example - Interface-level assertion\n```yaml\ninterfaces:\n  getUser:\n    method: GET\n    actions:\n      - name: FetchUser\n        database: main\n        query: SELECT * FROM users WHERE id = $1\n        params:\n          - a|params::id|\n    assert:\n      tests:\n        - value: count()\n          is_equal_to: 1\n      error_message: \"User not found\"\n      http_code_on_error: 404\n      http_code_on_success: 200\n```",
+      "type": "object",
+      "properties": {
+        "success_message": {
+          "description": "Message returned on successful assertion.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "error_message": {
+          "description": "Message returned when any test fails. Overrides individual test error messages\nat the assert level.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "http_code_on_error": {
+          "description": "HTTP status code to return when any test fails. Individual test-level\n`http_code_on_error` takes precedence when set.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "http_code_on_success": {
+          "description": "HTTP status code to return when all tests pass.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "tests": {
+          "description": "List of test definitions to evaluate. All tests run concurrently;\nerrors from all tests are collected and returned together.\n\n## Example\n```yaml\ntests:\n  - value: username\n    is_not_empty: true\n    error_message: \"Username is required\"\n    http_code_on_error: 422\n  - value: password\n    is_not_empty: true\n    contains_upper: true\n    contains_number: true\n    is_greater_than: 7\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/Test"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Transform": {
+      "type": "object",
+      "properties": {
+        "rename_attributes": {
+          "description": "Rename attributes (keys) within a JSON object. Maps old attribute names to new attribute names.\n\n## Example\n```yaml\nrename_attributes:\n  old_name: new_name\n```",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "remove_attributes": {
+          "description": "Remove specified attributes from the JSON object. Provides an array of attribute names to exclude.\n\n## Example\n```yaml\nremove_attributes:\n  - password\n  - secret\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "keep_attributes": {
+          "description": "Keep only specified attributes, removing all others. Provides an allowlist of attribute names.\n\n## Example\n```yaml\nkeep_attributes:\n  - id\n  - name\n  - email\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "move_attributes": {
+          "description": "Move attributes from one location to another. Maps source path to destination path.\n\n## Example\n```yaml\nmove_attributes:\n  user.name: name\n  user.email: email\n```",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "rename_keys": {
+          "description": "Rename keys at the root level of a JSON object. Maps old key names to new key names.\n\n## Example\n```yaml\nrename_keys:\n  user_id: userId\n  created_at: createdAt\n```",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "remove_keys": {
+          "description": "Remove specified keys from the JSON object. Provides an array of key names to exclude.\n\n## Example\n```yaml\nremove_keys:\n  - token\n  - internal_id\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "bcrypt": {
+          "description": "Hash a value using bcrypt for secure password storage. Supports custom cost factor.\n\n## Example\n```yaml\nbcrypt:\n  key: password          # Path to the password value (e.g., .password)\n  cost: 12               # Cost factor (higher = slower but more secure)\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BcryptTransform"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "add_attribute": {
+          "description": "Add new attributes to the JSON object with specified key-value pairs.\n\n## Example\n```yaml\nadd_attribute:\n  user_uuid: a|uuid|           # Auto-generate UUID\n  verification_token: a|uuid|  # Auto-generate token\n```",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "return_row": {
+          "description": "Return a specific row from a result set by index (0-based).\n\n## Example\n```yaml\nreturn_row: 0    # Return the first row\n```",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
+        },
+        "extract_value": {
+          "description": "Extract a single value from the response using a JSON path.\n\n## Example\n```yaml\nextract_value: .user.id\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "extract_array": {
+          "description": "Extract an array from a JSON response with options for flattening and deduplication.\n\n## Example\n```yaml\nextract_array:\n  from: .items         # Path to the array\n  paths:               # Paths to extract from each element\n    - id\n    - name\n  flatten: true        # Flatten nested arrays\n  dedupe: true         # Remove duplicates\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformExtractArray"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extract_with_json_path": {
+          "description": "Extract data using a JSON path expression. Shortcut for simple extractions.\n\n## Example\n```yaml\nextract_with_json_path: .[0]  # Get first element\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "extract_with_jq": {
+          "description": "Extract data using jq filter syntax for complex JSON transformations.\n\n## Example\n```yaml\nextract_with_jq: '.users | map({id, name})'\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "extract_with_regex": {
+          "description": "Extract values from a string using regex capture groups.\n\n## Example\n```yaml\nextract_with_regex:\n  value: .phone                           # Path to source string\n  expr: \"(\\\\d{3})-(\\\\d{3})-(\\\\d{4})\"   # Regex with capture groups\n  keys:                                   # Names for captured groups\n    - area\n    - prefix\n    - number\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExtractWithRegex"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "add_jwt": {
+          "description": "Add a JWT token to the response with configurable expiration and payload.\n\n## Example\n```yaml\nadd_jwt:\n  key: jwt                               # Output key for the token\n  secret: a|var::JWT_SECRET|            # JWT secret (use encrypted variable)\n  exp: 1d                                # Expiration STRING (e.g., 1h, 1d, 30m)\n  data:                                  # Claims — three accepted forms:\n    sub: a|FetchUser::id|                #  • object: explicit claim -> value (most flexible)\n    email: a|FetchUser::email|\n  # data: [id, email]                    #  • array: copy these fields from this action's input\n  # data: all                            #  • \"all\": copy every input field\n```\n\n**Security:** Store JWT secrets as encrypted AirPipe variables:\n```yaml\nsecret: a|var::ENCRYPTED_JWT_SECRET|\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AddJWT"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "read_jwt": {
+          "description": "Read and decode a JWT token to extract its payload.\n\n## Example\n```yaml\nread_jwt:\n  key: user_data       # Output key for decoded payload\n  token: .auth_header  # Path to JWT token\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReadJWT"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "numerics": {
+          "description": "Convert string fields to numeric types. Provides an array of field names to convert.\n\n## Example\n```yaml\nnumerics:\n  - age\n  - price\n  - quantity\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "group_by": {
+          "description": "Group array elements by specified fields. Used for aggregation operations.\n\n## Example\n```yaml\ngroup_by:\n  - category\n  - region\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "generate_password": {
+          "description": "Generate a secure random password with customizable options for length and character types.\n\n## Example\n```yaml\ngenerate_password:\n  key: temp_password         # Output key for generated password\n  length: 16                 # Password length\n  numbers: true              # Include numbers (0-9)\n  lowercase_letters: true    # Include lowercase (a-z)\n  uppercase_letters: true    # Include uppercase (A-Z)\n  symbols: true              # Include symbols (!@#$)\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformPasswordGen"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "replace_values": {
+          "description": "Replace values in strings or arrays with support for regex and multiple replacements.\n\n## Example - Simple string replacement\n```yaml\nreplace_values:\n  target_value: .message    # Path to target value\n  find_str: old             # String to find\n  new_str: new              # Replacement string\n```\n\n## Example - Multiple value replacement\n```yaml\nreplace_values:\n  target_value: .status\n  values:                    # Array of values to process\n    - pending\n    - approved\n  find_str: _\n  new_str: \" \"\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformReplaceValues"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "flatten": {
+          "description": "Flatten nested objects into a single level with configurable key separators.\n\n## Example\n```yaml\nflatten:\n  key_separator: .    # Separator for nested keys\n  prefix: user        # Optional prefix for all keys\n  target: .data       # Path to nested object\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformFlatten"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "b64_decode": {
+          "description": "Decode a Base64-encoded string.\n\n## Example\n```yaml\nb64_decode: .encoded_data    # Path to Base64 string\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "b64_decode_as_json": {
+          "description": "Decode a Base64-encoded string and parse as JSON.\n\n## Example\n```yaml\nb64_decode_as_json: .payload    # Path to Base64-encoded JSON\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "b64_encode": {
+          "description": "Encode a value to Base64. Can be a direct string or custom transform configuration.\n\n## Example\n```yaml\nb64_encode: .data    # Path to value to encode\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "yaml_to_json": {
+          "description": "Convert YAML-formatted string to JSON.\n\n## Example\n```yaml\nyaml_to_json: .yaml_data    # Path to YAML string\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nested_transforms": {
+          "description": "Apply nested transforms to specific keys. Maps keys to arrays of transform operations.\n\n## Example\n```yaml\nnested_transforms:\n  items:                    # Transform each item in the 'items' array\n    - remove_keys:\n        - internal_id\n    - rename_keys:\n        user_name: name\n```",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Transform"
+            }
+          }
+        },
+        "math": {
+          "description": "Perform mathematical operations on numeric values with expressions.\n\n## Example\n```yaml\nmath:\n  target: .data                    # Path to target object\n  expressions:                     # Math expressions to evaluate\n    total: price * quantity\n    discounted: total * 0.9\n  decimal_places: 2                # Round to 2 decimal places\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformMath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "filter": {
+          "description": "Filter array elements based on specified conditions.\n\n## Example\n```yaml\nfilter:\n  target: .users                   # Path to array to filter\n  conditions:\n    .age:\n      is_greater_than: 18\n    .status:\n      is_equal_to: \"active\"\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformFilterSearch"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "generate_bytes": {
+          "description": "Generate random bytes with specified length.\n\n## Example\n```yaml\ngenerate_bytes:\n  key: api_key      # Output key for generated bytes\n  length: 32        # Number of bytes to generate\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GenerateBytes"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "encrypt_value": {
+          "description": "Encrypt a value using AES-256-GCM encryption.\n\n## Example\n```yaml\nencrypt_value:\n  key: encrypted_data           # Output key for encrypted result\n  data: .sensitive_value        # Path to value to encrypt\n  secret_key: a|var::ENCRYPTED_ENCRYPTION_KEY|  # Encryption key (must be encrypted variable)\n  nonce: a|var::NONCE|          # Unique nonce (must be encrypted variable)\n```\n\n**Security:**\n- Store encryption keys as encrypted AirPipe variables\n- Use unique nonce values for each encryption operation",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EncryptValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "s3_generate_presigned_url": {
+          "description": "Generate a presigned URL for S3 file access.\n\n## Example\n```yaml\ns3_generate_presigned_url:\n  bucket: my-bucket                         # S3 bucket name\n  file_key: documents/file.pdf              # Path to file in bucket\n  expiration_secs: 3600                     # URL expiration (seconds)\n  endpoint: https://s3.amazonaws.com        # S3 endpoint\n  region: us-east-1                         # AWS region\n  access_key_id: a|var::ENCRYPTED_AWS_ACCESS_KEY|  # AWS access key (encrypted variable)\n  secret_access_key: a|var::ENCRYPTED_AWS_SECRET|  # AWS secret key (encrypted variable)\n  key: presigned_url                        # Output key for generated URL\n  json_path: .file_url                      # Optional: Extract from response\n```\n\n**Security:** Store AWS credentials securely as encrypted AirPipe variables:\n```yaml\naccess_key_id: a|var::ENCRYPTED_AWS_ACCESS_KEY|\nsecret_access_key: a|var::ENCRYPTED_AWS_SECRET|\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/S3GeneratePresignedURL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "encode_uri": {
+          "description": "URI-encode an entire URL string.\n\n## Example\n```yaml\nencode_uri: .url    # Path to URL to encode\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "encode_uri_component": {
+          "description": "URI-encode a single component of a URL.\n\n## Example\n```yaml\nencode_uri_component: .search_query    # Path to component to encode\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decode_uri": {
+          "description": "URI-decode an encoded URL string.\n\n## Example\n```yaml\ndecode_uri: .encoded_url    # Path to encoded URL\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decode_uri_component": {
+          "description": "URI-decode a single component of an encoded URL.\n\n## Example\n```yaml\ndecode_uri_component: .encoded_param    # Path to encoded component\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "generate_slug": {
+          "description": "Generate a URL-friendly slug from a string.\n\n## Example\n```yaml\ngenerate_slug: .title    # Path to text to convert to slug\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "BcryptTransform": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "jq": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "TransformExtractArray": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "description": "The JSON path to the starting array",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "paths": {
+          "description": "Array of JSON paths to extract values from each element",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "flatten": {
+          "description": "Whether to flatten nested arrays",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "dedupe": {
+          "description": "Whether to remove duplicates",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "ExtractWithRegex": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "expr": {
+          "type": "string"
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "expr",
+        "keys"
+      ]
+    },
+    "AddJWT": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "secret": {
+          "type": "string"
+        },
+        "exp": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "data": true
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "secret",
+        "data"
+      ]
+    },
+    "ReadJWT": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "token"
+      ]
+    },
+    "TransformPasswordGen": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "length": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "numbers": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "lowercase_letters": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "uppercase_letters": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "symbols": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "spaces": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "exclude_similar_characters": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "length"
+      ]
+    },
+    "TransformReplaceValues": {
+      "type": "object",
+      "properties": {
+        "target_value": {
+          "type": "string"
+        },
+        "target_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "find_str": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "new_str": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "regex": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "values": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "target_value"
+      ]
+    },
+    "TransformFlatten": {
+      "type": "object",
+      "properties": {
+        "key_separator": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key_separator"
+      ]
+    },
+    "TransformConfig": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/CustomTransform"
+        }
+      ]
+    },
+    "CustomTransform": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "json_path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "json_path"
+      ]
+    },
+    "TransformMath": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expressions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "to_string": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decimal_places": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int64"
+        },
+        "eval_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MathEvalType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "expressions"
+      ]
+    },
+    "MathEvalType": {
+      "type": "string",
+      "enum": [
+        "int",
+        "float",
+        "string",
+        "bool"
+      ]
+    },
+    "TransformFilterSearch": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conditions": {
+          "description": "Conditions to filter items in the array.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Test"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "conditions"
+      ]
+    },
+    "GenerateBytes": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "length": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "length"
+      ]
+    },
+    "EncryptValue": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "data": {
+          "type": "string"
+        },
+        "secret_key": {
+          "type": "string"
+        },
+        "nonce": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "data",
+        "secret_key",
+        "nonce"
+      ]
+    },
+    "S3GeneratePresignedURL": {
+      "type": "object",
+      "properties": {
+        "bucket": {
+          "type": "string"
+        },
+        "file_key": {
+          "type": "string"
+        },
+        "expiration_secs": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "access_key_id": {
+          "type": "string"
+        },
+        "secret_access_key": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "json_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "bucket",
+        "file_key",
+        "expiration_secs",
+        "endpoint",
+        "region",
+        "access_key_id",
+        "secret_access_key",
+        "key"
+      ]
+    },
+    "DocumentOperation": {
+      "type": "object",
+      "properties": {
+        "database": {
+          "type": "string"
+        },
+        "collection": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "filter": true,
+        "pipeline": true,
+        "insert": true,
+        "delete": true,
+        "update": true,
+        "options": true
+      },
+      "additionalProperties": false,
+      "required": [
+        "database",
+        "collection",
+        "operation"
+      ]
+    },
+    "ActionResponse": {
+      "type": "object",
+      "properties": {
+        "http_code": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "headers": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Param": {
+      "description": "Parameter definition for interface-level URL parameters with optional\nvalidation and default values.\n\n## Example\n```yaml\ninterfaces:\n  getUser:\n    method: GET\n    params:\n      id:\n        value: a|params::id|\n        error_message: \"User ID is required\"\n        validate:\n          is_not_empty: true\n          regex: \"^[0-9]+$\"\n      page:\n        value: a|params::page|\n        default_value: \"1\"\n```",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "Source value expression (e.g., `a|params::id|`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "default_value": {
+          "description": "Default value if the parameter is not provided.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "error_message": {
+          "description": "Custom error message when validation fails.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "validate": {
+          "description": "Validation test to run against the parameter value.\n\n## Example\n```yaml\nvalidate:\n  is_not_empty: true\n  is_less_than: 100\n  regex: \"^[a-zA-Z0-9]+$\"\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Test"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "InterfaceOutput": {
+      "type": "string",
+      "enum": [
+        "http",
+        "cli",
+        "none"
+      ]
+    },
+    "InterfaceResponse": {
+      "type": "object",
+      "properties": {
+        "http_code_on_error": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "http_code_inherit_error": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "headers": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "custom_body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "http_code_fallback": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "http_code_fallback_strategy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorFallbackStrategy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "logs": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/InterfaceLog"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ErrorFallbackStrategy": {
+      "type": "string",
+      "enum": [
+        "last_action",
+        "last_action_with_error",
+        "any_action"
+      ]
+    },
+    "InterfaceLog": {
+      "type": "object",
+      "properties": {
+        "on": {
+          "$ref": "#/$defs/InterfaceLogOn"
+        },
+        "database": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "on"
+      ]
+    },
+    "InterfaceLogOn": {
+      "type": "string",
+      "enum": [
+        "error",
+        "success",
+        "any"
+      ]
+    },
+    "NetworkPolicy": {
+      "description": "Network access-control policy. Set it config-wide (top-level `network:`, applies\nto every interface as a baseline) and/or per-interface (`interface.network:`,\nwhich inherits and **tightens** the config-wide policy).\n\n## Inheritance (tighten-only)\n- `deny` lists (ip/geo/asn) **union** across levels — a config-level deny can\n  never be weakened by an interface.\n- `allow` lists **intersect** — the request must satisfy every level that\n  declares an allow list.\n- An interface sets `inherit: false` to ignore the config-wide policy entirely\n  (a deliberate public exception, e.g. a health route).\n- Scalar settings (`mode`, `source`, `trusted_proxies`, `on_deny`) are taken\n  from the interface when present, otherwise inherited from the config level.\n\n## Evaluation order (per level)\n`ip.deny` → `geo.deny` → `asn.deny` → `*.allow` → `rate_limit`. The first rule\nthat rejects wins. In `monitor` mode nothing is blocked; matches are logged.\n\n## Example\n```yaml\nnetwork:                       # config-wide baseline\n  mode: enforce                # enforce (default) | monitor\n  source: client               # client (default) | socket | real_ip\n  trusted_proxies:             # validate XFF chain (anti-spoofing)\n    - \"10.0.0.0/8\"\n  ip:\n    allow: [\"203.0.113.0/24\", \"2001:db8::/32\"]\n    deny:  [\"1.2.3.4\"]\n    deny_check: source         # source (default) | all\n  geo:   { deny: [\"RU\", \"KP\"] }\n  asn:   { deny: [13335] }\n  rate_limit: { per: ip, requests: 100, window: \"60s\" }\n  on_deny: { status: 403, body: { error: \"forbidden\" } }\n\ninterfaces:\n  admin:\n    network:                   # inherits + tightens the baseline\n      ip: { allow: [\"198.51.100.10\"] }\n  health:\n    network: { inherit: false } # public exception\n```",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "description": "`enforce` (default) blocks denied requests; `monitor` logs only.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NetworkMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "inherit": {
+          "description": "Interface-level only: when `false`, ignore the config-wide policy for this\ninterface. Defaults to `true`. Ignored at the config level.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "source": {
+          "description": "Which captured IP to treat as authoritative. Defaults to `client`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IpFilterSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trusted_proxies": {
+          "description": "Trusted proxy CIDRs. When set, the client IP is resolved by walking the\n`X-Forwarded-For` chain from the right and skipping these hops, which\ndefeats client-supplied header spoofing. Without it, `source: client`\ntrusts the leftmost (spoofable) XFF entry.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "ip": {
+          "description": "IP allow/deny rules.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IpRule"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "geo": {
+          "description": "Country-level allow/deny rules (requires a GeoIP provider).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeoRule"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "asn": {
+          "description": "ASN allow/deny rules (requires an ASN provider).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AsnRule"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rate_limit": {
+          "description": "Per-source request rate limit.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RateLimitRule"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "on_deny": {
+          "description": "Response to return when a request is denied in `enforce` mode.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DenyResponse"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "NetworkMode": {
+      "description": "Operating mode for a [`NetworkPolicy`]. Defaults to `enforce`.",
+      "oneOf": [
+        {
+          "description": "Block requests that fail any rule, returning the `on_deny` response. Default.",
+          "type": "string",
+          "const": "enforce"
+        },
+        {
+          "description": "Never block. Evaluate every rule and log what *would* have been blocked.\nUse this to validate a policy against live traffic before enforcing it\n(equivalent to a WAF \"count\"/\"log-only\" mode).",
+          "type": "string",
+          "const": "monitor"
+        }
+      ]
+    },
+    "IpFilterSource": {
+      "description": "Which IP field from the incoming request is used as the authoritative source\nwhen evaluating `allow` and `deny` rules in an [`IpRule`].\n\nDefaults to `client` when not specified.",
+      "oneOf": [
+        {
+          "description": "Leftmost X-Forwarded-For entry (best-guess real client). Default.",
+          "type": "string",
+          "const": "client"
+        },
+        {
+          "description": "Raw TCP socket peer address (reliable when no proxy is involved).",
+          "type": "string",
+          "const": "socket"
+        },
+        {
+          "description": "X-Real-IP header value, falling back to `client` if not present.",
+          "type": "string",
+          "const": "real_ip"
+        }
+      ]
+    },
+    "IpRule": {
+      "description": "IP-based allow/deny rule. Single addresses or CIDR ranges; IPv4 and IPv6.\n\nWithin a single level, rules evaluate as: `deny` match → block;\nelse `allow` present and no match → block; else pass.",
+      "type": "object",
+      "properties": {
+        "allow": {
+          "description": "Allowed IPs / CIDR ranges. If set, only matching requests pass (evaluated\nagainst the policy `source` IP). Across levels these intersect.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "deny": {
+          "description": "Blocked IPs / CIDR ranges. Matching requests are denied. Across levels these\nunion (a config-level deny always applies). `deny_check` controls scope.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "deny_check": {
+          "description": "Which IPs are checked against `deny`: `source` (default) checks only the\nresolved source IP; `all` checks every IP in the request chain.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DenyCheckMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "DenyCheckMode": {
+      "description": "Controls which IPs are checked against the `deny` list.\n\nDefaults to `source` when not specified.",
+      "oneOf": [
+        {
+          "description": "Only check the configured `source` IP against the deny list. Default.",
+          "type": "string",
+          "const": "source"
+        },
+        {
+          "description": "Check deny rules against every IP in the full chain: client, socket,\nX-Real-IP, and all X-Forwarded-For hops. Useful for blocking known bad\nactors even when they route through proxies.",
+          "type": "string",
+          "const": "all"
+        }
+      ]
+    },
+    "GeoRule": {
+      "description": "Country-level (GeoIP) allow/deny rule. Requires a configured GeoIP provider.\nCountry codes are ISO 3166-1 alpha-2 (e.g. \"US\", \"GB\"), case-insensitive.",
+      "type": "object",
+      "properties": {
+        "allow": {
+          "description": "Allowed country codes. If set, only requests resolving to one of these pass.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "deny": {
+          "description": "Denied country codes. Requests resolving to one of these are blocked.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "require_resolution": {
+          "description": "When the country cannot be resolved: `true` blocks (fail-closed), `false`\n(default) skips the rule (fail-open).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "AsnRule": {
+      "description": "Autonomous System Number allow/deny rule. Requires a configured ASN provider.",
+      "type": "object",
+      "properties": {
+        "allow": {
+          "description": "Allowed ASNs. If set, only requests resolving to one of these pass.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "deny": {
+          "description": "Denied ASNs. Requests resolving to one of these are blocked.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "require_resolution": {
+          "description": "When the ASN cannot be resolved: `true` blocks, `false` (default) skips.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "RateLimitRule": {
+      "description": "Per-identifier request rate limit using a sliding window.",
+      "type": "object",
+      "properties": {
+        "per": {
+          "description": "What to bucket requests by. Defaults to `ip`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RateLimitScope"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requests": {
+          "description": "Maximum requests permitted per `window`.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "window": {
+          "description": "Window length as a humantime string (\"60s\", \"1m\", \"1h\"). Defaults to \"60s\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "burst": {
+          "description": "Optional short-term burst allowance above `requests`. Reserved for the\ntoken-bucket backend; ignored by the sliding-window default.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "requests"
+      ]
+    },
+    "RateLimitScope": {
+      "description": "Identifier a [`RateLimitRule`] buckets requests by. Defaults to `ip`.",
+      "oneOf": [
+        {
+          "description": "Bucket by the policy's resolved `source` IP address. Default.",
+          "type": "string",
+          "const": "ip"
+        }
+      ]
+    },
+    "DenyResponse": {
+      "description": "Response returned when a request is denied in `enforce` mode.",
+      "type": "object",
+      "properties": {
+        "status": {
+          "description": "HTTP status code. Defaults to 403. Set to 404 to hide a route's existence.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "body": {
+          "description": "Response body. Defaults to `{\"error\":\"forbidden\"}`."
+        },
+        "headers": {
+          "description": "Extra response headers to attach (e.g. `Retry-After` for rate limits).",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "McpTool": {
+      "description": "Opt-in MCP tool exposure for an interface. See [`Interface::mcp`].\n\nThe MCP server auto-generates the tool's `inputSchema` from the interface's\n`assert` tests (the same schema that powers the OpenAPI docs), so no separate\nschema needs to be authored here.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Expose this interface as an MCP tool. Default `false`.",
+          "type": "boolean",
+          "default": false
+        },
+        "tool_name": {
+          "description": "Override the tool name shown to MCP clients. Defaults to the interface name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "description": "Override the tool description. Defaults to the interface `summary`/`description`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "GlobalConfig": {
+      "type": "object",
+      "properties": {
+        "variables": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "templates": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "databases": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/Database"
+          }
+        },
+        "secrets": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/Secret"
+          }
+        },
+        "http": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpRequest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "google_credentials": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/GoogleCredential"
+          }
+        },
+        "aws_credentials": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/AwsCredential"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Database": {
+      "type": "object",
+      "properties": {
+        "driver": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conn_string": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "user": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pass": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "host": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "dbname": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "params": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "auth_source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_open_conns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "max_idle_conns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "conn_max_lifetime": true,
+        "timeout": true,
+        "synchronous": {
+          "description": "SQLite-only: `PRAGMA synchronous` (`OFF` | `NORMAL` | `FULL` | `EXTRA`). Defaults to `NORMAL`\n(with WAL journaling) when unset — durable against application/process crashes and ~10x faster\nthan `FULL` on writes. Set `FULL`/`EXTRA` for maximum durability, or `OFF` for maximum speed\n(no crash durability). Ignored by non-SQLite drivers.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Secret": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/SecretKind"
+        },
+        "ttl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "region": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "http": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpRequest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "credential_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "config_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "data": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SecretFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ]
+    },
+    "SecretKind": {
+      "type": "string",
+      "enum": [
+        "local",
+        "vault",
+        "aws-kms",
+        "command"
+      ]
+    },
+    "SecretFormat": {
+      "type": "string",
+      "enum": [
+        "raw",
+        "equal",
+        "json"
+      ]
+    },
+    "GoogleCredential": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "json": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "client_email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "private_key_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "private_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "auth_uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "token_uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "project_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "AwsCredential": {
+      "type": "object",
+      "properties": {
+        "region": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "access_key_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "secret_access_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

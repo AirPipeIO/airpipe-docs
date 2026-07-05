@@ -1,0 +1,49 @@
+---
+sidebar_position: 12
+slug: /configuration/scheduling
+displayed_sidebar: featuresSidebar
+---
+
+# Scheduling
+
+Any interface can run on a cron schedule instead of (or in addition to) being
+invoked over HTTP. Add a `schedule:` block to the interface. Full fields:
+[Schedule reference](../reference/02-interfaces.md#type-schedule).
+
+## Example
+
+```yaml
+interfaces:
+  nightlyDigest:
+    schedule:
+      cron: "0 6 * * *"        # 5-field cron: min hour day month weekday
+      enabled: true
+      timezone: "Europe/London" # IANA zone, defaults to UTC
+    actions:
+      - name: Query
+        database: main
+        query: SELECT count(*) AS signups FROM users WHERE created_at > now() - interval '1 day'
+      - name: Notify
+        http:
+          url: https://hooks.slack.com/services/XXX
+          body: { text: "a|Query::signups| new signups today" }
+```
+
+## Retries
+
+Scheduled runs retry independently of action-level retries:
+
+```yaml
+schedule:
+  cron: "*/15 * * * *"
+  enabled: true
+  max_attempts: 3
+  retry_backoff_seconds: 60      # first backoff
+  retry_backoff_multiplier: 2.0  # doubles each attempt
+  max_backoff_seconds: 3600      # cap
+```
+
+:::note
+`timezone` and `cron` are validated when the config loads — an invalid zone or
+expression is rejected. A minimum interval is enforced (minute-level).
+:::

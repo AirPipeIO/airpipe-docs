@@ -1,0 +1,61 @@
+---
+sidebar_position: 11
+slug: /configuration/access-control
+displayed_sidebar: featuresSidebar
+---
+
+# Network access control
+
+Air Pipe can enforce IP, geo, ASN and rate-limit rules before an interface runs.
+Policies are declared with `network:` at the **config** level (applies to every
+interface) and/or per **interface** (which can only tighten the config-wide
+policy). See the full field list in the
+[Network access control reference](../reference/13-network.md).
+
+## Modes
+
+- `mode: enforce` (default) — denied requests are blocked.
+- `mode: monitor` — rules are evaluated and logged but never block. Use this to
+  validate a policy against real traffic before enforcing it.
+
+## Example
+
+```yaml
+name: my-api
+network:                     # config-wide policy
+  mode: enforce
+  ip:
+    allow: ["10.0.0.0/8"]
+    deny: ["10.6.6.6"]
+  geo:
+    allow: ["US", "GB"]      # ISO 3166-1 alpha-2
+  rate_limit:
+    requests: 100
+    window: 60s
+    burst: 20
+  on_deny:
+    status: 403              # set 404 to hide the route entirely
+
+interfaces:
+  admin:
+    network:                 # tighten further for this route
+      ip:
+        allow: ["10.0.1.0/24"]
+    actions:
+      - name: Whoami
+        # ...
+```
+
+## Trusted proxies & IP source
+
+When Air Pipe runs behind a proxy or load balancer, set `source` and
+`trusted_proxies` so the real client IP is used for matching:
+
+```yaml
+network:
+  source: real_ip                 # client | socket | real_ip
+  trusted_proxies: ["10.0.0.0/8"]
+```
+
+`geo` and `asn` rules require IP resolution; set `require_resolution: true` to
+deny requests whose location/ASN cannot be determined.

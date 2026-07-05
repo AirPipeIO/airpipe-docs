@@ -4,12 +4,12 @@ description: If CheckBody succeeds, then allow GetUser1 action to run
 interfaces:
   run_condition/when_succeeded:
     method: POST
-    input: a|body
+    input: a|body|
     output: http
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: message

@@ -3,12 +3,12 @@ name: AskGemini
 interfaces:
   gemini/query:
     method: POST
-    input: a|body
+    input: a|body|
     output: http
 
     actions:
       - name: CheckBody
-        input: a|body
+        input: a|body|
         assert:
           tests:
             - value: text

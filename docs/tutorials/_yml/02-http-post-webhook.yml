@@ -8,4 +8,4 @@ interfaces:
 
     actions:
       - name: CheckBody
-        input: a|body # input now set as a|body to inspect the incoming payload
+        input: a|body| # input now set as a|body| to inspect the incoming payload

@@ -6,7 +6,7 @@ interfaces:
 
     actions:
       - name: Input
-        input: a|params # expects query parameters with title and body, eg. search/posts?title=eum&body=corp
+        input: a|params| # expects query parameters with title and body, eg. search/posts?title=eum&body=corp
         assert:
           tests:
             - value: title

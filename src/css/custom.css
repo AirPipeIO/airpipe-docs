@@ -1,51 +1,314 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * Air Pipe docs theme.
+ *
+ * Mirrors app-airpipe-react (Mantine v8, dark-first):
+ *   canvas #1b1c1d · flat surfaces separated by thin borders (#2a2c2f/#33353a)
+ *   blue #228be6 -> green #40c057 gradient identity · 8px radius
+ *   hover-lift (translateY/scale) · system font + source-code-pro mono · 1.7 prose
+ * Dark is the only mode (colorMode.disableSwitch). Everything below targets
+ * existing Infima classes/variables — nothing is swizzled.
  */
 
-/* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #007bff;
-  --ifm-link-color: #0056b3; /* Slightly darker blue for links in light mode */
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-color-primary: #228be6;
+  --ifm-color-primary-dark: #1c7fd6;
+  --ifm-color-primary-darker: #1a78ca;
+  --ifm-color-primary-darkest: #1663a6;
+  --ifm-color-primary-light: #3d97e9;
+  --ifm-color-primary-lighter: #4a9eeb;
+  --ifm-color-primary-lightest: #6fb2ef;
+
+  --ifm-code-font-size: 88%;
+  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Fira Sans", "Helvetica Neue", sans-serif;
+  --ifm-font-family-monospace: source-code-pro, Menlo, Monaco, Consolas,
+    "Courier New", monospace;
+  --ifm-line-height-base: 1.7;
+  --ifm-heading-font-weight: 650;
+  --ifm-global-radius: 8px;
+
+  /* Air Pipe surfaces & borders (Mantine dark scale) */
+  --ap-canvas: #1b1c1d;
+  --ap-surface: #1f2021;
+  --ap-surface-2: #242527;
+  --ap-border: #2a2c2f;
+  --ap-border-strong: #33353a;
+  --ap-text: #c9cbcf;
+  --ap-text-dim: #909296;
+  --ap-heading: #f1f3f5;
+
+  /* Identity gradient */
+  --ap-gradient: linear-gradient(90deg, #228be6, #40c057);
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme="dark"] {
-  --ifm-color-primary: #0096ff; /* Slightly lighter blue for primary elements in dark mode */
-  --ifm-link-color: #007bff; /* Standard blue for links in dark mode */
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
-  --ifm-footer-background-color: #242424;
-  --ifm-navbar-background-color: black;
-}
+  --ifm-color-primary: #4dabf7;
+  --ifm-color-primary-dark: #339af0;
+  --ifm-color-primary-darker: #228be6;
+  --ifm-color-primary-darkest: #1c7ed6;
+  --ifm-color-primary-light: #66b8f8;
+  --ifm-color-primary-lighter: #74bef9;
+  --ifm-color-primary-lightest: #9dd0fb;
 
-.internal-href [class*="iconExternalLink"] {
-  display: none;
-}
+  /* Single flat canvas; separation via borders, not fills. */
+  --ifm-background-color: var(--ap-canvas);
+  --ifm-background-surface-color: var(--ap-canvas);
+  --ifm-navbar-background-color: var(--ap-canvas);
+  --ifm-footer-background-color: #141516;
 
-.footer {
-  background-color: #242424;
-}
+  --ifm-font-color-base: var(--ap-text);
+  --ifm-heading-color: var(--ap-heading);
+  --ifm-link-color: #4dabf7;
+  --ifm-link-hover-color: #74c0fc;
 
-.navbar {
-  background-color: black;
+  --ifm-color-emphasis-0: #141516;
+  --ifm-color-emphasis-100: var(--ap-surface);
+  --ifm-color-emphasis-200: var(--ap-surface-2);
+  --ifm-color-emphasis-300: var(--ap-border-strong);
+  --ifm-toc-border-color: var(--ap-border);
+  --ifm-hr-border-color: var(--ap-border);
+
+  --ifm-code-background: var(--ap-surface-2);
+  --ifm-pre-background: #17181a;
+  --docusaurus-highlighted-code-line-bg: rgba(77, 171, 247, 0.14);
+
+  --ifm-menu-color: #a6a7ab;
+  --ifm-menu-color-active: var(--ap-heading);
+
+  --ifm-table-border-color: var(--ap-border);
+  --ifm-table-stripe-background: #1c1d1e;
+  --ifm-table-head-background: var(--ap-surface);
+  --ifm-blockquote-color: var(--ap-text-dim);
 }
 
 html,
 body {
-  background-color: black;
+  background-color: var(--ap-canvas);
+}
+
+/* ---- Navbar ------------------------------------------------------------- */
+.navbar {
+  background-color: var(--ap-canvas);
+  border-bottom: 1px solid var(--ap-border);
+  box-shadow: none;
+}
+.navbar__link {
+  position: relative;
+}
+.navbar__link:hover,
+.navbar__link--active {
+  color: var(--ap-heading);
+}
+.navbar__link--active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.55rem;
+  height: 2px;
+  background: var(--ap-gradient);
+  border-radius: 2px;
+}
+.navbar__search-input {
+  background: var(--ap-surface-2);
+  border: 1px solid var(--ap-border-strong);
+  border-radius: 8px;
+  color: var(--ap-text);
+}
+
+/* ---- Footer ------------------------------------------------------------- */
+.footer {
+  background-color: #141516;
+  border-top: 1px solid var(--ap-border);
+}
+
+/* ---- Sidebar (left) & TOC (right): flat canvas, thin dividers ----------- */
+.theme-doc-sidebar-container {
+  background: var(--ap-canvas);
+  border-right: 1px solid var(--ap-border);
+}
+.menu__link {
+  border-radius: 8px;
+}
+.menu__link:hover,
+.menu__list-item-collapsible:hover {
+  background: #202123;
+}
+.menu__link--active:not(.menu__link--sublist) {
+  background: var(--ap-surface-2);
+  color: var(--ap-heading);
+  box-shadow: inset 3px 0 0 var(--ifm-color-primary);
+}
+.theme-doc-toc-desktop,
+.table-of-contents {
+  background: transparent;
+}
+.table-of-contents {
+  border-left: 1px solid var(--ap-border);
+}
+.table-of-contents__link {
+  color: var(--ap-text-dim);
+}
+.table-of-contents__link:hover {
+  color: var(--ap-text);
+}
+.table-of-contents__link--active {
+  color: var(--ap-heading);
+  font-weight: 600;
+}
+.main-wrapper {
+  background: var(--ap-canvas);
+}
+
+/* ---- Headings ----------------------------------------------------------- */
+.markdown h1 {
+  font-size: 2rem;
+  border-bottom: 1px solid var(--ap-border);
+  padding-bottom: 0.3em;
+}
+.markdown h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--ap-surface-2);
+  padding-bottom: 0.2em;
+}
+.markdown h3 {
+  font-size: 1.2rem;
+}
+.markdown :is(h1, h2, h3, h4) {
+  scroll-margin-top: 4rem;
+}
+.hash-link {
+  color: #5c5f66;
+}
+
+/* ---- Inline code + code blocks ------------------------------------------ */
+code {
+  background: var(--ap-surface-2);
+  border: 1px solid var(--ap-border-strong);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+pre code,
+.prism-code code {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+div[class*="codeBlockContainer"] {
+  border: 1px solid var(--ap-border);
+  border-radius: 8px;
+}
+div[class*="codeBlockTitle"] {
+  background: var(--ap-surface);
+  border-bottom: 1px solid var(--ap-border);
+}
+.theme-code-block button[class*="copyButton"],
+.theme-code-block .buttonGroup button {
+  background: var(--ap-surface-2);
+  border: 1px solid var(--ap-border-strong);
+  border-radius: 6px;
+}
+.theme-code-block .buttonGroup button:hover {
+  background: var(--ap-border);
+}
+
+/* ---- Admonitions: flat dark card + colored left rule (not Infima pastels) */
+.theme-admonition,
+.admonition,
+.alert {
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  color: var(--ap-text);
+  --ifm-alert-background-color: var(--ap-surface);
+  --ifm-alert-background-color-highlight: transparent;
+  --ifm-alert-foreground-color: var(--ap-text);
+}
+.theme-admonition-note,
+.theme-admonition-info,
+.theme-admonition-tip {
+  border-left-color: #228be6;
+}
+.theme-admonition-warning,
+.theme-admonition-caution {
+  border-left-color: #f59f00;
+}
+.theme-admonition-danger {
+  border-left-color: #fa5252;
+}
+
+/* ---- Blockquotes -------------------------------------------------------- */
+.markdown blockquote {
+  border-left: 3px solid var(--ap-border-strong);
+  background: transparent;
+  color: var(--ap-text-dim);
+  padding: 0.2em 1em;
+}
+
+/* ---- Tables (the generated Reference is table-heavy) -------------------- */
+.markdown table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+.markdown table thead tr {
+  background: var(--ap-surface);
+}
+.markdown table th,
+.markdown table td {
+  border-color: var(--ap-border);
+  padding: 6px 12px;
+}
+.markdown table tbody tr:hover {
+  background: var(--ap-surface);
+}
+
+/* ---- Pagination + breadcrumbs ------------------------------------------- */
+.pagination-nav__link {
+  border: 1px solid var(--ap-border);
+  border-radius: 8px;
+  background: var(--ap-surface);
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+.pagination-nav__link:hover {
+  border-color: var(--ap-border-strong);
+  transform: translateY(-2px);
+}
+.breadcrumbs__link {
+  background: transparent;
+  color: var(--ap-text-dim);
+}
+.breadcrumbs__item--active .breadcrumbs__link {
+  background: var(--ap-surface-2);
+  color: var(--ap-heading);
+}
+
+/* ---- Buttons ------------------------------------------------------------ */
+.button.button--primary {
+  background: var(--ap-gradient);
+  border: 0;
+  color: #fff;
+  transition: transform 150ms ease, box-shadow 120ms ease;
+}
+.button.button--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(34, 139, 230, 0.28);
+  color: #fff;
+}
+.button.button--secondary {
+  background: var(--ap-surface-2);
+  border: 1px solid var(--ap-border-strong);
+  color: var(--ap-text);
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+.button.button--secondary:hover {
+  transform: translateY(-2px);
+  border-color: var(--ifm-color-primary);
+  color: var(--ap-heading);
+}
+
+/* Hide the external-link icon on links we mark internal. */
+.internal-href [class*="iconExternalLink"] {
+  display: none;
 }

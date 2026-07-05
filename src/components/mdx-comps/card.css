@@ -1,30 +1,34 @@
-.custom-card {
-  transition: border-color 0.3s ease;
-}
-
-.custom-card:hover {
-  border-color: #007bff;
-}
+/* MDX <Cards> grid — mirrors app-airpipe-react CardGradient.
+   All rules are scoped under `.card-demo` (the Cards component's wrapper) so
+   the gradient spine does NOT leak onto Docusaurus's own `.card` DocCards
+   (category index / generated-index pages). */
 
 .custom-card-wrapper a {
   user-select: none;
 }
 
-.card {
-  border: 1px solid transparent;
-  transition: border-color 0.3s ease;
-  height: 150px;
-}
-.card-hover:hover {
-  border-color: #007bff;
-}
-
-.card-description {
-  border: 1px solid transparent;
-  transition: border-color 0.3s ease;
-  height: 500px;
+.card-demo .card {
+  position: relative;
+  overflow: hidden;
+  background: #1f2021;
+  border: 1px solid #2a2c2f;
+  border-radius: 8px;
+  transition: transform 150ms ease, box-shadow 120ms ease, border-color 150ms ease;
 }
 
-.card-description:hover {
-  border-color: #007bff;
+/* Gradient identity spine on the left edge. */
+.card-demo .card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background-image: linear-gradient(180deg, #228be6, #40c057);
+}
+
+.card-demo .card-hover:hover {
+  transform: translateY(-2px);
+  border-color: #33353a;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }

@@ -1,0 +1,63 @@
+---
+sidebar_position: 4
+slug: /configuration/metrics
+displayed_sidebar: featuresSidebar
+---
+
+# Prometheus metrics
+
+Air Pipe exposes a Prometheus `/metrics` endpoint and lets actions emit custom
+metrics. For distributed tracing see [OpenTelemetry tracing](/docs/otel-tracing).
+
+## Enable it
+
+Set `expose_metrics: true` at the config root. The `/metrics` route is served in
+self-hosted modes and is **unauthenticated** — scrape it from inside your network.
+
+```yaml
+name: my-api
+expose_metrics: true
+interfaces:
+  # ...
+```
+
+Scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: airpipe
+    static_configs:
+      - targets: ["your-airpipe-host:PORT"]
+```
+
+## Built-in metrics
+
+| Metric | Type | Labels |
+|---|---|---|
+| `airpipe_interface_requests_total` | counter | `config`, `interface` |
+| `airpipe_interface_duration_ms` | histogram | `config`, `interface` |
+| `airpipe_http_action_duration_ms` | histogram | `config`, `interface`, `action` |
+| `axum_http_requests_total` | counter | route/method/status |
+| `axum_http_requests_duration_seconds` | histogram | route/method/status |
+| `axum_http_requests_pending` | gauge | — |
+
+## Custom metrics
+
+Emit your own metrics from an action with `emit_metric`. Full fields:
+[EmitMetric reference](../reference/10-metrics.md#type-emitmetric).
+
+```yaml
+actions:
+  - name: RecordSignup
+    emit_metric:
+      name: signups_total       # must be a valid Prometheus metric name
+      type: counter             # counter (default) | gauge | histogram
+      value: 1
+      labels:
+        plan: a|body::plan|
+```
+
+- **counter** — increments by `1` when `value` is omitted.
+- **gauge / histogram** — require a `value`.
+- Air Pipe **auto-attaches `config`, `interface` and `action` labels** to every
+  custom metric, in addition to any `labels` you set.

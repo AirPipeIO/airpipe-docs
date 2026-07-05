@@ -1,40 +1,45 @@
 import clsx from "clsx";
 import Heading from "@theme/Heading";
+import { IconCode, IconBolt, IconServer2 } from "@tabler/icons-react";
 import styles from "./styles.module.css";
 
 const FeatureList = [
   {
     title: "Zero Code",
-    Svg: require("@site/static/img/undraw_docusaurus_mountain.svg").default,
-    description: <>Just a handful of text in your YAML file</>,
+    Icon: IconCode,
+    description: (
+      <>Define APIs, integrations & workflows declaratively in a single YAML file.</>
+    ),
   },
   {
     title: "High Performance",
-    Svg: require("@site/static/img/undraw_docusaurus_tree.svg").default,
+    Icon: IconBolt,
     description: (
       <>
         Build performant, fully functional APIs, integrations & workflows faster
-        than ever
+        than ever.
       </>
     ),
   },
   {
     title: "Managed or Self Hosted",
-    Svg: require("@site/static/img/undraw_docusaurus_react.svg").default,
+    Icon: IconServer2,
     description: (
       <>
-        <b>Run anywhere</b> - managed by us, or self hosted on your own
-        infrastructure, host, container etc.
+        <b>Run anywhere</b> — managed by us, or self-hosted on your own
+        infrastructure, host or container.
       </>
     ),
   },
 ];
 
-function Feature({ Svg, title, description }) {
+function Feature({ Icon, title, description }) {
   return (
     <div className={clsx("col col--4")}>
       <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
+        <span className={styles.featureIcon}>
+          <Icon size={32} stroke={1.6} />
+        </span>
       </div>
       <div className="text--center padding-horiz--md">
         <Heading as="h3">{title}</Heading>

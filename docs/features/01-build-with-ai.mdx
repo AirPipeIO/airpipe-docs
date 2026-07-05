@@ -1,0 +1,58 @@
+---
+sidebar_position: 1
+slug: /features/build-with-ai
+displayed_sidebar: featuresSidebar
+---
+
+# Build with AI
+
+There are two ways to use AI with Air Pipe. Don't confuse them:
+
+1. **Build Air Pipe _with_ AI** — describe the API you want in plain English and
+   get a working, validated config (this page).
+2. **Expose _your_ API _to_ AI** — turn your own interfaces into tools an AI
+   agent can call. See [MCP tools](/docs/configuration/mcp-tools).
+
+## 1. Generate a config from a description
+
+The Air Pipe app has a **Build with AI** panel. Describe what you want — "a REST
+API over my Postgres `orders` table with JWT auth" — and it returns a complete
+Air Pipe config.
+
+Under the hood it does more than prompt an LLM:
+
+- **Retrieval** over the marketplace corpus + config schema, so the output uses
+  real Air Pipe patterns, not hallucinated fields.
+- **Schema validation with auto-repair** — the generated YAML is validated
+  against the engine schema and repaired before it's handed back, so what you
+  get is deployable, not a sketch.
+- Backed by frontier models (Claude / DeepSeek). Requires being signed in.
+
+The result is a normal config — review it, tweak it, and deploy it like any
+other. It's a starting point you own, not a black box.
+
+## 2. Manage Air Pipe from your AI client (MCP)
+
+Air Pipe also exposes a **management MCP server**, so an MCP-capable client
+(Claude Code, Claude Desktop, Cursor, …) can author, validate, and deploy
+configs conversationally. Point your client at Air Pipe's MCP endpoint with a
+bearer token and these tools become available:
+
+| Tool | Purpose |
+|---|---|
+| `list_organizations` | List orgs you can deploy to |
+| `list_configs` / `get_config` | Browse existing configs |
+| `plan_config` | Generate a config from a description (retrieval + validate/repair) |
+| `validate_config` | Schema-check a config without saving |
+| `create_config` / `update_config` / `edit_config` | Author and modify configs |
+| `deploy_config_revision` / `undeploy_config` / `toggle_config` | Ship it |
+
+A typical flow: ask your assistant to "build and deploy an API that…", it calls
+`plan_config` to draft + validate, `create_config` to save, then
+`deploy_config_revision` to go live — all without leaving the chat.
+
+:::note
+This management MCP is different from [exposing your own interfaces as MCP
+tools](/docs/configuration/mcp-tools). Here, the *Air Pipe platform* is the thing being
+driven by AI; there, *your API* is the thing an agent calls.
+:::

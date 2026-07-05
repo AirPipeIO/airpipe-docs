@@ -1,0 +1,46 @@
+---
+sidebar_position: 15
+slug: /configuration/mcp-tools
+displayed_sidebar: featuresSidebar
+---
+
+# MCP tools
+
+Any interface can be exposed as a [Model Context Protocol](https://modelcontextprotocol.io)
+tool, letting AI agents call it directly. Opt in with an `mcp:` block on the
+interface. Full fields: [McpTool reference](../reference/02-interfaces.md#type-mcptool).
+
+## Example
+
+```yaml
+interfaces:
+  searchOrders:
+    summary: Search orders by customer
+    mcp:
+      enabled: true
+      tool_name: search_orders        # optional, defaults to the interface name
+      description: Find orders for a customer by email
+    actions:
+      - name: Validate
+        input: a|body|
+        assert:
+          tests:
+            - value: a|body::email|
+              is_not_empty: true
+      - name: Query
+        database: main
+        query: SELECT * FROM orders WHERE customer_email = $1
+        params: [a|body::email|]
+```
+
+## Input schema
+
+The tool's `inputSchema` is generated automatically from the interface's
+`assert` tests against `a|body|` / `a|params|` — the test vocabulary (types,
+patterns, min/max, `is_uuid`, semver, …) maps to JSON Schema. Write clear
+assertions and agents get an accurate tool signature for free.
+
+:::tip
+Pair MCP tools with [network access control](/docs/configuration/access-control)
+and JWT verification so agent-callable endpoints stay authorized.
+:::
