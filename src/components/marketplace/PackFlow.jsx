@@ -5,48 +5,57 @@ import { load as loadYaml } from "js-yaml";
 import convertConfigToReactFlow from "./convert-with-dagre";
 import { nodeTypes } from "./FlowNodes";
 
-// Renders an Air Pipe config YAML as a read-only ReactFlow workflow diagram.
-// Import this ONLY from inside a <BrowserOnly> — @xyflow/react touches window /
-// ResizeObserver and cannot be server-rendered.
-export default function PackFlow({ yaml: yamlText, height = 460 }) {
+// Renders an Air Pipe config YAML as a ReactFlow workflow diagram.
+// Import ONLY from inside <BrowserOnly> — @xyflow/react needs the DOM.
+//   thumbnail=true  -> static, non-interactive preview (for the slider)
+//   thumbnail=false -> interactive (lightbox): pan/zoom + controls
+export default function PackFlow({ yaml: yamlText, height = 460, thumbnail = false }) {
   const { nodes, edges, error } = useMemo(() => {
     try {
       const config = loadYaml(yamlText) || {};
       if (!config.interfaces || typeof config.interfaces !== "object") {
         return { nodes: [], edges: [], error: "No interfaces in this config." };
       }
-      const flow = convertConfigToReactFlow(config, 1200, height) || {};
+      const flow = convertConfigToReactFlow(config, 1200, 800) || {};
       return { nodes: flow.nodes || [], edges: flow.edges || [], error: null };
     } catch (e) {
       return { nodes: [], edges: [], error: String(e.message || e) };
     }
-  }, [yamlText, height]);
+  }, [yamlText]);
 
   if (error) {
     return (
-      <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center", color: "#909296" }}>
-        Could not render workflow: {error}
+      <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center", color: "#5c5f66", fontSize: 13 }}>
+        {error}
       </div>
     );
   }
 
+  const interactive = !thumbnail;
   return (
-    <div style={{ height, width: "100%", borderRadius: 10, overflow: "hidden", border: "1px solid #2a2c2f" }}>
+    <div style={{ height, width: "100%" }}>
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
           fitView
+          fitViewOptions={{ padding: thumbnail ? 0.12 : 0.2 }}
           colorMode="dark"
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
+          panOnDrag={interactive}
+          zoomOnScroll={interactive}
+          zoomOnPinch={interactive}
+          zoomOnDoubleClick={interactive}
+          panOnScroll={false}
+          preventScrolling={interactive}
           proOptions={{ hideAttribution: true }}
-          minZoom={0.1}
+          minZoom={0.05}
         >
           <Background color="#2a2c2f" gap={18} />
-          <Controls showInteractive={false} />
+          {interactive ? <Controls showInteractive={false} /> : null}
         </ReactFlow>
       </ReactFlowProvider>
     </div>

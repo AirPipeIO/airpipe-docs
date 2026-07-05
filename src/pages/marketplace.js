@@ -5,7 +5,7 @@ import CodeBlock from "@theme/CodeBlock";
 import snapshot from "@site/data/packs.snapshot.json";
 import PackIcons from "@site/src/components/marketplace/PackIcons";
 import Markdown from "@site/src/components/marketplace/Markdown";
-import { IconStar, IconCircleCheck, IconLock, IconArrowLeft, IconSearch } from "@tabler/icons-react";
+import { IconStar, IconCircleCheck, IconLock, IconArrowLeft, IconSearch, IconArrowsMaximize, IconSitemap, IconX, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import styles from "@site/src/components/marketplace/marketplace.module.css";
 
 const CATEGORIES = {
@@ -161,8 +161,54 @@ function Gallery({ onOpen }) {
   );
 }
 
+function ThumbFlow({ content, height = 190, thumbnail = true }) {
+  return (
+    <BrowserOnly fallback={<div className={styles.flowSkeleton} style={{ height }}>Loading workflow…</div>}>
+      {() => {
+        const PackFlow = require("@site/src/components/marketplace/PackFlow").default;
+        return <PackFlow yaml={decodeB64(content)} height={height} thumbnail={thumbnail} />;
+      }}
+    </BrowserOnly>
+  );
+}
+
+function Lightbox({ files, index, setIndex, onClose }) {
+  useEffect(() => {
+    if (index == null) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowLeft" && index > 0) setIndex(index - 1);
+      else if (e.key === "ArrowRight" && index < files.length - 1) setIndex(index + 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [index, files.length, setIndex, onClose]);
+
+  if (index == null) return null;
+  const f = files[index];
+  return (
+    <div className={styles.lightbox} onClick={onClose}>
+      <div className={styles.lightboxInner} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.lightboxBar}>
+          <span className={styles.fileName}><IconSitemap size={14} /> {f.filename}</span>
+          <div className={styles.lightboxNav}>
+            <button disabled={index === 0} onClick={() => setIndex(index - 1)}><IconChevronLeft size={16} /></button>
+            <span>{index + 1} / {files.length}</span>
+            <button disabled={index === files.length - 1} onClick={() => setIndex(index + 1)}><IconChevronRight size={16} /></button>
+            <button onClick={onClose}><IconX size={16} /></button>
+          </div>
+        </div>
+        <div className={styles.lightboxFlow}>
+          <ThumbFlow content={f.content} height="100%" thumbnail={false} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Detail({ slug, onBack }) {
   const [tab, setTab] = useState("overview");
+  const [lightbox, setLightbox] = useState(null);
   const pack = PACKS.find((p) => p.slug === slug);
   const detail = DETAILS[slug];
   const packUrl = `${APP}?pack=${encodeURIComponent(slug)}`;
@@ -213,35 +259,40 @@ function Detail({ slug, onBack }) {
         </a>
       </div>
 
+      {ymlFiles.length > 0 && (
+        <div className={styles.previewSection}>
+          <div className={styles.sectionLabel}>Workflow Preview</div>
+          <div className={styles.slider}>
+            {ymlFiles.map((f, i) => (
+              <div
+                key={f.filename}
+                className={styles.thumb}
+                role="button"
+                tabIndex={0}
+                title="Click to expand"
+                onClick={() => setLightbox(i)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setLightbox(i); } }}
+              >
+                <div className={styles.thumbFlow}>
+                  <ThumbFlow content={f.content} height={190} />
+                </div>
+                <span className={styles.thumbExpand}><IconArrowsMaximize size={14} /></span>
+                <span className={styles.thumbName}><IconSitemap size={12} /> {f.filename}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={styles.tabs}>
-        {["overview", "workflow", "config"].map((t) => (
+        {["overview", "config"].map((t) => (
           <button key={t} className={tab === t ? styles.tabActive : styles.tab} onClick={() => setTab(t)}>
-            {t === "overview" ? "Overview" : t === "workflow" ? "Workflow" : "Config"}
+            {t === "overview" ? "Overview" : "Config"}
           </button>
         ))}
       </div>
 
       {tab === "overview" && <Markdown>{readme}</Markdown>}
-
-      {tab === "workflow" && (
-        <div>
-          {ymlFiles.length === 0 ? (
-            <p className={styles.empty}>No config files to visualize.</p>
-          ) : (
-            ymlFiles.map((f) => (
-              <div key={f.filename} style={{ marginBottom: "1.5rem" }}>
-                <div className={styles.fileName}>{f.filename}</div>
-                <BrowserOnly fallback={<div className={styles.flowSkeleton}>Loading workflow…</div>}>
-                  {() => {
-                    const PackFlow = require("@site/src/components/marketplace/PackFlow").default;
-                    return <PackFlow yaml={decodeB64(f.content)} />;
-                  }}
-                </BrowserOnly>
-              </div>
-            ))
-          )}
-        </div>
-      )}
 
       {tab === "config" && (
         <div>
@@ -254,6 +305,8 @@ function Detail({ slug, onBack }) {
           ))}
         </div>
       )}
+
+      <Lightbox files={ymlFiles} index={lightbox} setIndex={setLightbox} onClose={() => setLightbox(null)} />
     </div>
   );
 }
