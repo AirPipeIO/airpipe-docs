@@ -78,14 +78,20 @@ function HomepageHeader() {
           </Link>
           <Link
             className="button button--secondary button--lg"
+            to="/docs/tutorial/setup"
+          >
+            Start with YAML
+          </Link>
+          <Link
+            className="button button--secondary button--lg"
             to="/docs/examples/marketplace"
           >
             Browse the marketplace
           </Link>
         </div>
         <p className={styles.heroFootnote}>
-          Describe your API in plain English — or{" "}
-          <Link to="/docs/tutorial/setup">start from the docs</Link>. No card required.
+          Describe it in plain English, write the config by hand, or fork a
+          marketplace pack. No card required.
         </p>
       </div>
     </header>
