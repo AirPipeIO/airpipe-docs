@@ -11,11 +11,20 @@
 // Output: docs/configuration/reference/*.md  (CommonMark via markdown.format
 // 'detect' -- descriptions contain `{`/`<` from YAML examples).
 
-import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rm, readdir } from "node:fs/promises";
 import path from "node:path";
-import { DOCS_DIR, SNAPSHOTS } from "./lib/sources.mjs";
+import { DOCS_DIR, REPO_ROOT, SNAPSHOTS } from "./lib/sources.mjs";
 
 const OUT_DIR = path.join(DOCS_DIR, "reference");
+
+// Hand-authored concept + example prose, injected into the generated reference
+// page with the matching basename (e.g. reference-content/04-inputs-http.md ->
+// docs/reference/04-inputs-http.md, after the H1, before the field tables).
+// This is how a single Reference page carries BOTH the stable narrative AND the
+// always-current schema tables — so there is no separate Configuration page to
+// keep in sync. These files ARE committed (unlike the generated output).
+const CONTENT_DIR = path.join(REPO_ROOT, "reference-content");
+let PROSE = {}; // page file base -> markdown
 
 // Which $def lives on which page, in sidebar order. Anything unmapped falls
 // through to the "other-types" page (and is logged, so the map stays honest).
@@ -263,6 +272,9 @@ function renderPage(page, index) {
 
   const parts = [fm, `# ${page.title}`, ""];
 
+  // Hand-authored concept + examples, ahead of the generated field tables.
+  if (PROSE[page.file]) parts.push(PROSE[page.file], "");
+
   if (page.root) {
     const root = ROOT;
     if (root.description) parts.push(proseDescription(root.description), "");
@@ -290,10 +302,26 @@ function renderPage(page, index) {
 
 let ROOT = {};
 
+async function loadProse() {
+  let files = [];
+  try {
+    files = await readdir(CONTENT_DIR);
+  } catch {
+    return; // no reference-content/ dir yet
+  }
+  for (const f of files) {
+    if (!f.endsWith(".md")) continue;
+    PROSE[f.replace(/\.md$/, "")] = (
+      await readFile(path.join(CONTENT_DIR, f), "utf-8")
+    ).trim();
+  }
+}
+
 async function main() {
   const schema = JSON.parse(await readFile(SNAPSHOTS.schema, "utf-8"));
   DEFS = schema.$defs || {};
   ROOT = schema;
+  await loadProse();
 
   // Assign every def to a page; collect leftovers into "other-types".
   const mapped = new Set();

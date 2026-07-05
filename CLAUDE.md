@@ -21,7 +21,7 @@ No test suite, no linter, no formatter are configured. Verification = build succ
 
 Large parts of the docs are **generated from live Air Pipe sources**, not hand-written:
 
-- **Configuration reference** ← `https://api.airpipe.io/config/schema` (schemars JSON Schema of `IntegrationConfig`). Generator: `scripts/gen-config-reference.mjs` → `docs/configuration/reference/*.md`.
+- **Configuration reference** ← `https://api.airpipe.io/config/schema` (schemars JSON Schema of `IntegrationConfig`). Generator: `scripts/gen-config-reference.mjs` → `docs/reference/*.md` (surfaced as the top-level **Reference** navbar tab). Hand-authored concept + example prose lives in `reference-content/<page>.md` (committed) and is **injected** into the matching generated page after its H1, before the field tables — so each type has ONE page combining stable narrative with always-current schema tables. The old per-type Configuration pages (interfaces/actions/inputs/asserts/transforms) were removed; **Configuration is now concept-only** (structure, globals, interpolation, managed variables, workflow control, lookups, CLI) and links into Reference.
 - **Marketplace examples** ← `https://api.airpipe.io/accounts/marketplace/public/packs` + `/public/pack?slug=`. Generator: `scripts/gen-marketplace.mjs` → `docs/examples/marketplace/<category>/*.md`.
 
 Two-stage design (`scripts/lib/sources.mjs`):

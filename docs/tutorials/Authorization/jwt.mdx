@@ -69,9 +69,9 @@ curl --location 'http://your.ip.address:4111/jwtauth/user' \
 
 The typical scenario for generating a JWT token is when someone performs a login authentication.
 
-We will use the [add_jwt](/docs/configuration/interfaces/actions/transforms/functions#add-jwt) functionality.
+We will use the [add_jwt](/docs/reference/transforms#type-addjwt) functionality.
 
-**Note** we are also using blowfish encryption in this example to validate the password, see [verify_bcrypt](/docs/configuration/interfaces/actions/asserts/functions#bcrypt-verify).
+**Note** we are also using blowfish encryption in this example to validate the password, see [verify_bcrypt](/docs/reference/asserts#type-test).
 
 ```yaml title="Postgres database login example with JWT generation"
 name: login_user # unique name within your organization
