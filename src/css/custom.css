@@ -86,9 +86,11 @@ body {
   background-color: var(--ap-canvas);
 }
 
-/* ---- Navbar ------------------------------------------------------------- */
+/* ---- Navbar: glassmorphism, matching the marketing header --------------- */
 .navbar {
-  background-color: var(--ap-canvas);
+  background-color: rgba(20, 21, 22, 0.72);
+  backdrop-filter: saturate(140%) blur(12px);
+  -webkit-backdrop-filter: saturate(140%) blur(12px);
   border-bottom: 1px solid var(--ap-border);
   box-shadow: none;
 }
