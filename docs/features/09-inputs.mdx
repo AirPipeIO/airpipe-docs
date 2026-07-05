@@ -1,0 +1,34 @@
+---
+sidebar_position: 9
+slug: /features/inputs
+displayed_sidebar: featuresSidebar
+---
+
+# Inputs
+
+Every action gets its data from an **input**. That's either request data / a
+previous action's output selected with `input:`, or a fetch from an external
+source.
+
+| Source | Use it for | Reference |
+|---|---|---|
+| `http` | Call any HTTP/REST API | [HTTP requests](/docs/reference/inputs-http) |
+| `database` | Query SQL and NoSQL databases | [Databases](/docs/reference/inputs-database) |
+| `command` | Run CLI tools, scripts, `curl` | [Command](/docs/reference/inputs-command) |
+| `email` | Send email over SMTP | [Email](/docs/reference/inputs-email) |
+
+Select request data or an earlier action's output with the closed marker form:
+
+```yml
+actions:
+  - name: CheckBody
+    input: a|body|
+  - name: Fetch
+    http:
+      url: https://api.example.com/users/a|params::id|
+  - name: Use
+    input: a|Fetch::email|
+```
+
+See [Interpolation](/docs/configuration/interpolation) for the full `a|…|`
+grammar, and [Actions](/docs/reference/actions) for how inputs fit into an action.

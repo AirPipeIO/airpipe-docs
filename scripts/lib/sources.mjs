@@ -42,8 +42,11 @@ export const ENDPOINTS = {
 // we only touch a real marker prefix (not the `a` tail of a word before a `|`),
 // and `(?!\|)` avoids double-closing an already-closed marker.
 export function closeMarkers(text) {
+  // Only close simple bare/pathed markers. The trailing lookahead skips filter
+  // chains (`a|body->upper|` must close AFTER the filter, not after the root),
+  // already-closed markers (`|`), and word tails.
   return String(text).replace(
-    /(?<![\w])a\|([A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z0-9_.\-]+)*)(?!\|)/g,
+    /(?<![\w])a\|([A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z0-9_.\-]+)*)(?![|>\-])/g,
     "a|$1|"
   );
 }

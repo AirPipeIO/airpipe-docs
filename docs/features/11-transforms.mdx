@@ -1,0 +1,30 @@
+---
+sidebar_position: 11
+slug: /features/transforms
+displayed_sidebar: featuresSidebar
+---
+
+# Transforms
+
+Reshape an action's data after it's fetched with a `post_transforms` block — an
+ordered list of transform functions. Extract, rename, filter, aggregate, hash,
+encrypt, and more, without writing code.
+
+```yml
+actions:
+  - name: Fetch
+    http:
+      url: https://jsonplaceholder.typicode.com/users
+    post_transforms:
+      - extract_value: ".body"
+      - keep_attributes: [id, name, email]
+      - filter:
+          conditions:
+            $.name:
+              contains: a|params::q|
+```
+
+A few of what's available: `extract_value` / `extract_with_jq`, `rename_keys` /
+`remove_keys`, `keep_attributes`, `filter`, `group_by`, `math`,
+`generate_password`, `encrypt_value`, `add_jwt`. The full list with fields is in
+the [Transforms reference](/docs/reference/transforms).

@@ -1,0 +1,36 @@
+---
+sidebar_position: 10
+slug: /features/databases
+displayed_sidebar: featuresSidebar
+---
+
+# Databases
+
+Query relational and document databases directly from an action. Define a
+connection once in `global.databases` and reuse it, or inline it on the action.
+
+**Relational** (`query` + `params`): PostgreSQL, MySQL/MariaDB, SQL Server
+(MSSQL), SQLite — plus Postgres-compatible engines (CockroachDB, YugabyteDB,
+Timescale) and MySQL-compatible ones (TiDB, PlanetScale).
+
+**Document** (`document_operation`): MongoDB, Azure Cosmos DB, Amazon DocumentDB.
+
+```yml
+global:
+  databases:
+    main:
+      driver: postgres
+      conn_string: "postgresql://a|env::PG_USER|:a|env::PG_PASS|@a|env::PG_HOST|/app"
+
+interfaces:
+  users:
+    method: GET
+    actions:
+      - name: List
+        database: main
+        query: SELECT * FROM users WHERE org = $1
+        params: [a|params::org|]
+```
+
+Full connection options and the `document_operation` block are in the
+[Databases reference](/docs/reference/inputs-database).
