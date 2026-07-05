@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 slug: /configuration/airpipe-agent
-displayed_sidebar: configurationSidebar
+displayed_sidebar: referenceSidebar
 ---
 
 # Basic AirPipe Agent Features

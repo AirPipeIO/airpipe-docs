@@ -15,7 +15,7 @@
 import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { Buffer } from "node:buffer";
-import { DOCS_DIR, SNAPSHOTS } from "./lib/sources.mjs";
+import { DOCS_DIR, SNAPSHOTS, closeMarkers } from "./lib/sources.mjs";
 
 const OUT_DIR = path.join(DOCS_DIR, "examples", "marketplace");
 const APP_MARKETPLACE = "https://app.airpipe.io/marketplace";
@@ -146,7 +146,9 @@ function renderPack(row, detail) {
       ].join("\n")
     : "";
 
-  return [fm, "", header, "", readme, filesSection, ""].join("\n");
+  // Frontmatter stays verbatim; normalize deprecated open-form markers in the
+  // body (README + rendered config files) to the closed `a|…|` form.
+  return [fm, "", closeMarkers([header, "", readme, filesSection, ""].join("\n"))].join("\n");
 }
 
 function renderIndex(byCat) {

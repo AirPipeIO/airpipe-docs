@@ -35,6 +35,19 @@ export const ENDPOINTS = {
     `${API_BASE}/accounts/marketplace/public/pack?slug=${encodeURIComponent(slug)}`,
 };
 
+// Normalize deprecated open-form interpolation markers to the closed form:
+// `a|body` -> `a|body|`, `a|headers::x-github-event` -> `a|headers::x-github-event|`.
+// Applied to generated output whose upstream (schema doc-comments, marketplace
+// pack content) may still use the deprecated open form. The lookbehind ensures
+// we only touch a real marker prefix (not the `a` tail of a word before a `|`),
+// and `(?!\|)` avoids double-closing an already-closed marker.
+export function closeMarkers(text) {
+  return String(text).replace(
+    /(?<![\w])a\|([A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z0-9_.\-]+)*)(?!\|)/g,
+    "a|$1|"
+  );
+}
+
 // Pull the payload out of an Air Pipe action envelope: data.<action>.data
 export function unwrap(envelope, action) {
   const node = envelope?.data?.[action];

@@ -13,5 +13,5 @@ actions:
 ```
 
 The `filter` transform reuses the
-[assertion](/docs/configuration/interfaces/actions/asserts) vocabulary to keep
+[assertion](./12-asserts.md) vocabulary to keep
 only matching elements. Every transform and its fields are listed below.

@@ -81,12 +81,6 @@ const config = {
           },
           {
             type: "docSidebar",
-            sidebarId: "configurationSidebar",
-            position: "left",
-            label: "Configuration",
-          },
-          {
-            type: "docSidebar",
             sidebarId: "featuresSidebar",
             position: "left",
             label: "Features",

@@ -13,7 +13,7 @@
 
 import { readFile, writeFile, mkdir, rm, readdir } from "node:fs/promises";
 import path from "node:path";
-import { DOCS_DIR, REPO_ROOT, SNAPSHOTS } from "./lib/sources.mjs";
+import { DOCS_DIR, REPO_ROOT, SNAPSHOTS, closeMarkers } from "./lib/sources.mjs";
 
 const OUT_DIR = path.join(DOCS_DIR, "reference");
 
@@ -295,7 +295,7 @@ function renderPage(page, index) {
     }
     parts.push(renderDef(name, page.file), "");
   }
-  return parts.join("\n");
+  return closeMarkers(parts.join("\n"));
 }
 
 // --- main -----------------------------------------------------------------
