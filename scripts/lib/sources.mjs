@@ -42,11 +42,17 @@ export const ENDPOINTS = {
 // we only touch a real marker prefix (not the `a` tail of a word before a `|`),
 // and `(?!\|)` avoids double-closing an already-closed marker.
 export function closeMarkers(text) {
-  // Only close simple bare/pathed markers. The trailing lookahead skips filter
-  // chains (`a|body->upper|` must close AFTER the filter, not after the root),
-  // already-closed markers (`|`), and word tails.
+  // Append the closing pipe to a DEPRECATED open-form marker while leaving
+  // already-closed markers untouched. Marker body = a root, optional
+  // `::path` / `.dotted` / `:datetime` segments, and optional `->filter(args)`
+  // chains. The trailing negative lookahead `(?![...])` lists every char that
+  // is either part of the body (so we don't close mid-marker) OR the closing
+  // `|` itself (so a closed `a|body|` is never matched) OR `>` (a filter tail):
+  // when the body is followed by any of those, backtracking cannot satisfy the
+  // lookahead, so the marker is left as-is. It only fires when the char after
+  // the full marker is a true terminator (whitespace, quote, `/`, `,`, EOL, …).
   return String(text).replace(
-    /(?<![\w])a\|([A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z0-9_.\-]+)*)(?![|>\-])/g,
+    /(?<![\w])a\|([A-Za-z_][A-Za-z0-9_.:\-]*(?:->[A-Za-z0-9_]+(?:\([^)|]*\))?)*)(?![A-Za-z0-9_.:|>()\-])/g,
     "a|$1|"
   );
 }
