@@ -124,7 +124,7 @@ function Gallery({ onOpen }) {
       <div className={styles.hero}>
         <h1 className={styles.h1}>Marketplace</h1>
         <p className={styles.sub}>
-          {PACKS.length} ready-to-deploy Air Pipe configurations. Preview the workflow, README and YAML — then deploy in one click.
+          Ready-to-deploy Air Pipe configurations. Preview the workflow, README and YAML — then deploy in one click.
         </p>
         <div className={styles.searchBox}>
           <IconSearch size={18} />
