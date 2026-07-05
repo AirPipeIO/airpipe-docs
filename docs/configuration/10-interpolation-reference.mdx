@@ -26,9 +26,9 @@ a|<root>::<path>->filter1->filter2|
 
 | Root | Resolves to |
 |---|---|
-| `body` | the request body (`a|body::user.email|`) |
-| `params` | route/query parameters (`a|params::id|`) |
-| `headers` | request headers (`a|headers::authorization|`) |
+| `body` | the request body — `a\|body::user.email\|` |
+| `params` | route/query parameters — `a\|params::id\|` |
+| `headers` | request headers — `a\|headers::authorization\|` |
 | `ip` | the resolved client IP |
 | `raw_body` | the exact request bytes |
 | `request` | the full request object |
@@ -37,11 +37,12 @@ a|<root>::<path>->filter1->filter2|
 
 | Root | Resolves to |
 |---|---|
-| `var` / `ap_var` | a global variable — `a|var::api_base_url|` |
-| `secret` | a decrypted secret — `a|secret::stripe_key|` |
-| `env` | an environment variable — `a|env::HOME|` |
+| `var` | a config-local variable from `global.variables` — `a\|var::api_base_url\|` |
+| `ap_var` | a platform [managed variable](/docs/configuration/managed-variables), shared org-wide — `a\|ap_var::API_KEY\|` |
+| `secret` | a decrypted `global.secrets` value — `a\|secret::store::field\|` |
+| `env` | an OS environment variable (**self-hosted only** — unavailable in managed mode) — `a\|env::HOME\|` |
 | `template` | a named response template |
-| `state` | durable state — `a|state::last_seen|`, `a|state::NAMESPACE.KEY|` |
+| `state` | durable state — `a\|state::last_seen\|`, `a\|state::NAMESPACE.KEY\|` |
 | `uuid` | a freshly generated UUID |
 | `timestamp:<spec>` | a formatted timestamp |
 | `include` | file include (self-hosted) |

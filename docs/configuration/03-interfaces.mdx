@@ -27,17 +27,11 @@ interfaces:
   prod/user-details:
 ```
 
-## Options
+## Common options
 
-| Name          | Type              | Description                                                                                                                       |
-| ------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `summary`     | string (optional) | Short summary on what this api interface is for                                                                                   |
-| `description` | string (optional) | Longer description on what this api interface is for                                                                              |
-| `output`      | string (required) | How to interact with this api <ul><li>`http`</li></ul>                                                                            |
-| `method`      | string (required) | The method to call this api <ul><li>`GET`</li><li>`POST`</li></ul>                                                                |
-| `route`       | string (optional) | Define the route the api will be called on. The interface identifer is the default route and will be used if no route is defined. |
-| `tags`        | array (optional)  | Array of strings containing tags                                                                                                  |
-| `actions`     | array (optional)  | An array of instructions and transformations that occur when an API interface is called                                           |
+`summary`, `description`, `method`, `route`, `tags`, `output`, `actions`,
+`schedule`, `assert`, `response`, `mcp`, `network` and more — the full list with
+types and defaults is in the [Interfaces reference](/docs/reference/interfaces).
 
 <h3>Usage</h3>
 

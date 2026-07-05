@@ -32,16 +32,57 @@ The Air Pipe platform allows you to store common variables and encrypted variabl
 ### Accessing
 To substitute a managed variable the following convention is followed `a|ap_var::<NameOfTheVariable>|`.
 
-- Assume we have stored a variable called `MyThirdPartyService` with the value off `https://something.com/api/`.
+- Assume we have stored a variable called `MyThirdPartyService` with the value of `https://something.com/api/`.
 - This means we can access the variable with `a|ap_var::MyThirdPartyService|`
 - We can place this for substitution in nearly any area of your configuration file
-- If you have selected to `encrypt` the decryption process will be handled seamlessly for you
+- If you selected `Encrypt`, the value is decrypted seamlessly at runtime.
 
-### Access a query parameter
   ```yml title="Access a query parameter"
   actions:
       name: doSomething
       http:
-          url: a|ap_var::MyThirdPartyService|/someroute?id=a|params::id| 
+          url: a|ap_var::MyThirdPartyService|/someroute?id=a|params::id|
           # ^^ access the value of `MyThirdPartyService` to build the complete url ^^
   ```
+
+## How it works
+
+### var:: vs ap_var:: vs secret::
+
+Air Pipe has three ways to reference stored values — don't confuse them:
+
+| Marker | Source | Scope |
+|---|---|---|
+| `a\|var::NAME\|` | `global.variables` in the config itself | This config |
+| `a\|ap_var::NAME\|` | **Managed variables** stored on the platform | Organization (shared across configs) |
+| `a\|secret::NAME\|` | `global.secrets` in the config (local/Vault/AWS KMS/command — see [Secrets](/docs/configuration/globals/secrets)) | This config |
+
+This page covers **`ap_var::`** — the platform-managed variables.
+
+### Encryption
+
+Encrypted managed variables use **AES-256-GCM envelope encryption**: a master key
+(held by the platform) protects a per-organization key, which in turn protects
+each value with its own nonce. Decryption happens **only at runtime**, at the
+moment of interpolation — the list/UI never returns decrypted values. Encryption
+adds a small per-access overhead, so only encrypt genuinely sensitive values.
+
+### Environments
+
+A managed variable can hold a single value, or **separate `staging` and
+`production` values**. When both are set, Air Pipe picks the right one based on
+the environment the request runs under. When you set per-environment values you
+must provide **both** staging and production (or just the single base value) —
+not one on its own.
+
+### Permissions
+
+Each variable has a permission: `PUBLIC`, `USER_PRIVATE`, `USER_WITH_PUBLIC_READ`
+(default), `ROLE_PRIVATE`, or `ROLE_WITH_PUBLIC_READ`. For the `ROLE_*` levels,
+the hosted `configuration` or `api key` accessing the variable must carry the
+matching role.
+
+:::note
+Variable names are not enforced to be unique — lookups match by organization +
+name and take the first result, so avoid reusing a name for different values.
+:::

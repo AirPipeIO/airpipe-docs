@@ -12,28 +12,13 @@ You can define a Google Cloud credential in several ways.
 - Manually defining the required attributes
 
 
-## Using complete Credential JSON
+Provide a credential via `file` (path to a JSON key), `json` (inline JSON), or by
+setting the individual fields (`type`, `client_email`, `private_key_id`,
+`private_key`, `auth_uri`, `token_uri`, `project_id`, `location_id`). The full
+field list is in the [GoogleCredential reference](/docs/reference/globals#type-googlecredential).
 
-| Name          | Type              | Description                                                                                                                       |
-| ------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `json`     | string (optional) | If using the json credential file inline                                                                                   |
-| `file`     | string (optional) | Path to google credential file                                                                                 |
-
-### Manual
-
-**Note** think about utilizing our encrypted variable store or your own secrets management.
-
-
-| Name          | Type              | 
-| ------------- | ----------------- | 
-| `type`      | string (optional) |    
-| `client_email`      | string (optional) |                         
-| `private_key_id`       | string (optional) |  
-| `private_key`        | string (optional)  |          
-| `auth_uri`     | string (optional)  |                                    
-| `token_uri`     | string (optional)  |                                    
-| `project_id`     | string (optional)  |                
-| `location_id`     | string (optional)  |                      
+**Note** consider using the [managed variable store](/docs/configuration/managed-variables)
+or your own secrets management for the private key.
 
 ## JSON credential file path example
 

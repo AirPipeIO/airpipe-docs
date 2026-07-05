@@ -17,32 +17,19 @@ Any database config defined with a matching name will have its existing connecti
 
 ## Options
 
-| Name          | Type              | Description                                         |
-| ------------- | ----------------- | --------------------------------------------------- |
-| `driver`      | string            | the database driver (postgres, mysql, mssql, sqlite, mongodb)   |
-| [`conn_string`](#connection-strings) | string (optional) | the full connection string to connect to a database |
-| `user`        | string (optional) | database user                                       |
-| `pass`        | string (optional) | database password                                   |
-| `host`        | string (optional) | database host                                       |
-| `dbname`      | string (optional) | name of the db                                      |
-| `params`      | array             | optional parameters for the database                |
-| [`document_operation`](#document_operation)| object      | required for NoSQL operations eg. MongoDB           |
+Connect with a `driver` + [`conn_string`](#connection-strings), or with discrete
+`user` / `pass` / `host` / `dbname` fields — don't mix the two. Supported drivers:
+`postgres`, `mysql`, `mssql`, `sqlite`, `mongodb`. The full field list is in the
+[Databases reference](/docs/reference/inputs-database).
 
-> note if using user, pass, host, dbname is supplied do not use `conn_string`
+## document_operation {#document_operation}
 
-## document_operation
-
-| Name          | Type              | Description                                         |
-| ------------- | ----------------- | --------------------------------------------------- |
-| `database`    | string            | the database to select   |
-| `collection`  | string            | the collection to target |
-| `operation`   | string | [find](#mongodb-find-example), findOne, findOneAndDelete, findOneAndReplace, deleteOne, deleteMany, updateOne, updateMany, insertOne, insertMany, [aggregate](#mongodb-aggregate-example) |
-| `filter`      | string (optional) | required for any of the above operations except [aggregate](#mongodb-aggregate-example), supply JSON document as a string |
-| `pipeline`    | string (optional)| required if operation is set to [aggregate](#mongodb-aggregate-example), supply JSON document as a string        |
-| `insert`      | string (optional) | document as a JSON string                                      |
-| `update`      | string (optional) | document as a JSON string                                      |
-| `delete`      | string (optional) | document as a JSON string                                      |
-| `options`     | string (optional) | options as a JSON string                                     |
+NoSQL / document stores (MongoDB, Azure Cosmos DB, Amazon DocumentDB) use a
+`document_operation` block instead of `query`: `database`, `collection`,
+`operation` (`find`, `findOne`, `insertOne`, `updateMany`, `aggregate`, …) and
+the relevant `filter` / `pipeline` / `insert` / `update` / `delete` / `options`
+(each a JSON string). See the
+[document_operation reference](/docs/reference/inputs-database#type-documentoperation).
 
 ## Connection Strings
 
