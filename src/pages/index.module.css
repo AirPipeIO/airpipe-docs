@@ -42,6 +42,12 @@
   flex-wrap: wrap;
 }
 
+.heroFootnote {
+  margin-top: 1rem;
+  color: #909296;
+  font-size: 0.95rem;
+}
+
 .dots {
   position: absolute;
   color: #2a2c2f;

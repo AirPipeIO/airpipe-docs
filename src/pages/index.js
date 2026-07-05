@@ -74,13 +74,7 @@ function HomepageHeader() {
             className="button button--primary button--lg"
             to="https://app.airpipe.io/register"
           >
-            Start free — no card
-          </Link>
-          <Link
-            className="button button--secondary button--lg"
-            to="/docs/tutorial/setup"
-          >
-            Read the 5-min tutorial
+            ✨ Start with a prompt
           </Link>
           <Link
             className="button button--secondary button--lg"
@@ -89,6 +83,10 @@ function HomepageHeader() {
             Browse the marketplace
           </Link>
         </div>
+        <p className={styles.heroFootnote}>
+          Describe your API in plain English — or{" "}
+          <Link to="/docs/tutorial/setup">start from the docs</Link>. No card required.
+        </p>
       </div>
     </header>
   );
