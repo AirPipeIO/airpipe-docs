@@ -1,83 +1,120 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
+/* Homepage — dark, aligned to the marketing site (web-airpipe-react). */
 
 .heroBanner {
-  padding: 4rem 0;
+  padding: 6rem 0 4rem;
   text-align: center;
   position: relative;
-  overflow: auto;
-  /* background-image: linear-gradient(
-    to bottom right,
-    rgb(0, 0, 0) 3%,
-    rgb(3, 0, 61) 30%
-  ); */
-  background-color: black;
-  /* background: linear-gradient(
-    315deg,
-    rgb(16, 239, 255) 3%,
-    rgb(16, 239, 255) 30%,
-    rgb(196, 196, 196) 40%,
-    rgb(23, 166, 255) 60%,
-    rgb(16, 239, 255) 98%
-  );
-  animation: gradient 10s ease infinite;
-  background-size: 400% 400%;
-  background-attachment: fixed; */
+  overflow: hidden;
+  /* Canvas with a subtle deep-blue glow instead of a flat-black band. */
+  background:
+    radial-gradient(60% 80% at 50% 0%, rgba(34, 139, 230, 0.14), transparent 70%),
+    #1b1c1d;
 }
 
-.dots {
-  position: absolute;
-  color: #3b3b3b;
-  @media (max-width: 48em) {
-    display: none;
-  }
+.heroTitle {
+  font-size: 3.4rem;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  line-height: 1.08;
+  color: #f1f3f5;
+  margin-bottom: 1.25rem;
+}
+.heroTitle :global(.react-rotating-text-cursor) {
+  color: #4dabf7;
+}
+.highlight {
+  color: #4dabf7;
 }
 
-.dotsLeft {
-  left: 0;
-  top: 0;
-}
-
-body {
-  margin: auto;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  overflow: auto;
-  background-color: black;
-  min-height: 100%; /*or 100vh */
-  height: 100%;
-}
-@keyframes gradient {
-  0% {
-    background-position: 100% 100%;
-  }
-  50% {
-    background-position: 50% 50%;
-  }
-  100% {
-    background-position: 0% 0%;
-  }
-}
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 2rem;
-  }
+.heroSubtitle {
+  max-width: 680px;
+  margin: 0 auto 2rem;
+  font-size: 1.2rem;
+  line-height: 1.6;
+  color: #a6a7ab;
 }
 
 .buttons {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.wrapper {
-  position: relative;
-  padding-top: rem(10px);
-  padding-bottom: rem(10px);
-
-  @media (max-width: $mantine-breakpoint-sm) {
-    padding-top: rem(10px);
-    padding-bottom: rem(10px);
+.dots {
+  position: absolute;
+  color: #2a2c2f;
+}
+@media (max-width: 768px) {
+  .dots {
+    display: none;
   }
+  .heroTitle {
+    font-size: 2.4rem;
+  }
+  .heroBanner {
+    padding: 3.5rem 1rem 2.5rem;
+  }
+}
+
+/* Section headings shared by the build strip + closing CTA. */
+.sectionTitle {
+  text-align: center;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.5rem;
+}
+.sectionSubtitle {
+  text-align: center;
+  color: #909296;
+  max-width: 640px;
+  margin: 0 auto 2.5rem;
+  font-size: 1.05rem;
+}
+
+/* "What you can build" strip — subtle alternate surface for rhythm. */
+.buildSection {
+  padding: 4rem 0;
+  background: #171819;
+  border-top: 1px solid #2a2c2f;
+  border-bottom: 1px solid #2a2c2f;
+}
+.buildCard {
+  display: block;
+  height: 100%;
+  padding: 1.5rem;
+  background: #1f2021;
+  border: 1px solid #2a2c2f;
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 150ms ease, box-shadow 120ms ease, border-color 150ms ease;
+}
+.buildCard:hover {
+  text-decoration: none;
+  color: inherit;
+  transform: translateY(-3px);
+  border-color: #33353a;
+  box-shadow: 0 14px 34px -22px rgba(34, 139, 230, 0.7);
+}
+.buildTitle {
+  font-size: 1.1rem;
+  margin-bottom: 0.35rem;
+}
+.buildDesc {
+  color: #a6a7ab;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Closing CTA band. */
+.closing {
+  padding: 5rem 0;
+  text-align: center;
+  background:
+    radial-gradient(60% 100% at 50% 100%, rgba(64, 192, 87, 0.1), transparent 70%),
+    #1b1c1d;
 }

@@ -1,20 +1,68 @@
 .features {
-  display: flex;
-  align-items: center;
-  padding: 3rem 0;
-  width: 100%;
+  padding: 4rem 0;
+  background: #1b1c1d;
 }
 
-/* Gradient-tinted icon chip, matching the app's ThemeIcon gradient motif. */
+.sectionTitle {
+  text-align: center;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.sectionSubtitle {
+  text-align: center;
+  color: #909296;
+  max-width: 640px;
+  margin: 0 auto 2.5rem;
+  font-size: 1.05rem;
+}
+
+.featureCol {
+  margin-bottom: 1.5rem;
+}
+
+/* Flat dark card with gradient hover-lift, matching the app aesthetic. */
+.featureCard {
+  display: block;
+  height: 100%;
+  padding: 1.5rem;
+  background: #1f2021;
+  border: 1px solid #2a2c2f;
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 150ms ease, box-shadow 120ms ease, border-color 150ms ease;
+}
+.featureCard:hover {
+  text-decoration: none;
+  color: inherit;
+  transform: translateY(-3px);
+  border-color: #33353a;
+  box-shadow: 0 14px 34px -22px rgba(34, 139, 230, 0.7);
+}
+
 .featureIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
   margin-bottom: 1rem;
-  border-radius: 16px;
+  border-radius: 12px;
   color: #fff;
   background-image: linear-gradient(135deg, #228be6, #40c057);
-  box-shadow: 0 8px 24px rgba(34, 139, 230, 0.22);
+}
+
+.featureTitle {
+  font-size: 1.15rem;
+  margin-bottom: 0.4rem;
+}
+
+.featureDesc {
+  color: #a6a7ab;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
 }
