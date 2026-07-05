@@ -84,7 +84,7 @@ function HomepageHeader() {
           </Link>
           <Link
             className="button button--secondary button--lg"
-            to="/docs/examples/marketplace"
+            to="/marketplace"
           >
             Browse the marketplace
           </Link>
@@ -111,7 +111,7 @@ function BuildStrip() {
         <div className="row">
           {BUILD.map((b, i) => (
             <div className="col col--4" key={i} style={{ marginBottom: "1.5rem" }}>
-              <Link to={b.to} className={styles.buildCard}>
+              <Link to={b.to.replace("/docs/examples/marketplace/", "/marketplace?pack=")} className={styles.buildCard}>
                 <h3 className={styles.buildTitle}>{b.title}</h3>
                 <p className={styles.buildDesc}>{b.desc}</p>
               </Link>
@@ -121,7 +121,7 @@ function BuildStrip() {
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
-            to="/docs/examples/marketplace"
+            to="/marketplace"
           >
             See all 26 packs →
           </Link>

@@ -103,6 +103,11 @@ const config = {
             position: "left",
             label: "Examples",
           },
+          {
+            to: "/marketplace",
+            position: "left",
+            label: "Marketplace",
+          },
 
           // {
           //   href: "https://blog.airpipe.io",

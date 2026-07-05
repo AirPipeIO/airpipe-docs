@@ -27,15 +27,21 @@
     "@mdx-js/react": "^3.0.0",
     "@tabler/icons-react": "^3.2.0",
     "@tiptap/starter-kit": "^2.3.0",
+    "@xyflow/react": "^12.11.1",
     "clsx": "^2.0.0",
+    "dagre": "^0.8.5",
     "dayjs": "^1.11.10",
     "docusaurus-theme-github-codeblock": "^2.0.2",
     "embla-carousel-react": "^8.0.2",
+    "js-yaml": "^5.2.1",
     "react": "^18.0.0",
     "react-copy-to-clipboard": "^5.1.0",
     "react-dom": "^18.0.0",
+    "react-markdown": "^10.1.0",
     "react-rotating-text": "^1.4.1",
-    "recharts": "^2.12.5"
+    "recharts": "^2.12.5",
+    "remark-gfm": "^4.0.1",
+    "simple-icons": "^16.25.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.2.0",
