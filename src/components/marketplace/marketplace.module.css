@@ -358,6 +358,24 @@
   min-height: 0;
 }
 
+/* Neutralize the default ReactFlow node wrapper — our custom nodes are the box. */
+:global(.react-flow__node) {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  width: auto !important;
+  font-size: inherit;
+  color: inherit;
+}
+:global(.react-flow__handle) {
+  opacity: 0;
+}
+:global(.react-flow__edge-text) {
+  font-size: 10px;
+}
+
 /* ---- README markdown ---- */
 .markdown {
   color: var(--ifm-font-color-base);

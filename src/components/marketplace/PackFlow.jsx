@@ -17,7 +17,10 @@ export default function PackFlow({ yaml: yamlText, height = 460, thumbnail = fal
         return { nodes: [], edges: [], error: "No interfaces in this config." };
       }
       const flow = convertConfigToReactFlow(config, 1200, 800) || {};
-      return { nodes: flow.nodes || [], edges: flow.edges || [], error: null };
+      // Strip the converter's inline node.style (a white background + padding it
+      // sets for the app's built-in nodes) — our custom nodes carry their own look.
+      const nodes = (flow.nodes || []).map(({ style, ...n }) => n);
+      return { nodes, edges: flow.edges || [], error: null };
     } catch (e) {
       return { nodes: [], edges: [], error: String(e.message || e) };
     }
