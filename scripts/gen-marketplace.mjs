@@ -189,6 +189,12 @@ async function main() {
   await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(OUT_DIR, { recursive: true });
 
+  // Pin the Marketplace group to the top of the Examples sidebar, expanded.
+  await writeFile(
+    path.join(OUT_DIR, "_category_.json"),
+    JSON.stringify({ label: "Marketplace", position: 1, collapsed: false }, null, 2) + "\n"
+  );
+
   const byCat = new Map();
   for (const row of list) {
     (byCat.get(row.primary_category) ??
