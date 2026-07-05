@@ -123,7 +123,7 @@ function BuildStrip() {
             className="button button--secondary button--lg"
             to="/marketplace"
           >
-            See all 26 packs →
+            See all packs →
           </Link>
         </div>
       </div>
