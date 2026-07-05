@@ -40,8 +40,17 @@ Name the image to something you prefer for your purpose.
 
 By default Air Pipe runs on port `4111` you can adjust this if required.
 
+The Dockerfile pulls the **latest** Air Pipe version at build time. To pin a
+specific version, pass a build arg (e.g. `--build-arg AIRPIPE_VERSION=1.0.0`).
+
 ```
 docker build -t my-airpipe-image .
+```
+
+Pin a version:
+
+```
+docker build --build-arg AIRPIPE_VERSION=1.0.0 -t my-airpipe-image .
 ```
 
 ### Running on Docker
