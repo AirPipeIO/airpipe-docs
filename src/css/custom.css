@@ -94,6 +94,18 @@ body {
   border-bottom: 1px solid var(--ap-border);
   box-shadow: none;
 }
+/* Mobile burger drawer fix: Docusaurus renders the slide-out nav
+   (.navbar-sidebar) and its backdrop as position:fixed CHILDREN of .navbar.
+   A non-none backdrop-filter makes .navbar the containing block for those
+   fixed descendants, so top/bottom:0 resolve against the ~60px navbar instead
+   of the viewport — the drawer collapses to a thin strip and its links become
+   unreachable behind the page. Dropping the filter while the drawer is open
+   restores the viewport as the containing block. The blur is moot here anyway:
+   the drawer + dark backdrop already cover the page. */
+.navbar.navbar-sidebar--show {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
 .navbar__link {
   position: relative;
 }
