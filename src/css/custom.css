@@ -124,10 +124,30 @@ body {
   border-radius: 2px;
 }
 .navbar__search-input {
-  background: var(--ap-surface-2);
+  background-color: var(--ap-surface-2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23909296' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0.6rem center;
+  background-size: 1rem 1rem;
   border: 1px solid var(--ap-border-strong);
   border-radius: 8px;
   color: var(--ap-text);
+  padding-left: 2rem;
+}
+
+/* Mobile: magnifying glass icon always visible inside collapsed search box */
+@media (max-width: 768px) {
+  .navbar__search-input {
+    background-position: center center;
+    background-size: 1.15rem 1.15rem;
+  }
+
+  /* When search is expanded (focused), move icon back to the left */
+  .searchBarContainer_NW3z.focused_OWtg .navbar__search-input {
+    background-position: 0.6rem center;
+    background-size: 1rem 1rem;
+    padding-left: 2rem;
+  }
 }
 
 /* ---- Footer ------------------------------------------------------------- */
