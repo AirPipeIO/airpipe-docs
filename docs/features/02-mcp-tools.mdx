@@ -44,3 +44,64 @@ assertions and agents get an accurate tool signature for free.
 Pair MCP tools with [network access control](/docs/configuration/access-control)
 and JWT verification so agent-callable endpoints stay authorized.
 :::
+
+## Gating discovery
+
+`tools/call` is protected by the interface's own actions — a `ValidateJwt` step,
+`is_valid_jwt`, org/role checks. But `tools/list` (how a client **discovers**
+what exists) runs no interface, so those actions never fire for it. By default an
+`mcp.enabled` tool is therefore **publicly discoverable**: anyone who can reach
+the MCP endpoint sees its name, description, and input schema (calling it still
+requires whatever auth the interface enforces).
+
+When the tool catalog itself is sensitive — for example a managed endpoint you
+offer to your own customers, where different callers should see different tools —
+set `list_authorizer` to the name of an interface that decides visibility. When a
+client lists tools, AirPipe runs that interface **with the caller's forwarded
+credential**; the tool appears only if it returns `2xx`. It reuses the exact same
+auth you already write for calls (your JWT, your secret, your claims):
+
+```yaml
+interfaces:
+  searchOrders:
+    summary: Search orders by customer
+    mcp:
+      enabled: true
+      description: Find orders for a customer by email
+      list_authorizer: AuthorizeDiscovery   # <- run to decide if this tool is listed
+    actions:
+      - name: Query
+        database: main
+        query: SELECT * FROM orders WHERE customer_email = $1
+        params: [a|body::email|]
+
+  # Not a tool (no mcp block). Just authorizes discovery: passes = 2xx, denies = non-2xx.
+  AuthorizeDiscovery:
+    method: POST
+    actions:
+      - name: ValidateJwt
+        input: a|headers|
+        hide_data_on_success: true
+        assert:
+          http_code_on_error: 401
+          error_message: invalid or missing token
+          tests:
+            - value: airpipe-jwt
+              is_not_null: true
+              is_valid_jwt: a|var::JWT_SECRET|
+```
+
+How it behaves:
+
+- **Tools without a `list_authorizer` stay public** — mix public and gated tools
+  freely in one endpoint.
+- **An anonymous caller** (no credential) never triggers an authorizer run and
+  sees only public tools — gated tools can't be enumerated.
+- **Different callers see different tools** — the authorizer can inspect the
+  JWT's org/role/scope, so discovery is scoped to each caller's claims.
+- **Fail-closed** — an unknown authorizer interface, a resolve error, or any
+  non-`2xx` hides the tool.
+
+The credential is forwarded from the request's `Authorization: Bearer …` or
+`airpipe-jwt` header and reaches the authorizer as `a|headers::airpipe-jwt|`.
+Each distinct authorizer runs at most once per `tools/list`.
