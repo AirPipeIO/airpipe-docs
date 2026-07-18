@@ -11,8 +11,8 @@ metrics. For distributed tracing see [OpenTelemetry tracing](/docs/otel-tracing)
 
 ## Enable it
 
-Set `expose_metrics: true` at the config root. The `/metrics` route is served in
-self-hosted modes and is **unauthenticated** — scrape it from inside your network.
+Set `expose_metrics: true` at the config root. `/metrics` is served in self-hosted
+modes and is **unauthenticated** (Prometheus convention — isolate it by network).
 
 ```yaml
 name: my-api
@@ -21,13 +21,27 @@ interfaces:
   # ...
 ```
 
+As of engine **1.7.2**, `/metrics` is served on a **dedicated bind, default
+`127.0.0.1:9090`** — **not** the public API port — so it isn't exposed alongside your
+API. Configure with `--metrics-address` (env `AIRPIPE__METRICS_BIND`):
+
+| Value | Effect |
+|---|---|
+| `127.0.0.1:9090` *(default)* | loopback — scrape locally or via a sidecar |
+| `0.0.0.0:9090` | all interfaces — **firewall the port** |
+| `off` | disable the endpoint (and the per-request instrumentation) |
+
+*(Before 1.7.2, `/metrics` was served on the API port.)*
+
 Scrape config:
 
 ```yaml
 scrape_configs:
   - job_name: airpipe
     static_configs:
-      - targets: ["your-airpipe-host:PORT"]
+      # engine >= 1.7.2: the dedicated metrics bind (default 127.0.0.1:9090).
+      # If Prometheus runs elsewhere, start AirPipe with --metrics-address 0.0.0.0:9090.
+      - targets: ["127.0.0.1:9090"]
 ```
 
 ## Built-in metrics

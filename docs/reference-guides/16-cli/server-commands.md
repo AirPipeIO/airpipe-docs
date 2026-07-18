@@ -26,6 +26,7 @@ Options:
       --log-level <log-level>          Log Levels: info, debug, warning, error, trace, critical [default: info]
       --address <address>              HTTP bind address [default: 0.0.0.0]
       --port <port>                    HTTP Port [default: 4111]
+      --metrics-address <addr>         Prometheus /metrics bind: host:port, or 'off' to disable [env: AIRPIPE__METRICS_BIND=] [default: 127.0.0.1:9090]
   -h, --help                           Print help
 ```
 
@@ -67,6 +68,16 @@ The airpipe agent supports standard log levels and defaults to info when run wit
 By default `airpipe-agent` will run on the default address, using the `--address` flag you can specify what endpoint you want airpipe to run on.
 
 By default `airpipe-agent` will run on port `4111` specific the `--port` flag to run on a different port
+
+### Prometheus metrics bind
+
+The Prometheus `/metrics` endpoint is served on its **own** listener — separate from the API bind above — so it is not exposed alongside your public API. `--metrics-address` (env `AIRPIPE__METRICS_BIND`) controls it, default **`127.0.0.1:9090`** (loopback):
+
+- `--metrics-address 127.0.0.1:9090` — loopback (default); scrape locally or via a sidecar.
+- `--metrics-address 0.0.0.0:9090` — all interfaces; **firewall the port** (metrics are unauthenticated by Prometheus convention).
+- `--metrics-address off` — disable the endpoint entirely (also drops the per-request instrumentation overhead).
+
+Scrape it at `http://<metrics-bind>/metrics` (default `http://127.0.0.1:9090/metrics`). Available in self-hosted modes only. *(Added in engine 1.7.2; earlier versions served `/metrics` on the API port.)*
 
 ### OpenTelemetry
 

@@ -23,8 +23,10 @@ AIRPIPE_OTEL_ENDPOINT="http://localhost:4318/v1/traces" ./airpipe server
 :::warning
 The exporter uses **OTLP over HTTP/protobuf**, not gRPC. Point it at your
 collector's HTTP port (commonly **4318**, path `/v1/traces`) — not the gRPC
-`4317` port, or no traces will arrive. An unreachable endpoint fails **silently**,
-so verify spans land in your backend.
+`4317` port, or no traces will arrive. A malformed endpoint now **fails to
+initialize with a logged error** (engine ≥ 1.7.2); but a collector that's simply
+**unreachable at runtime** drops spans silently (OTLP batches in the background),
+so still verify spans land in your backend.
 :::
 
 ## Configuration
