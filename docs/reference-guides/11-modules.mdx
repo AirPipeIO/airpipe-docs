@@ -1,0 +1,208 @@
+---
+sidebar_position: 11
+slug: /configuration/modules
+displayed_sidebar: referenceSidebar
+---
+
+# Modules
+
+**Modules** let you define a piece of configuration **once** and reference it by
+handle from as many configs as you like. Instead of copy‑pasting the same
+database connection, auth check, or network policy into every config, you define
+it as a module and reference it with the `a|module::<handle>|` marker.
+
+Modules solve two problems:
+
+- **Duplication** — the same `global.databases` block (or the same auth
+  assertion) repeated across dozens of configs. Change it once, everywhere
+  updates.
+- **Collisions** — two configs that each define a connection named `main` but
+  pointing at *different* databases. With modules, the local name is decoupled
+  from the module, so there is no ambiguity.
+
+> A module is versioned and deployed exactly like a config (see
+> [Managed modules](#managed-modules)), so you get instant deploy and rollback.
+
+---
+
+## What a module is
+
+A module is a single **typed** fragment of a config. Each module has one **type**
+— the config struct it represents — and a **spec** (the fragment itself). The
+type determines where the module can be referenced and how its spec is
+validated.
+
+| Type | What it is | Where you reference it |
+|------|------------|------------------------|
+| `Database` | A database connection | a `global.databases.<name>` value |
+| `Assert` (Auth) | An auth / validation assertion set | an action's or interface's `assert` value |
+| `NetworkPolicy` | A network access‑control policy | a `network` value (config‑wide or per‑interface) |
+
+> Each module is **one object** at **one slot**. That keeps the model uniform:
+> a module is always "this typed thing, spliced in here".
+
+### Example specs
+
+A `Database` module:
+
+```yml
+driver: postgres
+host: your-db-host
+port: 5432
+dbname: your_database
+user: your_user
+pass: a|ap_var::db_password|   # keep secrets in an org variable, not inline
+```
+
+An `Assert` (auth) module:
+
+```yml
+error_message: unauthorized
+http_code_on_error: 401
+tests:
+  - value: a|header::authorization|
+    is_valid_jwt:
+      jwks_url: https://your-idp/.well-known/jwks.json
+```
+
+A `NetworkPolicy` module:
+
+```yml
+mode: enforce            # 'enforce' blocks; 'monitor' logs only (dry-run)
+source: client
+ip:
+  deny:
+    - 203.0.113.0/24
+rate_limit:
+  requests: 100
+  window: "1m"
+```
+
+---
+
+## Referencing a module
+
+Reference a module by placing the `a|module::<handle>|` marker where that type
+belongs. The whole value is the marker — the engine splices the module's spec in
+at that point.
+
+```yml
+name: orders-api
+
+global:
+  databases:
+    main: a|module::billing-db|        # a Database module
+
+interfaces:
+  create-order:
+    assert: a|module::standard-jwt|    # an Assert (auth) module
+    network: a|module::org-policy|     # a NetworkPolicy module
+    actions:
+      - name: InsertOrder
+        database: main                 # use the connection by its LOCAL name
+        query: "insert into orders ..."
+```
+
+Notice that `main` (the **local name** you use in actions) is independent of
+`billing-db` (the **module handle**). Two different configs can both call their
+connection `main` while pointing at different modules — there is no collision,
+because the identity is the org‑unique handle, not the local name.
+
+---
+
+## Self-hosted modules
+
+Self‑hosted, modules live as files under a `modules/` folder inside your
+config directory:
+
+```
+config-dir/
+  orders.yml
+  users.yml
+  modules/
+    databases/
+      billing-db.yml
+    auth/
+      standard-jwt.yml
+```
+
+Each module file is a `type:` + `spec:` document:
+
+```yml
+# modules/databases/billing-db.yml
+type: Database
+spec:
+  driver: postgres
+  host: db.prod.internal
+  dbname: billing
+  pass: a|ap_var::billing_pass|
+```
+
+- The **handle** is the file name (stem) — `billing-db.yml` → `billing-db`.
+  Handles must be unique across the `modules/` tree.
+- The `modules/` folder is loaded at startup and is **excluded** from normal
+  config loading, so a module file is never mistaken for a config.
+- Versioning is whatever your config directory already uses (e.g. **git**) —
+  `git revert` rolls a module back.
+
+> `modules/` is a **reserved** folder name. Don't put full configs in it.
+
+An unknown handle fails loud at load — a config that references
+`a|module::does-not-exist|` refuses to start, rather than silently doing the
+wrong thing.
+
+---
+
+## Managed modules
+
+In the managed (hosted) platform, modules are created and managed from the
+**Modules** section of the dashboard (or the account API / MCP tools).
+
+- **Create / edit** a module with a type picker and a spec editor. Selecting a
+  type auto‑fills a valid starter example, and the spec is **validated against
+  the type's schema** on save — unknown fields are rejected.
+- Modules carry **revisions** and **staging / production** deployment pointers,
+  exactly like configs. Deploy = point an environment at a revision; rollback =
+  point it at an older one. Both are instant.
+- A module redeploy **propagates immediately** to every config that references
+  it in that environment.
+
+The reference syntax (`a|module::<handle>|`) is **identical** to self‑hosted — a
+config doesn't change between deployment modes. Only where the module's bytes
+live differs (a file vs. a stored revision).
+
+---
+
+## Interpolation inside modules
+
+A module's spec can contain the usual [interpolation](/docs/configuration/interpolation)
+markers, and they resolve normally. Module resolution and interpolation are two
+ordered, independent passes: the module's structure is spliced into the config
+**first**, then the whole config is interpolated. So a marker inside a module is
+just part of the config by the time it resolves.
+
+- `a|env::NAME|` → resolves from the environment.
+- `a|var::NAME|` → resolves against the **consuming config's**
+  `global.variables` (variables are config‑local). If a module needs a value
+  shared across many configs, use a managed variable instead.
+- `a|ap_var::NAME|` → resolves against the org's
+  [managed variables](/docs/configuration/managed-variables) (org‑scoped — define
+  it once, use it from any config).
+- `a|secret::...|` → resolves from your secret store at request time.
+
+> **Secrets are never baked in.** A module stores the *marker*, not the resolved
+> value. The secret is resolved by the normal interpolation path when the config
+> runs, so it never lands in a stored module or a cache.
+
+Because `a|var::...|` is config‑local, prefer `a|ap_var::...|` for anything a
+shared module needs (like a connection password) — define it once at the org
+level and every config that references the module picks it up.
+
+---
+
+## See also
+
+- [Databases](/docs/configuration/globals/databases) — the `Database` type
+- [Access control](/docs/configuration/access-control) — the `NetworkPolicy` type
+- [Interpolation](/docs/configuration/interpolation) — the `a|…|` markers
+- [Managed variables](/docs/configuration/managed-variables) — org‑scoped `ap_var`
