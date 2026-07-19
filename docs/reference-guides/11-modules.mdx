@@ -36,10 +36,12 @@ validated.
 |------|------------|------------------------|
 | `Database` | A database connection | a `global.databases.<name>` value |
 | `Assert` (Auth) | An auth / validation assertion set | an action's or interface's `assert` value |
+| `Action` | A reusable action | a **list item** in an `actions` list |
 | `NetworkPolicy` | A network access‑control policy | a `network` value (config‑wide or per‑interface) |
 
 > Each module is **one object** at **one slot**. That keeps the model uniform:
-> a module is always "this typed thing, spliced in here".
+> a module is always "this typed thing, spliced in here". An `Action` module is
+> the same idea — it's spliced as a **list item** rather than a map value.
 
 ### Example specs
 
@@ -63,6 +65,22 @@ tests:
   - value: a|header::authorization|
     is_valid_jwt:
       jwks_url: https://your-idp/.well-known/jwks.json
+```
+
+An `Action` module (one action). It splices in verbatim, so it can reference
+sibling actions by name — as long as the consuming config defines them:
+
+```yml
+name: CheckOrgAccess
+run_when_succeeded: [ValidateJwt, CheckBody]
+input: a|ValidateJwt
+hide_data_on_success: true
+assert:
+  error_message: you are not a member of this organization
+  http_code_on_error: 403
+  tests:
+    - value: orgs.a|CheckBody::organization_uuid|
+      is_not_null: true
 ```
 
 A `NetworkPolicy` module:
@@ -98,10 +116,16 @@ interfaces:
     assert: a|module::standard-jwt|    # an Assert (auth) module
     network: a|module::org-policy|     # a NetworkPolicy module
     actions:
+      - a|module::check-org-access|    # an Action module — spliced as a list item
       - name: InsertOrder
         database: main                 # use the connection by its LOCAL name
         query: "insert into orders ..."
 ```
+
+An `Action` module is referenced as a **list item** (`- a|module::<handle>|`), not
+as a map value — the marker in the list is replaced by the action. To reuse a
+multi‑step preamble, make each step its own `Action` module and list them in
+order.
 
 Notice that `main` (the **local name** you use in actions) is independent of
 `billing-db` (the **module handle**). Two different configs can both call their
