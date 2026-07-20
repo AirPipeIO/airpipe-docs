@@ -85,7 +85,7 @@ const PAGES = [
     defs: ["Transform", "TransformConfig", "CustomTransform", "TransformExtractArray",
       "TransformFilterSearch", "TransformFlatten", "TransformMath", "TransformPasswordGen",
       "TransformReplaceValues", "BcryptTransform", "AddJWT", "ReadJWT", "EncryptValue",
-      "GenerateBytes", "ExtractWithRegex", "S3GeneratePresignedURL", "MathEvalType", "DataType"],
+      "DecryptValue", "GenerateBytes", "ExtractWithRegex", "S3GeneratePresignedURL", "MathEvalType", "DataType"],
   },
   {
     file: "12-asserts",

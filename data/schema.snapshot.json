@@ -3106,6 +3106,17 @@
             }
           ]
         },
+        "decrypt_value": {
+          "description": "Decrypt a value previously sealed with `encrypt_value` (AES-256-GCM).\n\n## Example\n```yaml\ndecrypt_value:\n  key: plaintext                # Output key for the decrypted string\n  value: a|Row::enc_value|      # Base64 ciphertext (the encrypt_value `.value`)\n  nonce: a|Row::enc_nonce|      # Base64 nonce   (the encrypt_value `.nonce`)\n  tag: a|Row::enc_tag|          # Base64 GCM tag (the encrypt_value `.tag`)\n  secret_key: a|env::AIRPIPE_ENC_SECRET_KEY|  # Same key used to encrypt\n```\n\n**Security:** decryption is authenticated — a wrong key, altered ciphertext,\nor altered tag fails loudly rather than returning garbage.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DecryptValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "s3_generate_presigned_url": {
           "description": "Generate a presigned URL for S3 file access.\n\n## Example\n```yaml\ns3_generate_presigned_url:\n  bucket: my-bucket                         # S3 bucket name\n  file_key: documents/file.pdf              # Path to file in bucket\n  expiration_secs: 3600                     # URL expiration (seconds)\n  endpoint: https://s3.amazonaws.com        # S3 endpoint\n  region: us-east-1                         # AWS region\n  access_key_id: a|var::ENCRYPTED_AWS_ACCESS_KEY|  # AWS access key (encrypted variable)\n  secret_access_key: a|var::ENCRYPTED_AWS_SECRET|  # AWS secret key (encrypted variable)\n  key: presigned_url                        # Output key for generated URL\n  json_path: .file_url                      # Optional: Extract from response\n```\n\n**Security:** Store AWS credentials securely as encrypted AirPipe variables:\n```yaml\naccess_key_id: a|var::ENCRYPTED_AWS_ACCESS_KEY|\nsecret_access_key: a|var::ENCRYPTED_AWS_SECRET|\n```",
           "anyOf": [
@@ -3577,6 +3588,34 @@
         "data",
         "secret_key",
         "nonce"
+      ]
+    },
+    "DecryptValue": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "nonce": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "secret_key": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "value",
+        "nonce",
+        "tag",
+        "secret_key"
       ]
     },
     "S3GeneratePresignedURL": {
