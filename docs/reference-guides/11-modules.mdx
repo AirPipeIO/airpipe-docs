@@ -4,6 +4,8 @@ slug: /configuration/modules
 displayed_sidebar: referenceSidebar
 ---
 
+import { ModuleDiagram, ConfigDiagram } from "@site/src/components/mdx-comps/Diagram";
+
 # Modules
 
 **Modules** let you define a piece of configuration **once** and reference it by
@@ -55,6 +57,19 @@ dbname: your_database
 user: your_user
 pass: a|ap_var::db_password|   # keep secrets in an org variable, not inline
 ```
+
+Rendered on its own in the visualizer, a module is a single typed node:
+
+<ModuleDiagram
+  type="Database"
+  height={200}
+  yaml={`driver: postgres
+host: your-db-host
+port: 5432
+dbname: your_database
+user: your_user
+pass: a|ap_var::db_password|`}
+/>
 
 An `Assert` (auth) module:
 
@@ -121,6 +136,48 @@ interfaces:
         database: main                 # use the connection by its LOCAL name
         query: "insert into orders ..."
 ```
+
+In the visualizer, a config that references modules **unpacks** them: each
+referencing action shows the module's real content (its assertions, connection,
+driver) plus a violet chip naming the module — **hover a chip to preview the
+module's spec**:
+
+<ConfigDiagram
+  height={460}
+  modules={{
+    "app-db": {
+      type: "Database",
+      spec: { driver: "postgres", conn_string: "a|ap_var::DATABASE_URL|" },
+    },
+    "require-auth": {
+      type: "Assert",
+      spec: {
+        error_message: "missing or invalid bearer token",
+        http_code_on_error: 401,
+        tests: [{ value: "authorization", is_not_null: true }],
+      },
+    },
+  }}
+  yaml={`name: orders-api
+
+global:
+  databases:
+    main: a|module::app-db|
+
+interfaces:
+  create-order:
+    method: POST
+    route: /orders
+    actions:
+      - name: RequireAuth
+        input: a|headers
+        assert: a|module::require-auth|
+      - name: InsertOrder
+        run_when_succeeded: { actions: [RequireAuth] }
+        database: main
+        query: "insert into orders ..."
+`}
+/>
 
 An `Action` module is referenced as a **list item** (`- a|module::<handle>|`), not
 as a map value — the marker in the list is replaced by the action. To reuse a

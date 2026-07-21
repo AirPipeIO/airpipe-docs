@@ -3,6 +3,8 @@ import Layout from "@theme/Layout";
 import BrowserOnly from "@docusaurus/BrowserOnly";
 import CodeBlock from "@theme/CodeBlock";
 import snapshot from "@site/data/packs.snapshot.json";
+import jsyaml from "js-yaml";
+import { inferModuleType } from "@site/src/components/marketplace/convert-with-dagre";
 import PackIcons from "@site/src/components/marketplace/PackIcons";
 import Markdown from "@site/src/components/marketplace/Markdown";
 import { IconStar, IconCircleCheck, IconLock, IconArrowLeft, IconSearch, IconArrowsMaximize, IconSitemap, IconX, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
@@ -39,6 +41,37 @@ function decodeB64(b64) {
 const isYaml = (n) => /\.ya?ml$/i.test(n || "");
 const langOf = (n) =>
   isYaml(n) ? "yaml" : /\.sql$/i.test(n) ? "sql" : /\.json$/i.test(n) ? "json" : /\.md$/i.test(n) ? "markdown" : "text";
+
+// A pack file is a MODULE when file_category is "module" (content = bare spec, type
+// inferred) or it's the wrapped `{ type, spec }` form. Returns { type, spec } or null.
+function moduleDefOf(file) {
+  if (!isYaml(file?.filename)) return null;
+  let doc;
+  try {
+    doc = jsyaml.load(decodeB64(file?.content) || "");
+  } catch {
+    return null;
+  }
+  if (!doc || typeof doc !== "object") return null;
+  if (doc.type && doc.spec) return { type: doc.type, spec: doc.spec };
+  if (file?.file_category === "module")
+    return { type: inferModuleType(doc), spec: doc };
+  return null;
+}
+
+// Module type to pass PackFlow when rendering a module file on its own (bare-spec form
+// only; the wrapped form is auto-detected). Undefined for normal config files.
+function moduleTypeForFile(file) {
+  const def = moduleDefOf(file);
+  if (!def) return undefined;
+  let doc;
+  try {
+    doc = jsyaml.load(decodeB64(file?.content) || "");
+  } catch {
+    return undefined;
+  }
+  return doc && doc.type && doc.spec ? undefined : def.type;
+}
 
 function readmeOf(detail) {
   if (detail?.readme_content) return detail.readme_content;
@@ -161,18 +194,18 @@ function Gallery({ onOpen }) {
   );
 }
 
-function ThumbFlow({ content, height = 190, thumbnail = true }) {
+function ThumbFlow({ content, height = 190, thumbnail = true, modules, moduleType }) {
   return (
     <BrowserOnly fallback={<div className={styles.flowSkeleton} style={{ height }}>Loading workflow…</div>}>
       {() => {
         const PackFlow = require("@site/src/components/marketplace/PackFlow").default;
-        return <PackFlow yaml={decodeB64(content)} height={height} thumbnail={thumbnail} />;
+        return <PackFlow yaml={decodeB64(content)} height={height} thumbnail={thumbnail} modules={modules} moduleType={moduleType} />;
       }}
     </BrowserOnly>
   );
 }
 
-function Lightbox({ files, index, setIndex, onClose }) {
+function Lightbox({ files, index, setIndex, onClose, modules }) {
   useEffect(() => {
     if (index == null) return;
     const onKey = (e) => {
@@ -199,7 +232,7 @@ function Lightbox({ files, index, setIndex, onClose }) {
           </div>
         </div>
         <div className={styles.lightboxFlow}>
-          <ThumbFlow content={f.content} height="100%" thumbnail={false} />
+          <ThumbFlow content={f.content} height="100%" thumbnail={false} modules={modules} moduleType={moduleTypeForFile(f)} />
         </div>
       </div>
     </div>
@@ -213,12 +246,25 @@ function Detail({ slug, onBack }) {
   const detail = DETAILS[slug];
   const packUrl = `${APP}?pack=${encodeURIComponent(slug)}`;
 
-  const { readme, ymlFiles, otherFiles } = useMemo(() => {
+  const { readme, ymlFiles, otherFiles, modules } = useMemo(() => {
     const files = detail?.files || [];
+    const yml = files.filter((f) => isYaml(f.filename));
+    // Module definitions in this pack ({ handle: { type, spec } }). A module file has
+    // file_category "module" (content = bare spec, type inferred) or the wrapped
+    // `{ type, spec }` form; handle is the filename stem. Lets the visualizer inline
+    // referenced modules so an action shows the module's real assertions / connection.
+    const mods = {};
+    for (const f of yml) {
+      const def = moduleDefOf(f);
+      if (!def) continue;
+      const handle = (f.filename || "").replace(/\.(ya?ml)$/i, "");
+      if (handle) mods[handle] = def;
+    }
     return {
       readme: cleanReadme(readmeOf(detail), pack?.name),
-      ymlFiles: files.filter((f) => isYaml(f.filename)),
+      ymlFiles: yml,
       otherFiles: files.filter((f) => !isYaml(f.filename) && f.filename?.toLowerCase() !== "readme.md"),
+      modules: mods,
     };
   }, [detail, pack]);
 
@@ -274,7 +320,7 @@ function Detail({ slug, onBack }) {
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setLightbox(i); } }}
               >
                 <div className={styles.thumbFlow}>
-                  <ThumbFlow content={f.content} height={190} />
+                  <ThumbFlow content={f.content} height={190} modules={modules} moduleType={moduleTypeForFile(f)} />
                 </div>
                 <span className={styles.thumbExpand}><IconArrowsMaximize size={14} /></span>
                 <span className={styles.thumbName}><IconSitemap size={12} /> {f.filename}</span>
@@ -306,7 +352,7 @@ function Detail({ slug, onBack }) {
         </div>
       )}
 
-      <Lightbox files={ymlFiles} index={lightbox} setIndex={setLightbox} onClose={() => setLightbox(null)} />
+      <Lightbox files={ymlFiles} index={lightbox} setIndex={setLightbox} onClose={() => setLightbox(null)} modules={modules} />
     </div>
   );
 }
