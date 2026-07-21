@@ -3,7 +3,7 @@ import Layout from "@theme/Layout";
 import BrowserOnly from "@docusaurus/BrowserOnly";
 import CodeBlock from "@theme/CodeBlock";
 import snapshot from "@site/data/packs.snapshot.json";
-import jsyaml from "js-yaml";
+import { load as loadYamlDoc } from "js-yaml";
 import { inferModuleType } from "@site/src/components/marketplace/convert-with-dagre";
 import PackIcons from "@site/src/components/marketplace/PackIcons";
 import Markdown from "@site/src/components/marketplace/Markdown";
@@ -48,7 +48,7 @@ function moduleDefOf(file) {
   if (!isYaml(file?.filename)) return null;
   let doc;
   try {
-    doc = jsyaml.load(decodeB64(file?.content) || "");
+    doc = loadYamlDoc(decodeB64(file?.content) || "");
   } catch {
     return null;
   }
@@ -66,7 +66,7 @@ function moduleTypeForFile(file) {
   if (!def) return undefined;
   let doc;
   try {
-    doc = jsyaml.load(decodeB64(file?.content) || "");
+    doc = loadYamlDoc(decodeB64(file?.content) || "");
   } catch {
     return undefined;
   }
