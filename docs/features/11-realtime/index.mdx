@@ -40,13 +40,35 @@ A public WebSocket feed — visitors subscribe with no auth, your backend publis
 name: LiveUpdates
 interfaces:
   feed:
-    output: http
-    ws: "on"
+    ws: "on"              # realtime — no `output` needed
     public: true          # browsers connect with no credential (non-sensitive data)
+    # output: http        # optional — ALSO serve this exact interface over HTTP (see Dual interface)
     actions:
       - name: Ping
         input: a|body|
 ```
+
+## Dual interface
+
+An interface's transport is set by markers, not by `output`: `ws: "on"` makes it a WebSocket
+interface, `mqtt:` makes it MQTT-triggered — **no `output` field is required** for realtime. Adding
+`output: http` doesn't change realtime; it *additionally* exposes the **same interface, same pipeline**
+over HTTP at `/dev/pipe/<org>/<env>/<interface>`. So one definition can serve WebSocket **and** MQTT
+**and** HTTP at once — pick per interface:
+
+```yml
+interfaces:
+  events:
+    ws: "on"             # WebSocket
+    mqtt: "in"           # + MQTT   (production/events/in)
+    output: http         # + HTTP   (POST /dev/pipe/<org>/<env>/events)
+    actions:
+      - name: Handle
+        input: a|body|
+```
+
+Leave `output` off for realtime-only interfaces; add it when you want the same logic reachable as a
+plain HTTP endpoint too.
 
 ```js
 // browser

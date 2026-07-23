@@ -41,8 +41,8 @@ A publish to `<environment>/<interface>/<trigger>` triggers that interface — t
 name: Telemetry
 interfaces:
   telemetry:
-    output: http
-    mqtt: "reading"          # production/telemetry/reading → runs this pipeline
+    mqtt: "reading"          # production/telemetry/reading → runs this pipeline (no `output` needed)
+    # output: http           # optional — also accept the reading over HTTP (dual interface)
     actions:
       - name: Validate
         input: a|body|

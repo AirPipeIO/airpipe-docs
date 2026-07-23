@@ -14,15 +14,17 @@ JSON **control frames**; pushes arrive out-of-band on the same socket.
 name: RealtimeApp
 interfaces:
   live:
-    output: http
-    ws: "on"
+    ws: "on"                                  # realtime — no `output` needed
     subscribe_authorizer: authorize-channel   # optional per-channel ACL (see Auth)
+    # output: http                            # optional — also expose over HTTP (dual interface)
     actions:
       - name: Ping
         input: a|body|
 ```
 
 Each **non-control** frame runs the interface (request/response) and the reply comes back on the socket.
+`ws: "on"` is all that's required — see [Dual interface](/docs/features/realtime#dual-interface) for
+adding `output: http` to serve the same interface over HTTP too.
 
 ## Control frames (client → server)
 

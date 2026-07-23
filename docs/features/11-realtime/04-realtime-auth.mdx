@@ -36,7 +36,6 @@ public interface, and (managed) the connection stays scoped to your org.
 
 ```yml
 feed:
-  output: http
   ws: "on"
   public: true
   actions:
@@ -78,8 +77,7 @@ with the same secret.
 The client brings a JWT signed with a secret you store in Air Pipe:
 
 ```yml
-authorize-channel:
-  output: http
+authorize-channel:                # internal authorizer — run by the socket, not an HTTP route
   actions:
     - name: Verify
       input: a|headers
