@@ -130,6 +130,20 @@
             "null"
           ]
         },
+        "subscribe_authorizer": {
+          "description": "Realtime-channel access control. The name of an interface run to authorize a\nsocket's `ap_subscribe` to a channel: it runs with `{ \"channel\": \"<name>\" }`\nas `a|body` and the socket's token as `a|headers::airpipe-jwt|`, and the\nsubscribe is allowed iff the authorizer returns 2xx (so its `is_valid_jwt` +\nclaim/channel checks gate it). Unset ⇒ any socket may subscribe to any channel\nin its own org. Fail-closed: an anonymous socket (no token) is denied.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "public": {
+          "description": "Public realtime opt-in. When `true`, this WebSocket interface accepts END-USER\nconnections with NO credential at all — no org API key and no JWT — for non-sensitive\npublic feeds (live scores, status pages, public presence), matching the \"public channel\"\nmodel of Ably/Pusher. Channel-level ACL still applies if a `subscribe_authorizer` is set,\nand the per-org realtime abuse floors (publish rate, subscriptions, topics, retained)\nstill bound the interface — so open access cannot be weaponised on shared infra. Default\n(unset/false) requires a credential at connect (the safe default).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "schedule": {
           "anyOf": [
             {
