@@ -116,6 +116,20 @@
             "type": "string"
           }
         },
+        "mqtt": {
+          "description": "MQTT trigger name. When set, this interface is triggered by an MQTT PUBLISH to the\ntopic `<environment>/<interface_name>/<this value>` (carried over MQTT-over-WebSocket\nat `/mqtt`). The published JSON is available to the pipeline as `a|body`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ws": {
+          "description": "WebSocket marker. When set (to any value), this interface is reachable over WebSocket at\n`/ws/<org>/<environment>/<interface_name>`; each inbound JSON text frame runs the\ninterface and the result is sent back over the same socket.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "schedule": {
           "anyOf": [
             {
@@ -604,6 +618,28 @@
           "anyOf": [
             {
               "$ref": "#/$defs/EmitMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ws_publish": {
+          "description": "Publish a payload to realtime WebSocket channels (server push / fan-out).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WsPublish"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mqtt_publish": {
+          "description": "Publish a payload to MQTT topics (pipeline → topic, cross-node fan-out).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MqttPublish"
             },
             {
               "type": "null"
@@ -2585,6 +2621,13 @@
             "null"
           ]
         },
+        "rows": {
+          "description": "Batch mode. An interpolation ref resolving to a JSON array of row objects\n(e.g. `a|Fired|`). When set, one email is sent per row: each row's string\nfields `to` / `subject` / `html` / `text` / `cc` / `bcc` supply that message\n(build them in the producing query), while `from` and `smtp` are shared from\nthis action. `to`/`cc`/`bcc` may be comma-separated for multiple recipients.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "subject": {
           "type": "string"
         },
@@ -2706,6 +2749,54 @@
         "counter",
         "gauge",
         "histogram"
+      ]
+    },
+    "WsPublish": {
+      "description": "Publish a payload to realtime WebSocket channels (server push / fan-out). Every\nsocket subscribed to any listed channel — on this node AND every peer node —\nreceives the payload. Fire-and-forget: it does not wait for delivery.\n\n## Example\n```yaml\n- name: Broadcast\n  ws_publish:\n    channels: a|body::rooms|     # a string, an array, or an a|...| marker\n    data: a|OrderAction|         # defaults to a|body| when omitted\n```",
+      "type": "object",
+      "properties": {
+        "channels": {
+          "description": "Channel key(s) to publish to: a string, an array of strings, or an `a|...`\nmarker resolving to either."
+        },
+        "data": {
+          "description": "The payload pushed to subscribers. An `a|...` marker or inline JSON.\nDefaults to the request/message body when omitted."
+        },
+        "retain": {
+          "description": "Store the payload as the channel's RETAINED value, so a subscriber that connects (or\nreconnects) later immediately receives the current value on subscribe. Defaults to false.\nAccepts a literal boolean OR an `a|...` marker resolving to one (e.g. `a|body::retain|`),\nso a backend route can pass retain through per-request."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "channels"
+      ]
+    },
+    "MqttPublish": {
+      "description": "A `mqtt_publish` action publishes a message from a pipeline to one or more MQTT\ntopics. Every subscriber to a listed topic — on this node AND every peer node (via\nthe realtime mesh) — receives the payload. This is the pipeline→topic direction\n(the inbound topic→pipeline direction is the ingest consumer). Fire-and-forget: it\ndoes not wait for broker acknowledgement.\n\n## Example\n```yaml\n- name: Push\n  mqtt_publish:\n    topics: a|body::topic|      # a string, an array, or an a|...| marker\n    data: a|Reading|            # defaults to a|body| when omitted\n    qos: 1                      # 0 (default) | 1 | 2\n    retain: false               # default false\n```",
+      "type": "object",
+      "properties": {
+        "topics": {
+          "description": "Topic(s) to publish to: a string, an array of strings, or an `a|...` marker\nresolving to either."
+        },
+        "data": {
+          "description": "The payload published to subscribers. An `a|...` marker or inline JSON. A JSON\nstring publishes as raw text; any other value publishes as its JSON encoding.\nDefaults to the request/message body when omitted."
+        },
+        "qos": {
+          "description": "MQTT quality of service for the published message: 0 (at most once, default),\n1 (at least once), or 2 (exactly once).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "retain": {
+          "description": "Whether the broker retains this message as the topic's last-known-good value,\ndelivered to future subscribers on subscribe. Defaults to false. Accepts a literal\nboolean OR an `a|...` marker resolving to one (e.g. `a|body::retain|`)."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "topics"
       ]
     },
     "RunCondition": {
@@ -4232,6 +4323,13 @@
             "string",
             "null"
           ]
+        },
+        "list_authorizer": {
+          "description": "Optional per-tool `tools/list` authorizer: the name of an interface in this config that is\nRUN (with the forwarded request headers) when a client lists tools. The tool appears in the\nlisting only if that interface returns success (2xx). Absent = the tool is public discovery.\n\nThis is how a customer gates DISCOVERY with their OWN auth: `tools/list` executes no actions,\nso the interface-level auth that protects `tools/call` never runs for it. The authorizer is a\nnormal interface (e.g. a `ValidateJwt` action asserting `is_valid_jwt` against the customer's\nsecret, plus any org/role checks); the managed MCP handler runs it and hides the tool on\nfailure. See `airpipe-http-server/src/mcp_managed.rs`.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -4323,7 +4421,8 @@
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "pass": {
           "type": [
@@ -4335,7 +4434,8 @@
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "port": {
           "type": [
@@ -4350,13 +4450,15 @@
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "params": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "auth_source": {
           "type": [

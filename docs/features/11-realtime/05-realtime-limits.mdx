@@ -1,0 +1,54 @@
+---
+sidebar_position: 5
+slug: /features/realtime/limits
+displayed_sidebar: featuresSidebar
+---
+
+# Realtime limits & billing
+
+Realtime runs on shared, multi-tenant infrastructure, so every resource is bounded **per organisation**.
+Limits resolve through the entitlement ladder — `GREATEST(floor, plan tier, per-org override)` — and are
+cached on the hot path. Self-hosted uses the environment defaults shown below.
+
+## Enablement & product limits
+
+| Entitlement | Default | What it controls |
+|---|:--:|---|
+| `max_ws_connections` | 1 | Concurrent WebSocket connections per org. **This is the WS on/off switch** — `0` disables WS |
+| `max_mqtt_connections` | 1 | Concurrent MQTT connections per org (independent of WS) — `0` disables MQTT |
+| `max_ws_history` | 0 | Per-channel [history-rewind](/docs/features/realtime/websocket#history) depth. `0` = off; paid tiers scale it. Self-hosted: `AIRPIPE__WS_HISTORY_MAX` |
+
+Higher plans raise the connection ladders (e.g. 1 → 5 → 25 → 100 → 250).
+
+## Safety floors (abuse protection)
+
+These are **protective floors, not pricing levers** — every org gets at least the floor, and a higher
+plan can only raise it. They stop any single org from exhausting a node. Self-hosted sets them via env.
+
+| Entitlement | Default | Bounds | Self-hosted env |
+|---|:--:|---|---|
+| `max_subscriptions_per_conn` | 1000 | Subscriptions one connection may hold | `AIRPIPE__RT_MAX_SUBS_PER_CONN` |
+| `max_presence_per_conn` | 100 | Presence memberships one connection may hold | `AIRPIPE__RT_MAX_PRESENCE_PER_CONN` |
+| `max_retained` | 1000 | Retained messages an org pins across all channels | `AIRPIPE__RT_MAX_RETAINED` |
+| `max_publish_rate` | 1000 | Publishes per second per connection (token bucket) | `AIRPIPE__RT_MAX_PUBLISH_RATE` |
+| `max_topics` | 100000 | Distinct topics/channels an org may create | `AIRPIPE__RT_MAX_TOPICS` |
+
+Enforcement is fail-loud: over a cap, the offending operation is rejected (`ap_error` / dropped
+subscribe) or the retain bit is stripped — never a silent degrade of other tenants. On MQTT, an
+over-rate publish is still delivered to subscribers (so a QoS1 publisher isn't left hanging) but skips
+the pipeline + cross-node fan-out.
+
+## Billing (managed)
+
+Realtime bills on top of `config_run`:
+
+- **Connection-time** and **throughput (bytes)** are metered per org while a socket is open.
+- Each message that **triggers a pipeline** counts as one request (`config_run`), exactly like an HTTP
+  call. Plain pub/sub delivery between clients is not a pipeline run.
+- A connection is refused when the org is out of balance, and open connections are dropped if the
+  balance is exhausted.
+
+**Public interfaces are still fully accounted.** An anonymous/public connection is attributed to the
+owning organisation (WS via the URL, MQTT via the username), so its connection-time, throughput and
+pipeline runs bill to — and are capped by — that org. Opening a `public: true` interface means you
+accept and pay for its public traffic, bounded by the safety floors above.

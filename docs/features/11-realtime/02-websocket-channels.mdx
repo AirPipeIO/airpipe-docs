@@ -1,0 +1,91 @@
+---
+sidebar_position: 2
+slug: /features/realtime/websocket
+displayed_sidebar: featuresSidebar
+---
+
+# WebSocket channels
+
+Mark any interface with `ws: "on"` and it's reachable over WebSocket at
+`wss://<host>/ws/<ORG_UUID>/<env>/<interface>`. Clients open one socket and drive channels with small
+JSON **control frames**; pushes arrive out-of-band on the same socket.
+
+```yml
+name: RealtimeApp
+interfaces:
+  live:
+    output: http
+    ws: "on"
+    subscribe_authorizer: authorize-channel   # optional per-channel ACL (see Auth)
+    actions:
+      - name: Ping
+        input: a|body|
+```
+
+Each **non-control** frame runs the interface (request/response) and the reply comes back on the socket.
+
+## Control frames (client → server)
+
+| Frame | Effect |
+|---|---|
+| `{"ap_subscribe": "room:42"}` or `{"ap_subscribe": ["a","b"]}` | Subscribe. Wildcards: `room:+` (one level), `room:#` (all). Reply: `{"ap_subscribed":[…]}` |
+| `{"ap_subscribe": ["room:42"], "history": 20}` | Subscribe **and** replay the last 20 messages (see [History](#history)) |
+| `{"ap_unsubscribe": "room:42"}` | Unsubscribe |
+| `{"ap_publish": {"channels":["room:42"], "data":{…}, "retain": true}}` | Publish. `retain: true` stores it as the channel's last value for future subscribers. Reply: `{"ap_published":[…], "delivered": N}` |
+| `{"ap_presence_enter": {"channel":"room:42", "id":"alice", "state":{…}}}` | Join presence (see [Presence](#presence)) |
+| `{"ap_presence_leave": {"channel":"room:42"}}` | Leave presence (also automatic on disconnect) |
+| `{"ap_presence_get": {"channel":"room:42"}}` | List members: `{"ap_presence":{"channel":"room:42","members":[…]}}` |
+
+**Pushes** arrive as `{"ap_channel":"room:42","data":{…}}`. A denied/failed op replies `{"ap_error":"…"}`.
+
+> `delivered` is a channel count, not a live subscriber count — the router forwards asynchronously (the
+> same model realtime specialists use).
+
+## Publishing from a pipeline
+
+Any interface (HTTP, MQTT, scheduled) can push to channels with a `ws_publish` action — e.g. a
+database insert that also fans the new row out to subscribers:
+
+```yml
+- name: Broadcast
+  ws_publish:
+    channels: a|body::channels|
+    data: a|body::data|
+    retain: a|body::retain|      # literal true/false or an a|…| marker
+```
+
+## Presence {#presence}
+
+Presence tracks who is on a channel and emits enter/leave events — the Ably/Pusher parity feature,
+bundled and queryable in your pipeline.
+
+```js
+ws.send(JSON.stringify({ ap_presence_enter: { channel: "room:42", id: "alice", state: { typing: false } } }));
+ws.send(JSON.stringify({ ap_presence_get:   { channel: "room:42" } }));
+```
+
+Subscribers to the channel receive presence events as
+`{"ap_channel":"room:42","data":{"$presence":{"action":"enter","id":"alice","state":{…}}}}`. The member
+list from `ap_presence_get` is **cluster-wide** (gathered across nodes). Members auto-leave on disconnect.
+
+## History-rewind {#history}
+
+Add `"history": N` to a subscribe to replay the last _N_ messages for each exact channel (wildcards
+aren't replayed). Each replayed frame is flagged `"ap_history": true` so the client can tell replay
+from live:
+
+```js
+ws.send(JSON.stringify({ ap_subscribe: ["room:42"], history: 50 }));
+// → {"ap_channel":"room:42","data":{…},"ap_history":true}  ×(up to 50), then live frames
+```
+
+History depth is a per-org entitlement (`max_ws_history`) — see [Limits](/docs/features/realtime/limits).
+
+## Delivery
+
+Ordered per channel; best-effort live delivery plus **retained-value recovery** and **history-rewind**
+so a (re)connecting client isn't left blank. Cross-node delivery is at-least-once within the mesh
+retry window. A slow consumer's outbound queue is bounded (drop-on-full), so one socket can't grow
+node memory without limit.
+
+Next: **[MQTT broker →](/docs/features/realtime/mqtt)** · **[Auth →](/docs/features/realtime/realtime-auth)**

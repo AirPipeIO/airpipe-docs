@@ -1,0 +1,103 @@
+---
+sidebar_position: 4
+slug: /features/realtime/realtime-auth
+displayed_sidebar: featuresSidebar
+---
+
+# Realtime authentication
+
+Realtime supports a full **auth ladder** — from fully open to enterprise SSO — so you pick the level
+that fits each interface. The organisation API key is a **backend-only** credential; never ship it to
+a browser.
+
+| Mode | How | Use when |
+|---|---|---|
+| **[Open / public](#public)** | `public: true` on the interface — no credential | Non-sensitive public feeds (scores, status, prices) |
+| **[Air Pipe issues the token](#issued)** | Users log in through an Air Pipe interface; `add_jwt` mints a JWT | You have no identity provider |
+| **[Your JWT — shared secret](#hs256)** | Client sends its JWT; verified with `is_valid_jwt` (HS256) | You have a backend, no IdP |
+| **[Your JWT — JWKS](#jwks)** | Verified against your IdP's JWKS (RS256/ES256) | You already have Auth0/Cognito/etc. |
+| **Backend API key** | `Authorization: Bearer <key>` (server-to-server) | Trusted backend publishing |
+
+## How end-users present a credential
+
+- **WebSocket, browser:** `?token=<jwt>` on the URL — browsers can't set WebSocket headers.
+- **WebSocket, native:** the `airpipe-jwt` header (or `?token=`).
+- **Backend (WS):** the org API key via `Authorization: Bearer`, `x-api-key`, or `?api_key=`.
+- **MQTT:** `username = <ORG_UUID>`, `password = <API_KEY>` — or no password for [public](#public).
+
+The interface authenticates the user **in-pipeline** (an `is_valid_jwt` assert), and channel access is
+gated by `subscribe_authorizer` — so the ACL is *your* pipeline logic on *your* claims.
+
+## Open / public {#public}
+
+`public: true` lets a client connect with **no credential at all** — the Ably/Pusher "public channel"
+model. Safe on shared infra: the [per-org abuse floors](/docs/features/realtime/limits) still bound a
+public interface, and (managed) the connection stays scoped to your org.
+
+```yml
+feed:
+  output: http
+  ws: "on"
+  public: true
+  actions:
+    - name: Ping
+      input: a|body|
+```
+
+**Public MQTT** works the same way: an anonymous MQTT client (no password) may pub/sub **only** to
+`public: true` interfaces — never a private topic (enforced fail-closed at subscribe and publish). On
+managed hosts pass `username = <ORG_UUID>` with no password so the stream is scoped + accounted to your
+org; pure self-hosted allows fully anonymous (single-tenant, like EMQX `allow_anonymous`).
+
+## Air Pipe issues the token {#issued}
+
+No IdP? Log users in through an Air Pipe interface and mint a JWT with `add_jwt`; Air Pipe verifies its
+own token on the socket.
+
+```yml
+login:
+  output: http
+  method: POST
+  actions:
+    - name: Validate           # replace with a real credential check (DB lookup + bcrypt)
+      input: a|body|
+      assert:
+        tests: [{ value: username, is_not_null: true }, { value: password, is_not_null: true }]
+    - name: Mint
+      run_when_succeeded: { actions: [Validate] }
+      input: a|Validate|
+      post_transforms:
+        - add_jwt: { key: token, secret: a|ap_var::JWT_SECRET|, exp: 24h, data: [username] }
+```
+
+The browser opens `wss://…/ws/<org>/production/live?token=<the token>`; `authorize-channel` verifies it
+with the same secret.
+
+## Your JWT — shared secret {#hs256}
+
+The client brings a JWT signed with a secret you store in Air Pipe:
+
+```yml
+authorize-channel:
+  output: http
+  actions:
+    - name: Verify
+      input: a|headers
+      assert:
+        http_code_on_error: 403
+        tests:
+          - value: airpipe-jwt
+            is_valid_jwt: a|ap_var::JWT_SECRET|
+```
+
+## Your JWT — JWKS {#jwks}
+
+For an enterprise IdP, swap the assert to the JWKS form (RS256/ES256) — no other change:
+
+```yml
+          - value: airpipe-jwt
+            is_valid_jwt:
+              jwks_url: a|ap_var::JWKS_URL|
+```
+
+Next: **[Limits & entitlements →](/docs/features/realtime/limits)**

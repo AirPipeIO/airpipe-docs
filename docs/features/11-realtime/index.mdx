@@ -1,0 +1,63 @@
+---
+sidebar_position: 1
+slug: /features/realtime
+displayed_sidebar: featuresSidebar
+---
+
+# Realtime
+
+Air Pipe ships **two realtime transports on one stack** — native **WebSocket channels** and a real
+**MQTT broker** — with pub/sub, presence, history-rewind and retained state. Unlike a relay, the
+message can **run your pipeline** (validate, enrich, store, fan out), and unlike a raw broker it is
+**multi-tenant-safe** with per-org limits built in. One vendor for transport + logic + auth + billing,
+no message broker, Redis or NATS to operate.
+
+## WebSocket or MQTT?
+
+| Use… | When |
+|---|---|
+| **[WebSocket channels](/docs/features/realtime/websocket)** | Browser/app realtime — live dashboards, chat, presence, notifications, collaborative UIs. Simple JSON frames; browsers connect natively. |
+| **[MQTT broker](/docs/features/realtime/mqtt)** | IoT / devices / anything already speaking MQTT — telemetry, commands, sensor fleets. Full broker semantics (wildcards, retained, QoS, sessions). |
+
+Both deliver across all nodes over Air Pipe's private mesh, both can trigger your pipelines, and both
+are bounded by the same [per-org limits](/docs/features/realtime/limits).
+
+## What you get
+
+- **Pub/sub + wildcards** — publish to a channel/topic; every subscriber (on any node) receives it.
+- **[Presence](/docs/features/realtime/websocket#presence)** — who's on a channel, with enter/leave events (WS).
+- **[History-rewind](/docs/features/realtime/websocket#history)** — replay the last _N_ messages on subscribe (WS).
+- **Retained state** — a new subscriber immediately gets the channel's last value.
+- **[Flexible auth](/docs/features/realtime/realtime-auth)** — fully open/public, Air Pipe-issued tokens,
+  your own JWT (shared-secret or JWKS), or a backend API key.
+- **In-pipeline processing** — an interface-shaped message runs its Air Pipe pipeline.
+
+## A 30-second example
+
+A public WebSocket feed — visitors subscribe with no auth, your backend publishes:
+
+```yml
+name: LiveUpdates
+interfaces:
+  feed:
+    output: http
+    ws: "on"
+    public: true          # browsers connect with no credential (non-sensitive data)
+    actions:
+      - name: Ping
+        input: a|body|
+```
+
+```js
+// browser
+const ws = new WebSocket("wss://api.airpipe.io/ws/<ORG_UUID>/production/feed");
+ws.onopen = () => ws.send(JSON.stringify({ ap_subscribe: "updates" }));
+ws.onmessage = (e) => console.log(JSON.parse(e.data));   // {ap_channel:"updates", data:{…}}
+```
+
+Publish to every subscriber from any pipeline with a `ws_publish` action (or `mqtt_publish` for MQTT).
+
+Ready-made packs: **Realtime WebSocket Channels**, **Realtime MQTT Broker**, **Realtime Public Feed**,
+**Realtime MQTT Public Stream** (Marketplace).
+
+Next: **[WebSocket channels →](/docs/features/realtime/websocket)**

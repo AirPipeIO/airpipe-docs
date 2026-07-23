@@ -1,0 +1,93 @@
+---
+sidebar_position: 3
+slug: /features/realtime/mqtt
+displayed_sidebar: featuresSidebar
+---
+
+# MQTT broker
+
+Air Pipe runs a real MQTT broker — pub/sub, wildcards, retained messages, QoS 0/1/2, sessions, LWT —
+carried over secure WebSocket. On top of the broker, a publish to an **interface-shaped topic** also
+runs that interface's Air Pipe pipeline. It's an alternative to EMQX/HiveMQ/AWS IoT that also runs
+your logic on the message.
+
+## Connect
+
+Point any MQTT-over-WebSocket client at `wss://<host>/mqtt` (sub-protocol `mqtt`):
+
+- **username** = your organisation UUID
+- **password** = your Air Pipe API key
+
+```js
+const mqtt = require("mqtt");
+const c = mqtt.connect("wss://api.airpipe.io/mqtt", { username: "<ORG_UUID>", password: "<API_KEY>" });
+```
+
+(For open/no-auth streams see [Auth → Public/anonymous](/docs/features/realtime/realtime-auth#public).)
+
+## Broker features (no config needed)
+
+- **Wildcards** — subscribe `production/telemetry/+` (one level) or `production/#` (all).
+- **Retained** — publish with `retain: true`; a new/reconnecting subscriber gets the last value at once.
+- **QoS 0 / 1 / 2** — at-most-once / at-least-once / exactly-once.
+- **Sessions / LWT** — clean or persistent sessions, keep-alive, last-will.
+
+## Topics that run a pipeline
+
+A publish to `<environment>/<interface>/<trigger>` triggers that interface — the published JSON is
+`a|body|`. Declare the trigger with the `mqtt:` marker:
+
+```yml
+name: Telemetry
+interfaces:
+  telemetry:
+    output: http
+    mqtt: "reading"          # production/telemetry/reading → runs this pipeline
+    actions:
+      - name: Validate
+        input: a|body|
+        assert:
+          tests:
+            - value: device_id
+              is_not_null: true
+      - name: Stamp
+        run_when_succeeded: { actions: [Validate] }
+        input: a|Validate|
+        post_transforms:
+          - add_attribute: { reading_id: a|uuid|, received_at: a|timestamp:datetimeutctz| }
+```
+
+```js
+// device publishes — broker delivers to subscribers AND the pipeline runs
+c.publish("production/telemetry/reading",
+  JSON.stringify({ device_id: "sensor-01", temp_c: 21.4 }), { qos: 1 });
+```
+
+Plain pub/sub between clients works on **any** topic; only interface-shaped topics additionally run a
+pipeline. MQTT publish is fire-and-forget — to see a pipeline's result, persist it or forward it
+(then read it back).
+
+## Publishing from a pipeline
+
+Push to topics from any interface with an `mqtt_publish` action (e.g. republish an enriched reading
+to a `processed` stream):
+
+```yml
+- name: Republish
+  mqtt_publish:
+    topics: production/telemetry/processed
+    data: a|Stamp|
+    qos: 1
+    retain: false            # literal, or an a|…| marker
+```
+
+## Subscribe authorization
+
+Gate who may subscribe to an interface's topics with `subscribe_authorizer` — a sibling interface run
+with the requested topic as `a|body::channel|`; a non-2xx result drops the SUBSCRIBE (no subscription).
+See [Auth](/docs/features/realtime/realtime-auth).
+
+> Targets MQTT-over-WebSocket clients (MQTT.js, `paho` with `transport="websockets"`, the HiveMQ web
+> client, most modern SDKs).
+
+Next: **[Auth →](/docs/features/realtime/realtime-auth)** · **[Limits →](/docs/features/realtime/limits)**
