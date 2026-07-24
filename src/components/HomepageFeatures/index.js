@@ -40,7 +40,7 @@ const FeatureList = [
     Icon: IconChartHistogram,
     to: "/docs/configuration/metrics",
     description:
-      "A Prometheus /metrics endpoint with per-interface and per-action metrics, plus custom counters and gauges.",
+      "A Prometheus /metrics endpoint (self-hosted) with per-interface and per-action metrics, plus custom counters and gauges.",
   },
   {
     title: "Observability",

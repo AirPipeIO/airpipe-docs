@@ -62,8 +62,10 @@ function HomepageHeader() {
         <p className={styles.heroSubtitle}>
           For apps and agents. Build from a prompt, a marketplace pack, or
           hand-written YAML — managed cloud or a single self-hosted binary.
-          OpenAPI, Prometheus metrics, and OpenTelemetry built in, so it fits
-          the observability stack you already trust.
+        </p>
+        <p className={styles.heroProof}>
+          OpenAPI, Prometheus, and OpenTelemetry built in — fits the stack you
+          already trust.
         </p>
         <div className={styles.buttons}>
           <Link

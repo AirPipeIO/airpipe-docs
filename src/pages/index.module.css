@@ -25,10 +25,22 @@
 
 .heroSubtitle {
   max-width: 680px;
-  margin: 0 auto 2rem;
+  margin: 0 auto 0.75rem;
   font-size: 1.2rem;
   line-height: 1.6;
   color: #a6a7ab;
+}
+
+/* Secondary observability proof line — kept per the GTM lock but demoted:
+   smaller and lower-contrast than the pitch line so it reads as proof, not
+   headline (mirrors the marketing hero's .subproof). */
+.heroProof {
+  max-width: 680px;
+  margin: 0 auto 2rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #a6a7ab;
+  opacity: 0.7;
 }
 
 .buttons {
