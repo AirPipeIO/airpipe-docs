@@ -188,15 +188,51 @@ function summarize(desc) {
 }
 
 // Full def-level description, safe to render as prose: demote headings to bold
-// so `## Example` inside a doc-comment doesn't pollute the page TOC.
+// so `## Example` inside a doc-comment doesn't pollute the page TOC. Fence-aware
+// — a `# ...` line inside a ```` ``` ```` block is a YAML comment, not a heading,
+// so it must be left verbatim (demoting it would corrupt the code example).
 function proseDescription(desc) {
   if (!desc) return "";
+  let inFence = false;
   return desc
     .replace(/\r\n/g, "\n")
     .split("\n")
-    .map((line) => line.replace(/^(#{1,6})\s+(.*)$/, "**$2**"))
+    .map((line) => {
+      if (/^\s*```/.test(line)) { inFence = !inFence; return line; }
+      if (inFence) return line;
+      return line.replace(/^(#{1,6})\s+(.*)$/, "**$2**");
+    })
     .join("\n")
     .trim();
+}
+
+// A field whose doc-comment carries more than its one-line table summary — a
+// fenced example or a subheading — gets an expandable block below the table,
+// since a markdown table cell can only hold the single summarize() line.
+function hasExtendedDesc(desc) {
+  return !!desc && /```|\n#{1,6}\s/.test(String(desc).replace(/\r\n/g, "\n"));
+}
+
+// Expandable <details> per field with extended content, rendered after the
+// field table: full prose + example, collapsed by default so the page stays
+// scannable. The blank lines around the prose are required for Docusaurus to
+// parse the markdown (incl. the ```` ``` ```` fence) inside the raw-HTML block.
+function renderFieldDetails(schema) {
+  const props = schema.properties || {};
+  const blocks = Object.keys(props)
+    .filter((name) => hasExtendedDesc(props[name].description))
+    .map((name) =>
+      [
+        "<details>",
+        `<summary><code>${name}</code></summary>`,
+        "",
+        proseDescription(props[name].description),
+        "",
+        "</details>",
+      ].join("\n")
+    );
+  if (!blocks.length) return "";
+  return ["**Field examples**", "", blocks.join("\n\n")].join("\n");
 }
 
 // --- rendering ------------------------------------------------------------
@@ -258,6 +294,8 @@ function renderDef(name, currentFile) {
   const table = renderFieldsTable(d, currentFile);
   if (table) out.push(table, "");
   else out.push("_No configurable fields._", "");
+  const details = renderFieldDetails(d);
+  if (details) out.push(details, "");
   return out.join("\n");
 }
 
@@ -280,6 +318,8 @@ function renderPage(page, index) {
     if (root.description) parts.push(proseDescription(root.description), "");
     parts.push("## Top-level fields", "");
     parts.push(renderFieldsTable(root, page.file), "");
+    const rootDetails = renderFieldDetails(root);
+    if (rootDetails) parts.push(rootDetails, "");
     parts.push(
       "Each section below documents a named type referenced from this structure. " +
         "This reference is generated from the live config schema " +
