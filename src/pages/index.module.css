@@ -19,9 +19,6 @@
   color: #f1f3f5;
   margin-bottom: 1.25rem;
 }
-.heroTitle :global(.react-rotating-text-cursor) {
-  color: #4dabf7;
-}
 .highlight {
   color: #4dabf7;
 }

@@ -4,19 +4,11 @@ import Layout from "@theme/Layout";
 import HomepageFeatures from "@site/src/components/HomepageFeatures";
 import Heading from "@theme/Heading";
 import styles from "./index.module.css";
-import ReactRotatingText from "react-rotating-text";
 import Dots from "./dots";
 
-const ROTATING = [
-  "APIs",
-  "workflows",
-  "AI agents",
-  "MCP servers",
-  "RAG chatbots",
-  "integrations",
-  "backend services",
-];
-
+// Build cards point at real docs pack pages (sitemap-verified slugs).
+// Do not rewrite to /marketplace?pack= — that SPA query is softer for SEO
+// and skips onBrokenLinks for the underlying pack docs.
 const BUILD = [
   {
     title: "REST API over your database",
@@ -58,16 +50,19 @@ function HomepageHeader() {
       <Dots className={styles.dots} style={{ left: 0, top: 140 }} />
       <Dots className={styles.dots} style={{ right: 0, top: 60 }} />
       <div className="container">
+        {/*
+          Single static H1 for a11y + GTM lock. (Rotating fragment text is
+          decorative elsewhere on the brand site; screen readers need one
+          stable heading that matches the recommended positioning line.)
+        */}
         <Heading as="h1" className={styles.heroTitle}>
-          <span>Ship </span>
-          <ReactRotatingText items={ROTATING} />
-          <br />
-          you can <span className={styles.highlight}>actually see</span>.
+          Ship APIs, workflows, and AI agents you can{" "}
+          <span className={styles.highlight}>actually see</span>.
         </Heading>
         <p className={styles.heroSubtitle}>
-          Build from a prompt or by hand — and go live in seconds. Every endpoint
-          ships with tracing, metrics, and OpenAPI docs generated automatically.
-          No black boxes.
+          Build from a prompt, YAML, or a marketplace pack. Every HTTP and MCP
+          surface can ship with OpenAPI, Prometheus metrics, and OpenTelemetry
+          — managed cloud or a single self-hosted binary.
         </p>
         <div className={styles.buttons}>
           <Link
@@ -90,8 +85,9 @@ function HomepageHeader() {
           </Link>
         </div>
         <p className={styles.heroFootnote}>
-          Describe it in plain English, write the config by hand, or fork a
-          marketplace pack. No card required.
+          Prefer a guided path? Try the{" "}
+          <Link to="/docs/start/fifteen-minutes">15-minute onboarding tracks</Link>
+          . No card required.
         </p>
       </div>
     </header>
@@ -111,7 +107,7 @@ function BuildStrip() {
         <div className="row">
           {BUILD.map((b, i) => (
             <div className="col col--4" key={i} style={{ marginBottom: "1.5rem" }}>
-              <Link to={b.to.replace("/docs/examples/marketplace/", "/marketplace?pack=")} className={styles.buildCard}>
+              <Link to={b.to} className={styles.buildCard}>
                 <h3 className={styles.buildTitle}>{b.title}</h3>
                 <p className={styles.buildDesc}>{b.desc}</p>
               </Link>
@@ -136,7 +132,7 @@ function ClosingCTA() {
     <section className={styles.closing}>
       <div className="container">
         <Heading as="h2" className={styles.sectionTitle}>
-          Ship your first API in five minutes
+          Ship your first API in fifteen minutes
         </Heading>
         <p className={styles.sectionSubtitle}>
           No credit card required. Managed or self-hosted.
@@ -144,6 +140,12 @@ function ClosingCTA() {
         <div className={styles.buttons}>
           <Link
             className="button button--primary button--lg"
+            to="/docs/start/fifteen-minutes"
+          >
+            Pick a 15-minute track
+          </Link>
+          <Link
+            className="button button--secondary button--lg"
             to="https://app.airpipe.io/register"
           >
             Start building — free
@@ -158,7 +160,7 @@ export default function Home() {
   return (
     <Layout
       title="Air Pipe — Ship APIs, workflows & AI agents you can actually see"
-      description="Build APIs, workflows, MCP servers and integrations from a prompt or by hand. Every endpoint ships with tracing, metrics and OpenAPI docs automatically. Managed or self-hosted."
+      description="Build from a prompt, YAML, or a marketplace pack. Every HTTP and MCP surface can ship with OpenAPI, Prometheus metrics, and OpenTelemetry — managed cloud or a single self-hosted binary."
     >
       <HomepageHeader />
       <main>
