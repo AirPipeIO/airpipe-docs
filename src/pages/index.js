@@ -56,13 +56,14 @@ function HomepageHeader() {
           stable heading that matches the recommended positioning line.)
         */}
         <Heading as="h1" className={styles.heroTitle}>
-          Ship APIs, workflows, and AI agents you can{" "}
-          <span className={styles.highlight}>actually see</span>.
+          Ship APIs, workflows, and MCP tools from{" "}
+          <span className={styles.highlight}>one config</span>.
         </Heading>
         <p className={styles.heroSubtitle}>
-          Build from a prompt, YAML, or a marketplace pack. Every HTTP and MCP
-          surface can ship with OpenAPI, Prometheus metrics, and OpenTelemetry
-          — managed cloud or a single self-hosted binary.
+          For apps and agents. Build from a prompt, a marketplace pack, or
+          hand-written YAML — managed cloud or a single self-hosted binary.
+          OpenAPI, Prometheus metrics, and OpenTelemetry built in, so it fits
+          the observability stack you already trust.
         </p>
         <div className={styles.buttons}>
           <Link
@@ -159,8 +160,8 @@ function ClosingCTA() {
 export default function Home() {
   return (
     <Layout
-      title="Air Pipe — Ship APIs, workflows & AI agents you can actually see"
-      description="Build from a prompt, YAML, or a marketplace pack. Every HTTP and MCP surface can ship with OpenAPI, Prometheus metrics, and OpenTelemetry — managed cloud or a single self-hosted binary."
+      title="Air Pipe — Ship APIs, workflows, and MCP tools from one config"
+      description="Ship APIs, workflows, and MCP tools from one config — a prompt, a marketplace pack, or hand-written YAML. OpenAPI, Prometheus metrics, and OpenTelemetry built in. Managed cloud or self-hosted."
     >
       <HomepageHeader />
       <main>
