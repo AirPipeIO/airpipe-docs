@@ -1,0 +1,155 @@
+---
+sidebar_position: 2
+displayed_sidebar: documentationSidebar
+slug: /start/fifteen-minutes
+title: 15-minute onboarding tracks
+sidebar_label: 15-minute tracks
+description: Three guided paths to a running Air Pipe surface in about fifteen minutes — MCP Postgres, REST API, or Stripe webhooks.
+---
+
+import Cards from "../../src/components/mdx-comps/Cards";
+import { MDXProvider } from "@mdx-js/react";
+import {
+  IconDatabase,
+  IconApi,
+  IconWebhook,
+} from "@tabler/icons-react";
+
+# 15-minute onboarding tracks
+
+Ship something real in about fifteen minutes. Each track uses a marketplace pack, ends in a callable surface, and keeps **OpenAPI / metrics / tracing** available so you can see what ran.
+
+**Prereqs (all tracks):** a free [Air Pipe account](https://app.airpipe.io/register). Managed cloud is enough; self-host is optional ([Install](/docs/install)).
+
+export const tracks = [
+  {
+    title: "Track A — MCP + Postgres",
+    to: "#track-a--mcp--postgres",
+    desc: "Expose Postgres as MCP tools an AI client can call",
+    icon: <IconDatabase color="#4dabf7" />,
+  },
+  {
+    title: "Track B — REST API",
+    to: "#track-b--rest-api-crud",
+    desc: "CRUD API over Postgres with optional JWT",
+    icon: <IconApi color="#4dabf7" />,
+  },
+  {
+    title: "Track C — Webhook / Stripe",
+    to: "#track-c--webhook--stripe",
+    desc: "Verify Stripe webhooks, store events, notify Slack",
+    icon: <IconWebhook color="#4dabf7" />,
+  },
+];
+export const col = "col--4";
+
+<MDXProvider components={Cards}>
+
+<Cards cards={tracks} col={col} />
+
+</MDXProvider>
+
+---
+
+## Track A — MCP + Postgres
+
+**Goal:** AI clients (Claude Desktop, Claude Code, Cursor, any MCP client) call your Postgres data as tools — with a real auth story.
+
+**Pack:** [MCP Postgres Starter](/docs/examples/marketplace/mcp-postgres-starter)  
+**Install in app:** [app.airpipe.io/marketplace?pack=mcp-postgres-starter](https://app.airpipe.io/marketplace?pack=mcp-postgres-starter)
+
+### Steps (~15 min)
+
+1. **Create / open an org** at [app.airpipe.io](https://app.airpipe.io) and install the pack into an environment.
+2. **Attach Postgres** — managed DB or your own connection string in the pack globals / secrets.
+3. **Seed** — call the pack’s seed endpoint (see pack page) so demo tenants + tasks exist.
+4. **Pick a tier**
+   - *Solo:* one shared token → `tasks-solo.yml` tools
+   - *Multi-tenant:* per-user tokens with `tenant_id` → `tasks.yml` + `auth.yml` (or OIDC via `auth-oidc.yml`)
+5. **Point an MCP client** at your Air Pipe MCP endpoint with the bearer token (pack README has the client snippet).
+6. **Call a tool** — e.g. `list_tasks` / `create_task` — and confirm rows in Postgres.
+
+### See it
+
+- MCP surface: [MCP tools](/docs/configuration/mcp-tools) — same auth path as HTTP
+- Optional: enable `docs: true` / `expose_metrics: true` on the config for OpenAPI + Prometheus
+
+### Next
+
+- Harden JWT / OIDC claims
+- Scope queries tighter per tenant
+- Add more interfaces as tools
+
+---
+
+## Track B — REST API (CRUD)
+
+**Goal:** Production-shaped CRUD over Postgres (users, posts, comments) you can curl immediately.
+
+**Pack:** [REST API Starter](/docs/examples/marketplace/rest-api-starter)  
+**Install in app:** [app.airpipe.io/marketplace?pack=rest-api-starter](https://app.airpipe.io/marketplace?pack=rest-api-starter)
+
+### Steps (~15 min)
+
+1. **Install the pack** into an environment.
+2. **Connect Postgres** and run **seed** so tables + sample data load.
+3. **Hit list endpoints** — e.g. `GET /api/users`, `GET /api/posts` (exact paths on the pack page).
+4. **Create a resource** with `POST` + JSON body; confirm with `GET` by id.
+5. **Optional JWT** — enable the pack’s `auth.yml` pattern when you want protected routes.
+6. **Turn on docs** — set `docs: true` and open the generated Swagger UI (`/documentation` self-hosted, or the managed docs route).
+
+### See it
+
+- [OpenAPI docs](/docs/features/openapi)
+- [Prometheus metrics](/docs/configuration/metrics)
+- [OpenTelemetry tracing](/docs/otel-tracing) on the self-hosted binary
+
+### Next
+
+- [Beginner tutorial](/docs/tutorial/setup) for hand-written YAML depth
+- [JWT verification starter](/docs/examples/marketplace/jwt-verification-starter)
+- Multi-tenant SaaS pack if you need org scoping
+
+---
+
+## Track C — Webhook / Stripe
+
+**Goal:** One endpoint that verifies Stripe signatures, stores events idempotently in Postgres, and notifies Slack.
+
+**Pack:** [Stripe Webhooks → DB → Slack](/docs/examples/marketplace/stripe-webhooks-db-slack)  
+**Install in app:** [app.airpipe.io/marketplace?pack=stripe-webhooks-db-slack](https://app.airpipe.io/marketplace?pack=stripe-webhooks-db-slack)
+
+### Steps (~15 min)
+
+1. **Install the pack** and attach Postgres (+ Slack webhook URL as a secret).
+2. **Set the Stripe webhook signing secret** from the Stripe Dashboard (or Stripe CLI).
+3. **Expose the endpoint** — managed public URL, or tunnel to self-host.
+4. **Send a test event** with Stripe CLI (`stripe trigger payment_intent.succeeded`) or Dashboard “Send test webhook”.
+5. **Confirm** — row in the events table + Slack message; replay the same event and confirm idempotency (no duplicate side effects).
+6. **Inspect** — logs/traces for the verify → store → notify action chain.
+
+### See it
+
+- Signature pattern explained on the pack page (HMAC over `{timestamp}.{raw_body}`)
+- [Durable state](/docs/configuration/state) patterns if you extend with cursors/dedupe sets
+- [Observability showcase](/docs/examples/marketplace/observability-showcase) for a metrics/tracing-heavy pack
+
+### Next
+
+- Map more Stripe event types to domain actions
+- Fan-out to email/SMS packs
+- Add access control on non-webhook admin routes
+
+---
+
+## After any track
+
+| Want… | Go here |
+|---|---|
+| Hand-written config fundamentals | [Start Here tutorial](/docs/tutorial/setup) |
+| Feature depth (MCP, OpenAPI, metrics, state…) | [Features](/docs/features/build-with-ai) |
+| Schema + field reference | [Configuration](/docs/configuration) |
+| More packs | [Marketplace browser](/marketplace) |
+| Self-host binary / container | [Install](/docs/install) |
+
+Questions or a pack that should be a fourth track? Open an issue or PR on [airpipe-docs](https://github.com/AirPipeIO/airpipe-docs).

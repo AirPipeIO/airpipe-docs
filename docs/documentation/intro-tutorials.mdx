@@ -6,44 +6,69 @@ slug: /
 
 import Cards from "../../src/components/mdx-comps/Cards";
 import { MDXProvider } from "@mdx-js/react";
-import { IconClick, IconFiles, IconDownload } from "@tabler/icons-react";
+import {
+  IconClick,
+  IconFiles,
+  IconDownload,
+  IconRocket,
+  IconPackages,
+} from "@tabler/icons-react";
 
 # Introduction
 
-Air Pipe is a high performance backend as a service enabling you to build APIs, integrations, workflows and more effortlessly with zero code.
+**Air Pipe** is a platform for shipping high-performance **APIs, workflows, integrations, and AI/MCP services** from a prompt, declarative YAML, or a marketplace pack.
 
-Run self hosted or on our global managed backend. See below to get started.
+Deploy on **managed cloud** or a **single self-hosted binary**. Every HTTP and MCP surface can ship with **OpenAPI docs, Prometheus metrics, and OpenTelemetry tracing** — observability by default, not a black box.
+
+## What you can build
+
+- REST/CRUD APIs over Postgres, MySQL, SQLite, MongoDB, and more
+- Webhook pipelines (Stripe, GitHub, custom) with durable state and retries
+- MCP tool servers so AI agents call your data safely
+- RAG chatbots, LLM gateways, scheduled jobs, multi-tenant backends
+
+Configs are real deployable services with schema validation — not throwaway LLM sketches.
+
+## How to start
+
+Pick the path that matches how you like to work:
 
 export const desc = [
   {
-    title: "Beginner Tutorial",
-    to: "/docs/tutorial/setup",
-    desc: "Build in minutes!",
-    icon: <IconClick color="#007bff" />,
+    title: "15-minute tracks",
+    to: "/docs/start/fifteen-minutes",
+    desc: "Three Peerlist-friendly paths: MCP Postgres, REST API, or Stripe webhooks",
+    icon: <IconRocket color="#4dabf7" />,
   },
-  // {
-  //   title: "Getting Started",
-  //   to: "/docs/getting-started",
-  //   desc: "Get up and running in minutes",
-  //   icon: <IconClick color="#007bff" />,
-  // },
+  {
+    title: "Beginner tutorial",
+    to: "/docs/tutorial/setup",
+    desc: "Hand-written YAML walkthrough — setup through workflows",
+    icon: <IconClick color="#4dabf7" />,
+  },
   {
     title: "Install",
     to: "/docs/install",
-    desc: "Installation methods and supported platforms",
-    icon: <IconDownload color="#007bff" />,
+    desc: "Managed cloud, binary, container, Linux, macOS, Windows",
+    icon: <IconDownload color="#4dabf7" />,
   },
   {
     title: "Configuration",
     to: "/docs/configuration",
-    desc: "Learn the all features and available functionality",
-    icon: <IconFiles color="#007bff" />,
+    desc: "Interfaces, actions, globals, interpolation, and schema reference",
+    icon: <IconFiles color="#4dabf7" />,
+  },
+  {
+    title: "Marketplace",
+    to: "/marketplace",
+    desc: "Fork a ready pack — REST, MCP, RAG, webhooks, SaaS starters",
+    icon: <IconPackages color="#4dabf7" />,
   },
   {
     title: "Examples",
     to: "/docs/examples",
-    desc: "Instant deploy and modify any available examples",
-    icon: <IconFiles color="#007bff" />,
+    desc: "Worked examples across databases, HTTP, AI, and marketplace packs",
+    icon: <IconFiles color="#4dabf7" />,
   },
 ];
 export const col = "col--6";
@@ -53,3 +78,15 @@ export const col = "col--6";
 <Cards cards={desc} col={col} />
 
 </MDXProvider>
+
+## Why teams pick Air Pipe
+
+1. **Ship fast** — prompt, YAML, or marketplace pack; go live in minutes.
+2. **See everything** — OpenAPI (`docs: true`), Prometheus (`expose_metrics: true`), OpenTelemetry on the binary.
+3. **AI-native both ways** — [Build with AI](/docs/features/build-with-ai) for config generation; [MCP tools](/docs/configuration/mcp-tools) to expose your APIs to agents.
+4. **Run anywhere** — [app.airpipe.io](https://app.airpipe.io/register) managed, or self-host with one binary — no lock-in story.
+5. **Real backend primitives** — databases, webhooks, durable state, scheduling, access control, flow control.
+
+## Not sure where to begin?
+
+Start with the [15-minute onboarding tracks](/docs/start/fifteen-minutes). Each track ends in something you can hit with curl, an MCP client, or Stripe CLI — and that you can inspect with OpenAPI and metrics.
