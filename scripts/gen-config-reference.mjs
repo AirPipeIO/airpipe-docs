@@ -114,6 +114,10 @@ const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^
 // Explicit, collision-proof heading id for a type (page H1 titles never use
 // this prefix, so e.g. the "Email" page title can't clash with the Email type).
 const anchorId = (name) => `type-${slug(name)}`;
+// Anchor for a field's expandable example block. Namespaced by the owning type
+// so the same field name on two types (e.g. `name`, `timeout`) stays unique
+// within a page. The table row links down to this; the block sits above it.
+const exampleAnchor = (typeName, field) => `example-${slug(typeName)}-${slug(field)}`;
 
 // --- schema helpers -------------------------------------------------------
 
@@ -217,12 +221,16 @@ function hasExtendedDesc(desc) {
 // field table: full prose + example, collapsed by default so the page stays
 // scannable. The blank lines around the prose are required for Docusaurus to
 // parse the markdown (incl. the ```` ``` ```` fence) inside the raw-HTML block.
-function renderFieldDetails(schema) {
+function renderFieldDetails(schema, typeName) {
   const props = schema.properties || {};
   const blocks = Object.keys(props)
     .filter((name) => hasExtendedDesc(props[name].description))
     .map((name) =>
       [
+        // Scroll target for the table's "Example ↓" link. Sits just above the
+        // (collapsed) block so the summary is what lands in view.
+        `<a id="${exampleAnchor(typeName, name)}"></a>`,
+        "",
         "<details>",
         `<summary><code>${name}</code></summary>`,
         "",
@@ -237,7 +245,7 @@ function renderFieldDetails(schema) {
 
 // --- rendering ------------------------------------------------------------
 
-function renderFieldsTable(schema, currentFile) {
+function renderFieldsTable(schema, currentFile, typeName) {
   const props = schema.properties || {};
   const required = new Set(schema.required || []);
   const names = Object.keys(props);
@@ -250,6 +258,8 @@ function renderFieldsTable(schema, currentFile) {
     if (required.has(name)) desc = `**Required.** ${desc}`.trim();
     if (p.default !== undefined) desc += ` Default: \`${JSON.stringify(p.default)}\`.`;
     if (p.enum) desc += ` One of: ${p.enum.map((v) => `\`${v}\``).join(", ")}.`;
+    // Link the row to its expandable example block below the table.
+    if (hasExtendedDesc(p.description)) desc += ` [Example ↓](#${exampleAnchor(typeName, name)})`;
     return `| \`${name}\` | ${cell(type)} | ${cell(desc)} |`;
   });
   return ["| Field | Type | Description |", "|---|---|---|", ...rows].join("\n");
@@ -291,10 +301,10 @@ function renderDef(name, currentFile) {
     return out.join("\n");
   }
 
-  const table = renderFieldsTable(d, currentFile);
+  const table = renderFieldsTable(d, currentFile, name);
   if (table) out.push(table, "");
   else out.push("_No configurable fields._", "");
-  const details = renderFieldDetails(d);
+  const details = renderFieldDetails(d, name);
   if (details) out.push(details, "");
   return out.join("\n");
 }
@@ -317,8 +327,8 @@ function renderPage(page, index) {
     const root = ROOT;
     if (root.description) parts.push(proseDescription(root.description), "");
     parts.push("## Top-level fields", "");
-    parts.push(renderFieldsTable(root, page.file), "");
-    const rootDetails = renderFieldDetails(root);
+    parts.push(renderFieldsTable(root, page.file, "root"), "");
+    const rootDetails = renderFieldDetails(root, "root");
     if (rootDetails) parts.push(rootDetails, "");
     parts.push(
       "Each section below documents a named type referenced from this structure. " +
