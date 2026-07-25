@@ -64,6 +64,41 @@ function cleanReadme(md) {
   return out.join("\n").replace(/^\n+/, "").replace(/\n{3,}/g, "\n\n").trimEnd();
 }
 
+// Pack READMEs link to sibling packs assuming a flat marketplace layout
+// (`../slack-slash-command`). We file them under per-category dirs, so those
+// targets 404 and `onBrokenLinks: throw` kills the build. Rewrite any link
+// pointing at a known pack slug to the real relative .md path -- Docusaurus
+// then resolves it through the target page's own `slug:` frontmatter, so we
+// never hardcode the /docs routeBasePath. Fenced code is left untouched.
+function relinkPacks(md, catOf) {
+  const rewriteTarget = (target) => {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("#") || target.startsWith("/")) {
+      return null; // absolute URL, scheme, in-page anchor, or site-absolute path
+    }
+    const [rawPath, ...rest] = target.split("#");
+    const anchor = rest.length ? `#${rest.join("#")}` : "";
+    const base = rawPath
+      .replace(/^(?:\.{1,2}\/)+/, "")
+      .replace(/\/$/, "")
+      .replace(/\.mdx?$/i, "");
+    const cat = catOf.get(base);
+    return cat ? `../${cat}/${base}.md${anchor}` : null;
+  };
+
+  // Split on fenced blocks so ](...) inside YAML/SQL samples is never touched.
+  return md
+    .split(/(^```[\s\S]*?^```$)/gm)
+    .map((chunk, i) =>
+      i % 2
+        ? chunk
+        : chunk.replace(/\]\(([^)\s]+)((?:\s+"[^"]*")?)\)/g, (whole, target, title) => {
+            const next = rewriteTarget(target);
+            return next ? `](${next}${title})` : whole;
+          })
+    )
+    .join("");
+}
+
 function readmeOf(detail) {
   if (detail.readme_content) return detail.readme_content;
   const f = (detail.files || []).find(
@@ -99,9 +134,9 @@ function badges(row) {
   return b.join(" · ");
 }
 
-function renderPack(row, detail) {
+function renderPack(row, detail, catOf) {
   const tags = Array.isArray(row.tags) ? row.tags : [];
-  const readme = cleanReadme(readmeOf(detail));
+  const readme = relinkPacks(cleanReadme(readmeOf(detail)), catOf);
   const files = configFiles(detail);
   const packUrl = `${APP_MARKETPLACE}?pack=${encodeURIComponent(row.slug)}`;
 
@@ -201,6 +236,10 @@ async function main() {
       byCat.set(row.primary_category, []).get(row.primary_category)).push(row);
   }
 
+  // slug -> category dir, so cross-pack README links can be rewritten to a
+  // resolvable relative path (see relinkPacks).
+  const catOf = new Map(list.map((row) => [row.slug, row.primary_category]));
+
   let written = 0;
   for (const [cat, packs] of byCat) {
     const dir = path.join(OUT_DIR, cat);
@@ -219,7 +258,7 @@ async function main() {
         console.warn(`  ! no detail for ${row.slug}, skipping`);
         continue;
       }
-      await writeFile(path.join(dir, `${row.slug}.md`), renderPack(row, detail));
+      await writeFile(path.join(dir, `${row.slug}.md`), renderPack(row, detail, catOf));
       written++;
     }
   }
