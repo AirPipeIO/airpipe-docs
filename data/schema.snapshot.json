@@ -1397,6 +1397,13 @@
             "string",
             "null"
           ]
+        },
+        "encoding": {
+          "description": "How the signature in the target value is encoded: `hex` (default) or\n`base64`. GitHub, Stripe and Slack send hex; Shopify sends standard\nbase64 in `X-Shopify-Hmac-Sha256`.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false,
@@ -2672,6 +2679,16 @@
             "type": "string"
           }
         },
+        "attachments": {
+          "description": "Files to attach. Turns the message into a `multipart/mixed` — the html/text\nbody stays the first part and each attachment follows.\n\n## Example\n```yaml\nattachments:\n  - filename: signups.csv\n    content: a|BuildCsv::csv_b64|   # base64 (see `b64_encode`)\n    content_type: text/csv\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/EmailAttachment"
+          }
+        },
         "success_message": {
           "type": [
             "string",
@@ -2725,6 +2742,39 @@
         "user",
         "pass",
         "server"
+      ]
+    },
+    "EmailAttachment": {
+      "description": "One file attached to an outgoing email.",
+      "type": "object",
+      "properties": {
+        "filename": {
+          "description": "Filename shown to the recipient.",
+          "type": "string"
+        },
+        "content": {
+          "description": "The file contents. `base64` by default — pair it with the `b64_encode`\npost-transform, which is also what makes binary files (PDF, images) work.\nUse `encoding: utf8` to attach a plain string (CSV, JSON, text) directly.",
+          "type": "string"
+        },
+        "content_type": {
+          "description": "MIME type, e.g. `text/csv`, `application/pdf`. Defaults to\n`application/octet-stream`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encoding": {
+          "description": "How `content` is encoded: `base64` (default) or `utf8`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "filename",
+        "content"
       ]
     },
     "EmitMetric": {
@@ -3154,6 +3204,28 @@
             }
           ]
         },
+        "parse_csv": {
+          "description": "Parse a CSV string into an array of header-keyed row objects. Point it at the\nCSV string in the action's data (e.g. the raw request body via\n`input: a|raw_body|`, or fetched text).\n\n## Example\n```yaml\nparse_csv: \"$\"                       # replace the root CSV string with the rows\n# parse_csv: { json_path: \"$\", key: rows }   # put the rows array under `rows`\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_csv": {
+          "description": "Serialize an array of row objects INTO a CSV string — the inverse of\n`parse_csv`. Columns come from the first row's keys and every later row is\nwritten in that same order. Pair it with an email attachment\n(`encoding: utf8`) to send a report.\n\n## Example\n```yaml\nto_csv: \"$\"                              # replace the root rows array with a CSV string\n# to_csv: { json_path: \"$\", key: csv }   # put the CSV string under `csv`\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "nested_transforms": {
           "description": "Apply nested transforms to specific keys. Maps keys to arrays of transform operations.\n\n## Example\n```yaml\nnested_transforms:\n  items:                    # Transform each item in the 'items' array\n    - remove_keys:\n        - internal_id\n    - rename_keys:\n        user_name: name\n```",
           "type": [
@@ -3168,10 +3240,21 @@
           }
         },
         "math": {
-          "description": "Perform mathematical operations on numeric values with expressions.\n\n## Example\n```yaml\nmath:\n  target: .data                    # Path to target object\n  expressions:                     # Math expressions to evaluate\n    total: price * quantity\n    discounted: total * 0.9\n  decimal_places: 2                # Round to 2 decimal places\n```",
+          "description": "Perform mathematical operations on numeric values with expressions.\n\n`target` is OPTIONAL and defaults to the root object — omit it to read and\nwrite fields at the top level (as below). Inside an expression, reference a\nfield with the `target.` prefix; that prefix is the substitution token and is\nresolved against the target object, so a bare `price` is left as-is and will\nnot resolve. Set `target:` only to scope to a nested object (e.g. `.data`).\n\n## Example\n```yaml\nmath:\n  expressions:                     # key = output field name\n    total: target.price * target.quantity\n    discounted: target.total * 0.9\n  decimal_places: 2                # optional: round to 2 places\n```",
           "anyOf": [
             {
               "$ref": "#/$defs/TransformMath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "aggregate": {
+          "description": "Reduce a JSON array to a summary (sum/avg/min/max/count), optionally grouped.\n\n## Example\n```yaml\naggregate: { over: body.data, sum: [amount], count: true, group_by: [status] }\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformAggregate"
             },
             {
               "type": "null"
@@ -3205,6 +3288,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/EncryptValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hmac": {
+          "description": "Compute an HMAC of a message — the signing counterpart to the\n`is_valid_hmac` assertion. Use it to sign webhook deliveries you SEND,\nthen interpolate the result into a header.\n\n## Example\n```yaml\nhmac:\n  key: signature                  # Output key for the digest\n  data: a|BuildPayload::body|     # The message to sign\n  secret: a|Subscriber::secret|   # Per-recipient signing secret\n  algorithm: sha256               # sha1 | sha256 (default) | sha512\n  encoding: hex                   # hex (default) | base64\n```\n\nA digest produced here verifies under `is_valid_hmac` with the same\n`algorithm` and `encoding`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HmacSign"
             },
             {
               "type": "null"
@@ -3630,6 +3724,84 @@
         "bool"
       ]
     },
+    "TransformAggregate": {
+      "description": "Reduce a JSON array to a summary (sum / avg / min / max / count), optionally grouped.",
+      "type": "object",
+      "properties": {
+        "over": {
+          "description": "JSONPath to the array to aggregate. Omit to aggregate the whole data when it is\nitself an array.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "key": {
+          "description": "Output field to hold the summary. Omit to replace the data with the summary.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sum": {
+          "description": "Fields to sum.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "avg": {
+          "description": "Fields to average.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "min": {
+          "description": "Fields to take the minimum of.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "max": {
+          "description": "Fields to take the maximum of.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "count": {
+          "description": "Include a row count in the summary (default true when no other op is given).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "group_by": {
+          "description": "Group rows by these fields; the summary is computed per group under `groups`.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "TransformFilterSearch": {
       "type": "object",
       "properties": {
@@ -3695,6 +3867,44 @@
         "nonce"
       ]
     },
+    "HmacSign": {
+      "description": "Parameters for the `hmac` post-transform (signing).\n\n## Example\n```yaml\nhmac:\n  key: signature\n  data: a|BuildPayload::body|\n  secret: a|Subscriber::secret|\n  algorithm: sha256\n  encoding: hex\n```",
+      "type": "object",
+      "properties": {
+        "key": {
+          "description": "Output key the computed digest is written to.",
+          "type": "string"
+        },
+        "data": {
+          "description": "The message to sign. Supports interpolation.",
+          "type": "string"
+        },
+        "secret": {
+          "description": "The signing secret. Supports interpolation — use `a|ap_var::NAME|` or a\nper-recipient secret read from a prior action.",
+          "type": "string"
+        },
+        "algorithm": {
+          "description": "Hash algorithm: `sha1`, `sha256` (default), or `sha512`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encoding": {
+          "description": "Digest encoding: `hex` (default) or `base64`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "data",
+        "secret"
+      ]
+    },
     "DecryptValue": {
       "type": "object",
       "properties": {
@@ -3726,6 +3936,13 @@
     "S3GeneratePresignedURL": {
       "type": "object",
       "properties": {
+        "operation": {
+          "description": "`get` (default) mints a time-limited DOWNLOAD link; `put` mints a time-limited\nUPLOAD target the client can PUT straight to, so the file never transits AirPipe.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "bucket": {
           "type": "string"
         },
