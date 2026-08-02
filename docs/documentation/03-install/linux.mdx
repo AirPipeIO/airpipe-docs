@@ -34,4 +34,36 @@ This is typically used in tutorial mode.
     --local
 ```
 
+### Download directly, without piping to a shell
+
+If you would rather not pipe a script into `sudo bash` — or your environment
+does not allow it — fetch the binary yourself. Every release publishes a
+SHA-256 next to it so you can verify what you downloaded before running it.
+
+```sh
+  # Resolve the current version
+  VERSION=$(curl -sf https://download.airpipe.io/latest.version)
+
+  # x86_64 — for ARM machines use aarch64 instead
+  BASE="https://download.airpipe.io/${VERSION}/linux/x86_64"
+
+  curl -fLO "${BASE}/airpipe"
+  curl -fLO "${BASE}/airpipe.sha256"
+
+  sha256sum -c airpipe.sha256    # expects: airpipe: OK
+  chmod +x airpipe
+```
+
+Only run the binary once the checksum reports `OK`. If it does not match, the
+download is incomplete or has been tampered with — delete it and fetch again.
+
+You still need an API key to start it:
+
+```sh
+  ./airpipe --api-key enter-your-api-key-12345
+```
+
+The checksum is generated from the build artifact at release time, so it
+verifies the file we published rather than the file you happened to receive.
+
 <a target="_blank" and rel="noopener noreferrer" href="https://download.airpipe.io/" style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px', marginBottom:"5px" }}>Download Binary</a>
