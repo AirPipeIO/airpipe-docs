@@ -64,6 +64,16 @@
           "type": "null"
         }
       ]
+    },
+    "mcp_servers": {
+      "description": "MCP server identities declared by this config, keyed by server id. The id doubles as the\nroute segment (`/<org>/<env>/mcp/<id>`), so it is restricted to `[a-z0-9-]{1,64}`.\n\nDeclaring a server is independent of contributing tools to it: interfaces in *any* config in\nthe same org+environment join a server via `mcp.server`, and one entry here marked `default`\nadopts every tool that names no server. A config that declares nothing keeps today's\nbehaviour exactly \u2014 its tools join the default server, which falls back to the built-in\nidentity when no config declares one.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/McpServer"
+      }
     }
   },
   "additionalProperties": false,
@@ -131,14 +141,14 @@
           ]
         },
         "subscribe_authorizer": {
-          "description": "Realtime-channel access control. The name of an interface run to authorize a\nsocket's `ap_subscribe` to a channel: it runs with `{ \"channel\": \"<name>\" }`\nas `a|body` and the socket's token as `a|headers::airpipe-jwt|`, and the\nsubscribe is allowed iff the authorizer returns 2xx (so its `is_valid_jwt` +\nclaim/channel checks gate it). Unset ⇒ any socket may subscribe to any channel\nin its own org. Fail-closed: an anonymous socket (no token) is denied.",
+          "description": "Realtime-channel access control. The name of an interface run to authorize a\nsocket's `ap_subscribe` to a channel: it runs with `{ \"channel\": \"<name>\" }`\nas `a|body` and the socket's token as `a|headers::airpipe-jwt|`, and the\nsubscribe is allowed iff the authorizer returns 2xx (so its `is_valid_jwt` +\nclaim/channel checks gate it). Unset \u21d2 any socket may subscribe to any channel\nin its own org. Fail-closed: an anonymous socket (no token) is denied.",
           "type": [
             "string",
             "null"
           ]
         },
         "public": {
-          "description": "Public realtime opt-in. When `true`, this WebSocket interface accepts END-USER\nconnections with NO credential at all — no org API key and no JWT — for non-sensitive\npublic feeds (live scores, status pages, public presence), matching the \"public channel\"\nmodel of Ably/Pusher. Channel-level ACL still applies if a `subscribe_authorizer` is set,\nand the per-org realtime abuse floors (publish rate, subscriptions, topics, retained)\nstill bound the interface — so open access cannot be weaponised on shared infra. Default\n(unset/false) requires a credential at connect (the safe default).",
+          "description": "Public realtime opt-in. When `true`, this WebSocket interface accepts END-USER\nconnections with NO credential at all \u2014 no org API key and no JWT \u2014 for non-sensitive\npublic feeds (live scores, status pages, public presence), matching the \"public channel\"\nmodel of Ably/Pusher. Channel-level ACL still applies if a `subscribe_authorizer` is set,\nand the per-org realtime abuse floors (publish rate, subscriptions, topics, retained)\nstill bound the interface \u2014 so open access cannot be weaponised on shared infra. Default\n(unset/false) requires a credential at connect (the safe default).",
           "type": [
             "boolean",
             "null"
@@ -254,7 +264,7 @@
           ]
         },
         "disable_fastpath": {
-          "description": "Opt this interface out of the compiled fast path (AP_FASTPATH), forcing every request through\nthe interpreter. The fast path is byte-identical, so this never changes output — it is an escape\nhatch for interfaces where the fast-path attempt's side effects matter on a fallback: a fast-path\nattempt that bails (an assert fails) has already fired its side-effecting actions (http requests,\nDB writes), and the interpreter then re-runs them, so those side effects fire twice. Set this on\nan interface where that double-fire is unacceptable (or, as here, on a test-harness interface\nthat deliberately fails tests so it would always bail). Default (unset) = fast path allowed.",
+          "description": "Opt this interface out of the compiled fast path (AP_FASTPATH), forcing every request through\nthe interpreter. The fast path is byte-identical, so this never changes output \u2014 it is an escape\nhatch for interfaces where the fast-path attempt's side effects matter on a fallback: a fast-path\nattempt that bails (an assert fails) has already fired its side-effecting actions (http requests,\nDB writes), and the interpreter then re-runs them, so those side effects fire twice. Set this on\nan interface where that double-fire is unacceptable (or, as here, on a test-harness interface\nthat deliberately fails tests so it would always bail). Default (unset) = fast path allowed.",
           "type": [
             "boolean",
             "null"
@@ -365,7 +375,7 @@
             "null"
           ],
           "format": "double",
-          "default": 2
+          "default": 2.0
         },
         "max_backoff_seconds": {
           "description": "Maximum retry backoff cap in seconds",
@@ -614,7 +624,7 @@
           ]
         },
         "delay": {
-          "description": "Pause for a fixed duration before continuing — pacing / throttling between steps.\nAccepts a duration string (`\"2s\"`, `\"500ms\"`, `\"1m\"`) or a number of milliseconds.\nBounded by `AIRPIPE__MAX_DELAY_SECS` (default 300s); longer values are rejected.\nThis is an in-process wait, not a durable long-running delay.\n\n## Example\n```yaml\ndelay: \"2s\"\n```"
+          "description": "Pause for a fixed duration before continuing \u2014 pacing / throttling between steps.\nAccepts a duration string (`\"2s\"`, `\"500ms\"`, `\"1m\"`) or a number of milliseconds.\nBounded by `AIRPIPE__MAX_DELAY_SECS` (default 300s); longer values are rejected.\nThis is an in-process wait, not a durable long-running delay.\n\n## Example\n```yaml\ndelay: \"2s\"\n```"
         },
         "email": {
           "description": "Email sending action.\n\n## Example\n```yaml\nemail:\n  from: noreply@example.com\n  to: user@example.com\n  subject: Hello\n  text: Body text\n```",
@@ -650,7 +660,7 @@
           ]
         },
         "mqtt_publish": {
-          "description": "Publish a payload to MQTT topics (pipeline → topic, cross-node fan-out).",
+          "description": "Publish a payload to MQTT topics (pipeline \u2192 topic, cross-node fan-out).",
           "anyOf": [
             {
               "$ref": "#/$defs/MqttPublish"
@@ -751,7 +761,7 @@
           ]
         },
         "multi": {
-          "description": "Run this action's `query` as a multi-statement batch (Postgres only).\n\nThe native driver prepares every query, and a prepared statement can hold\nonly one command — so a `query` with several `;`-separated statements\n(e.g. a schema/seed block) normally fails with SQLSTATE 42601. Set\n`multi: true` to run it via the simple protocol instead, which executes\nall statements. Only valid for queries with **no** `params` (a batch\ncannot be parameterized); it returns an empty result set.\n\n## Example\n```yaml\nmulti: true\nquery: |\n  CREATE TABLE IF NOT EXISTS a (id int);\n  CREATE TABLE IF NOT EXISTS b (id int);\n```",
+          "description": "Run this action's `query` as a multi-statement batch (Postgres only).\n\nThe native driver prepares every query, and a prepared statement can hold\nonly one command \u2014 so a `query` with several `;`-separated statements\n(e.g. a schema/seed block) normally fails with SQLSTATE 42601. Set\n`multi: true` to run it via the simple protocol instead, which executes\nall statements. Only valid for queries with **no** `params` (a batch\ncannot be parameterized); it returns an empty result set.\n\n## Example\n```yaml\nmulti: true\nquery: |\n  CREATE TABLE IF NOT EXISTS a (id int);\n  CREATE TABLE IF NOT EXISTS b (id int);\n```",
           "type": [
             "boolean",
             "null"
@@ -1311,7 +1321,7 @@
       ]
     },
     "JwtConfig": {
-      "description": "Configuration for the `is_valid_jwt` assertion.\n\nAccepts either a bare string (the HS256 shared secret — the original form,\nstill supported) or an object for asymmetric algorithms and OIDC providers:\n\n```yaml\n# HS256 (unchanged):\nis_valid_jwt: \"my-shared-secret\"\n\n# RS256/ES256 with a static PEM public key:\nis_valid_jwt:\n  alg: RS256\n  public_key: a|ap_var::IDP_PUBLIC_KEY|\n\n# RS256/ES256 verified against a provider's rotating JWKS (Auth0/Clerk/Cognito):\nis_valid_jwt:\n  jwks_url: https://YOUR.auth0.com/.well-known/jwks.json\n  alg: RS256          # optional; falls back to the token header's alg\n  iss: https://YOUR.auth0.com/\n  aud: https://your-api\n```",
+      "description": "Configuration for the `is_valid_jwt` assertion.\n\nAccepts either a bare string (the HS256 shared secret \u2014 the original form,\nstill supported) or an object for asymmetric algorithms and OIDC providers:\n\n```yaml\n# HS256 (unchanged):\nis_valid_jwt: \"my-shared-secret\"\n\n# RS256/ES256 with a static PEM public key:\nis_valid_jwt:\n  alg: RS256\n  public_key: a|ap_var::IDP_PUBLIC_KEY|\n\n# RS256/ES256 verified against a provider's rotating JWKS (Auth0/Clerk/Cognito):\nis_valid_jwt:\n  jwks_url: https://YOUR.auth0.com/.well-known/jwks.json\n  alg: RS256          # optional; falls back to the token header's alg\n  iss: https://YOUR.auth0.com/\n  aud: https://your-api\n```",
       "anyOf": [
         {
           "description": "Bare HS256 shared secret (back-compatible form).",
@@ -1324,7 +1334,7 @@
       ]
     },
     "JwtVerifyConfig": {
-      "description": "Structured form of [`JwtConfig`] — a symmetric secret, a static public key,\nor a JWKS URL, plus optional algorithm and issuer/audience checks.",
+      "description": "Structured form of [`JwtConfig`] \u2014 a symmetric secret, a static public key,\nor a JWKS URL, plus optional algorithm and issuer/audience checks.",
       "type": "object",
       "properties": {
         "secret": {
@@ -1886,7 +1896,7 @@
           ]
         },
         "multipart": {
-          "description": "A flat list of parts for a `multipart/form-data` request.\n\nEach entry is one form part. Whether it is a text or binary part is determined\nimplicitly by which source field is provided:\n\n- `value` → plain text part\n- `b64` → binary part decoded from base64\n- `file_path` → binary part read from disk (not allowed in managed/hosted mode)\n\n`filename` and `mime` are always optional. When omitted on a binary part, `mime`\nis guessed from the `filename` extension, falling back to `application/octet-stream`.\n\n```yaml\nmultipart:\n  - name: image\n    b64: a|previous_action::body.image.data|\n    filename: photo.png   # optional — sent as Content-Disposition filename\n    mime: image/png       # optional — guessed from filename if absent\n  - name: model\n    value: gpt-image-1\n  - name: prompt\n    value: Transform into Studio Ghibli style\n```",
+          "description": "A flat list of parts for a `multipart/form-data` request.\n\nEach entry is one form part. Whether it is a text or binary part is determined\nimplicitly by which source field is provided:\n\n- `value` \u2192 plain text part\n- `b64` \u2192 binary part decoded from base64\n- `file_path` \u2192 binary part read from disk (not allowed in managed/hosted mode)\n\n`filename` and `mime` are always optional. When omitted on a binary part, `mime`\nis guessed from the `filename` extension, falling back to `application/octet-stream`.\n\n```yaml\nmultipart:\n  - name: image\n    b64: a|previous_action::body.image.data|\n    filename: photo.png   # optional \u2014 sent as Content-Disposition filename\n    mime: image/png       # optional \u2014 guessed from filename if absent\n  - name: model\n    value: gpt-image-1\n  - name: prompt\n    value: Transform into Studio Ghibli style\n```",
           "type": [
             "array",
             "null"
@@ -1997,7 +2007,7 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Form field name — the `name` attribute sent in `Content-Disposition`.",
+          "description": "Form field name \u2014 the `name` attribute sent in `Content-Disposition`.",
           "type": "string"
         },
         "value": {
@@ -2015,7 +2025,7 @@
           ]
         },
         "file_path": {
-          "description": "Path to a file to read and send as binary data.\nNot permitted in managed/hosted mode — use `b64` instead.\nMutually exclusive with `value` and `b64`.",
+          "description": "Path to a file to read and send as binary data.\nNot permitted in managed/hosted mode \u2014 use `b64` instead.\nMutually exclusive with `value` and `b64`.",
           "type": [
             "string",
             "null"
@@ -2436,7 +2446,7 @@
       ]
     },
     "StateAction": {
-      "description": "A persistent state operation. State is durable key/value used for things like\npolling cursors, dedupe sets, idempotency keys and counters — distinct from\n`var::` variables, which are read-only config/secrets.\n\nIt is backed by a pluggable backend selected by deployment:\nin-memory (local single-node, ephemeral), Postgres (durable/shared, BYO via\n`global.databases`), or the AirPipe backend (managed). Redis is a planned backend.\n\nRead state inline anywhere interpolation runs with `a|state::KEY|` or\n`a|state::NAMESPACE.KEY|`. The default namespace is the config name.\n\n## Example — read a cursor, fetch since it, advance it\n```yaml\nactions:\n  - name: Cursor\n    state:\n      get:\n        key: last_seen\n        default: \"1970-01-01T00:00:00Z\"\n  - name: Fetch\n    http:\n      url: \"https://api.example.com/items?since=a|state::last_seen|\"\n  - name: SaveCursor\n    state:\n      advance:\n        key: last_seen\n        value: a|Fetch::max_updated_at|\n```",
+      "description": "A persistent state operation. State is durable key/value used for things like\npolling cursors, dedupe sets, idempotency keys and counters \u2014 distinct from\n`var::` variables, which are read-only config/secrets.\n\nIt is backed by a pluggable backend selected by deployment:\nin-memory (local single-node, ephemeral), Postgres (durable/shared, BYO via\n`global.databases`), or the AirPipe backend (managed). Redis is a planned backend.\n\nRead state inline anywhere interpolation runs with `a|state::KEY|` or\n`a|state::NAMESPACE.KEY|`. The default namespace is the config name.\n\n## Example \u2014 read a cursor, fetch since it, advance it\n```yaml\nactions:\n  - name: Cursor\n    state:\n      get:\n        key: last_seen\n        default: \"1970-01-01T00:00:00Z\"\n  - name: Fetch\n    http:\n      url: \"https://api.example.com/items?since=a|state::last_seen|\"\n  - name: SaveCursor\n    state:\n      advance:\n        key: last_seen\n        value: a|Fetch::max_updated_at|\n```",
       "oneOf": [
         {
           "description": "Read a value by key. Output: `{ \"value\": <v>, \"version\": <n>, \"found\": <bool> }`.\nReturns `default` (or null) when the key is absent or expired.",
@@ -2452,7 +2462,7 @@
           "additionalProperties": false
         },
         {
-          "description": "Upsert a value. Last-write-wins unless `expected_version` is set (optimistic\nconcurrency — the write fails with a conflict if the stored version differs).\nOutput: `{ \"version\": <n> }`.",
+          "description": "Upsert a value. Last-write-wins unless `expected_version` is set (optimistic\nconcurrency \u2014 the write fails with a conflict if the stored version differs).\nOutput: `{ \"version\": <n> }`.",
           "type": "object",
           "properties": {
             "set": {
@@ -2680,7 +2690,7 @@
           }
         },
         "attachments": {
-          "description": "Files to attach. Turns the message into a `multipart/mixed` — the html/text\nbody stays the first part and each attachment follows.\n\n## Example\n```yaml\nattachments:\n  - filename: signups.csv\n    content: a|BuildCsv::csv_b64|   # base64 (see `b64_encode`)\n    content_type: text/csv\n```",
+          "description": "Files to attach. Turns the message into a `multipart/mixed` \u2014 the html/text\nbody stays the first part and each attachment follows.\n\n## Example\n```yaml\nattachments:\n  - filename: signups.csv\n    content: a|BuildCsv::csv_b64|   # base64 (see `b64_encode`)\n    content_type: text/csv\n```",
           "type": [
             "array",
             "null"
@@ -2753,7 +2763,7 @@
           "type": "string"
         },
         "content": {
-          "description": "The file contents. `base64` by default — pair it with the `b64_encode`\npost-transform, which is also what makes binary files (PDF, images) work.\nUse `encoding: utf8` to attach a plain string (CSV, JSON, text) directly.",
+          "description": "The file contents. `base64` by default \u2014 pair it with the `b64_encode`\npost-transform, which is also what makes binary files (PDF, images) work.\nUse `encoding: utf8` to attach a plain string (CSV, JSON, text) directly.",
           "type": "string"
         },
         "content_type": {
@@ -2790,7 +2800,7 @@
           "default": "counter"
         },
         "value": {
-          "description": "Value to record. Required for `gauge` and `histogram`; counters increment by 1 when omitted.\nAccepts a literal number or a standard interpolation expression (`a|ActionName::field|`).\nNumeric values resolved via interpolation retain their type — no string parsing required."
+          "description": "Value to record. Required for `gauge` and `histogram`; counters increment by 1 when omitted.\nAccepts a literal number or a standard interpolation expression (`a|ActionName::field|`).\nNumeric values resolved via interpolation retain their type \u2014 no string parsing required."
         },
         "labels": {
           "description": "User-defined labels. `config`, `interface`, and `action` are always attached automatically.\nValues accept standard interpolation expressions. Resolved values are coerced to strings\nat emit time since Prometheus labels must be strings.",
@@ -2816,7 +2826,7 @@
       ]
     },
     "WsPublish": {
-      "description": "Publish a payload to realtime WebSocket channels (server push / fan-out). Every\nsocket subscribed to any listed channel — on this node AND every peer node —\nreceives the payload. Fire-and-forget: it does not wait for delivery.\n\n## Example\n```yaml\n- name: Broadcast\n  ws_publish:\n    channels: a|body::rooms|     # a string, an array, or an a|...| marker\n    data: a|OrderAction|         # defaults to a|body| when omitted\n```",
+      "description": "Publish a payload to realtime WebSocket channels (server push / fan-out). Every\nsocket subscribed to any listed channel \u2014 on this node AND every peer node \u2014\nreceives the payload. Fire-and-forget: it does not wait for delivery.\n\n## Example\n```yaml\n- name: Broadcast\n  ws_publish:\n    channels: a|body::rooms|     # a string, an array, or an a|...| marker\n    data: a|OrderAction|         # defaults to a|body| when omitted\n```",
       "type": "object",
       "properties": {
         "channels": {
@@ -2835,7 +2845,7 @@
       ]
     },
     "MqttPublish": {
-      "description": "A `mqtt_publish` action publishes a message from a pipeline to one or more MQTT\ntopics. Every subscriber to a listed topic — on this node AND every peer node (via\nthe realtime mesh) — receives the payload. This is the pipeline→topic direction\n(the inbound topic→pipeline direction is the ingest consumer). Fire-and-forget: it\ndoes not wait for broker acknowledgement.\n\n## Example\n```yaml\n- name: Push\n  mqtt_publish:\n    topics: a|body::topic|      # a string, an array, or an a|...| marker\n    data: a|Reading|            # defaults to a|body| when omitted\n    qos: 1                      # 0 (default) | 1 | 2\n    retain: false               # default false\n```",
+      "description": "A `mqtt_publish` action publishes a message from a pipeline to one or more MQTT\ntopics. Every subscriber to a listed topic \u2014 on this node AND every peer node (via\nthe realtime mesh) \u2014 receives the payload. This is the pipeline\u2192topic direction\n(the inbound topic\u2192pipeline direction is the ingest consumer). Fire-and-forget: it\ndoes not wait for broker acknowledgement.\n\n## Example\n```yaml\n- name: Push\n  mqtt_publish:\n    topics: a|body::topic|      # a string, an array, or an a|...| marker\n    data: a|Reading|            # defaults to a|body| when omitted\n    qos: 1                      # 0 (default) | 1 | 2\n    retain: false               # default false\n```",
       "type": "object",
       "properties": {
         "topics": {
@@ -3094,7 +3104,7 @@
           ]
         },
         "add_jwt": {
-          "description": "Add a JWT token to the response with configurable expiration and payload.\n\n## Example\n```yaml\nadd_jwt:\n  key: jwt                               # Output key for the token\n  secret: a|var::JWT_SECRET|            # JWT secret (use encrypted variable)\n  exp: 1d                                # Expiration STRING (e.g., 1h, 1d, 30m)\n  data:                                  # Claims — three accepted forms:\n    sub: a|FetchUser::id|                #  • object: explicit claim -> value (most flexible)\n    email: a|FetchUser::email|\n  # data: [id, email]                    #  • array: copy these fields from this action's input\n  # data: all                            #  • \"all\": copy every input field\n```\n\n**Security:** Store JWT secrets as encrypted AirPipe variables:\n```yaml\nsecret: a|var::ENCRYPTED_JWT_SECRET|\n```",
+          "description": "Add a JWT token to the response with configurable expiration and payload.\n\n## Example\n```yaml\nadd_jwt:\n  key: jwt                               # Output key for the token\n  secret: a|var::JWT_SECRET|            # JWT secret (use encrypted variable)\n  exp: 1d                                # Expiration STRING (e.g., 1h, 1d, 30m)\n  data:                                  # Claims \u2014 three accepted forms:\n    sub: a|FetchUser::id|                #  \u2022 object: explicit claim -> value (most flexible)\n    email: a|FetchUser::email|\n  # data: [id, email]                    #  \u2022 array: copy these fields from this action's input\n  # data: all                            #  \u2022 \"all\": copy every input field\n```\n\n**Security:** Store JWT secrets as encrypted AirPipe variables:\n```yaml\nsecret: a|var::ENCRYPTED_JWT_SECRET|\n```",
           "anyOf": [
             {
               "$ref": "#/$defs/AddJWT"
@@ -3216,7 +3226,7 @@
           ]
         },
         "to_csv": {
-          "description": "Serialize an array of row objects INTO a CSV string — the inverse of\n`parse_csv`. Columns come from the first row's keys and every later row is\nwritten in that same order. Pair it with an email attachment\n(`encoding: utf8`) to send a report.\n\n## Example\n```yaml\nto_csv: \"$\"                              # replace the root rows array with a CSV string\n# to_csv: { json_path: \"$\", key: csv }   # put the CSV string under `csv`\n```",
+          "description": "Serialize an array of row objects INTO a CSV string \u2014 the inverse of\n`parse_csv`. Columns come from the first row's keys and every later row is\nwritten in that same order. Pair it with an email attachment\n(`encoding: utf8`) to send a report.\n\n## Example\n```yaml\nto_csv: \"$\"                              # replace the root rows array with a CSV string\n# to_csv: { json_path: \"$\", key: csv }   # put the CSV string under `csv`\n```",
           "anyOf": [
             {
               "$ref": "#/$defs/TransformConfig"
@@ -3240,7 +3250,7 @@
           }
         },
         "math": {
-          "description": "Perform mathematical operations on numeric values with expressions.\n\n`target` is OPTIONAL and defaults to the root object — omit it to read and\nwrite fields at the top level (as below). Inside an expression, reference a\nfield with the `target.` prefix; that prefix is the substitution token and is\nresolved against the target object, so a bare `price` is left as-is and will\nnot resolve. Set `target:` only to scope to a nested object (e.g. `.data`).\n\n## Example\n```yaml\nmath:\n  expressions:                     # key = output field name\n    total: target.price * target.quantity\n    discounted: target.total * 0.9\n  decimal_places: 2                # optional: round to 2 places\n```",
+          "description": "Perform mathematical operations on numeric values with expressions.\n\n`target` is OPTIONAL and defaults to the root object \u2014 omit it to read and\nwrite fields at the top level (as below). Inside an expression, reference a\nfield with the `target.` prefix; that prefix is the substitution token and is\nresolved against the target object, so a bare `price` is left as-is and will\nnot resolve. Set `target:` only to scope to a nested object (e.g. `.data`).\n\n## Example\n```yaml\nmath:\n  expressions:                     # key = output field name\n    total: target.price * target.quantity\n    discounted: target.total * 0.9\n  decimal_places: 2                # optional: round to 2 places\n```",
           "anyOf": [
             {
               "$ref": "#/$defs/TransformMath"
@@ -3295,7 +3305,7 @@
           ]
         },
         "hmac": {
-          "description": "Compute an HMAC of a message — the signing counterpart to the\n`is_valid_hmac` assertion. Use it to sign webhook deliveries you SEND,\nthen interpolate the result into a header.\n\n## Example\n```yaml\nhmac:\n  key: signature                  # Output key for the digest\n  data: a|BuildPayload::body|     # The message to sign\n  secret: a|Subscriber::secret|   # Per-recipient signing secret\n  algorithm: sha256               # sha1 | sha256 (default) | sha512\n  encoding: hex                   # hex (default) | base64\n```\n\nA digest produced here verifies under `is_valid_hmac` with the same\n`algorithm` and `encoding`.",
+          "description": "Compute an HMAC of a message \u2014 the signing counterpart to the\n`is_valid_hmac` assertion. Use it to sign webhook deliveries you SEND,\nthen interpolate the result into a header.\n\n## Example\n```yaml\nhmac:\n  key: signature                  # Output key for the digest\n  data: a|BuildPayload::body|     # The message to sign\n  secret: a|Subscriber::secret|   # Per-recipient signing secret\n  algorithm: sha256               # sha1 | sha256 (default) | sha512\n  encoding: hex                   # hex (default) | base64\n```\n\nA digest produced here verifies under `is_valid_hmac` with the same\n`algorithm` and `encoding`.",
           "anyOf": [
             {
               "$ref": "#/$defs/HmacSign"
@@ -3306,7 +3316,7 @@
           ]
         },
         "decrypt_value": {
-          "description": "Decrypt a value previously sealed with `encrypt_value` (AES-256-GCM).\n\n## Example\n```yaml\ndecrypt_value:\n  key: plaintext                # Output key for the decrypted string\n  value: a|Row::enc_value|      # Base64 ciphertext (the encrypt_value `.value`)\n  nonce: a|Row::enc_nonce|      # Base64 nonce   (the encrypt_value `.nonce`)\n  tag: a|Row::enc_tag|          # Base64 GCM tag (the encrypt_value `.tag`)\n  secret_key: a|env::AIRPIPE_ENC_SECRET_KEY|  # Same key used to encrypt\n```\n\n**Security:** decryption is authenticated — a wrong key, altered ciphertext,\nor altered tag fails loudly rather than returning garbage.",
+          "description": "Decrypt a value previously sealed with `encrypt_value` (AES-256-GCM).\n\n## Example\n```yaml\ndecrypt_value:\n  key: plaintext                # Output key for the decrypted string\n  value: a|Row::enc_value|      # Base64 ciphertext (the encrypt_value `.value`)\n  nonce: a|Row::enc_nonce|      # Base64 nonce   (the encrypt_value `.nonce`)\n  tag: a|Row::enc_tag|          # Base64 GCM tag (the encrypt_value `.tag`)\n  secret_key: a|env::AIRPIPE_ENC_SECRET_KEY|  # Same key used to encrypt\n```\n\n**Security:** decryption is authenticated \u2014 a wrong key, altered ciphertext,\nor altered tag fails loudly rather than returning garbage.",
           "anyOf": [
             {
               "$ref": "#/$defs/DecryptValue"
@@ -3880,7 +3890,7 @@
           "type": "string"
         },
         "secret": {
-          "description": "The signing secret. Supports interpolation — use `a|ap_var::NAME|` or a\nper-recipient secret read from a prior action.",
+          "description": "The signing secret. Supports interpolation \u2014 use `a|ap_var::NAME|` or a\nper-recipient secret read from a prior action.",
           "type": "string"
         },
         "algorithm": {
@@ -4189,7 +4199,7 @@
       ]
     },
     "NetworkPolicy": {
-      "description": "Network access-control policy. Set it config-wide (top-level `network:`, applies\nto every interface as a baseline) and/or per-interface (`interface.network:`,\nwhich inherits and **tightens** the config-wide policy).\n\n## Inheritance (tighten-only)\n- `deny` lists (ip/geo/asn) **union** across levels — a config-level deny can\n  never be weakened by an interface.\n- `allow` lists **intersect** — the request must satisfy every level that\n  declares an allow list.\n- An interface sets `inherit: false` to ignore the config-wide policy entirely\n  (a deliberate public exception, e.g. a health route).\n- Scalar settings (`mode`, `source`, `trusted_proxies`, `on_deny`) are taken\n  from the interface when present, otherwise inherited from the config level.\n\n## Evaluation order (per level)\n`ip.deny` → `geo.deny` → `asn.deny` → `*.allow` → `rate_limit`. The first rule\nthat rejects wins. In `monitor` mode nothing is blocked; matches are logged.\n\n## Example\n```yaml\nnetwork:                       # config-wide baseline\n  mode: enforce                # enforce (default) | monitor\n  source: client               # client (default) | socket | real_ip\n  trusted_proxies:             # validate XFF chain (anti-spoofing)\n    - \"10.0.0.0/8\"\n  ip:\n    allow: [\"203.0.113.0/24\", \"2001:db8::/32\"]\n    deny:  [\"1.2.3.4\"]\n    deny_check: source         # source (default) | all\n  geo:   { deny: [\"RU\", \"KP\"] }\n  asn:   { deny: [13335] }\n  rate_limit: { per: ip, requests: 100, window: \"60s\" }\n  on_deny: { status: 403, body: { error: \"forbidden\" } }\n\ninterfaces:\n  admin:\n    network:                   # inherits + tightens the baseline\n      ip: { allow: [\"198.51.100.10\"] }\n  health:\n    network: { inherit: false } # public exception\n```",
+      "description": "Network access-control policy. Set it config-wide (top-level `network:`, applies\nto every interface as a baseline) and/or per-interface (`interface.network:`,\nwhich inherits and **tightens** the config-wide policy).\n\n## Inheritance (tighten-only)\n- `deny` lists (ip/geo/asn) **union** across levels \u2014 a config-level deny can\n  never be weakened by an interface.\n- `allow` lists **intersect** \u2014 the request must satisfy every level that\n  declares an allow list.\n- An interface sets `inherit: false` to ignore the config-wide policy entirely\n  (a deliberate public exception, e.g. a health route).\n- Scalar settings (`mode`, `source`, `trusted_proxies`, `on_deny`) are taken\n  from the interface when present, otherwise inherited from the config level.\n\n## Evaluation order (per level)\n`ip.deny` \u2192 `geo.deny` \u2192 `asn.deny` \u2192 `*.allow` \u2192 `rate_limit`. The first rule\nthat rejects wins. In `monitor` mode nothing is blocked; matches are logged.\n\n## Example\n```yaml\nnetwork:                       # config-wide baseline\n  mode: enforce                # enforce (default) | monitor\n  source: client               # client (default) | socket | real_ip\n  trusted_proxies:             # validate XFF chain (anti-spoofing)\n    - \"10.0.0.0/8\"\n  ip:\n    allow: [\"203.0.113.0/24\", \"2001:db8::/32\"]\n    deny:  [\"1.2.3.4\"]\n    deny_check: source         # source (default) | all\n  geo:   { deny: [\"RU\", \"KP\"] }\n  asn:   { deny: [13335] }\n  rate_limit: { per: ip, requests: 100, window: \"60s\" }\n  on_deny: { status: 403, body: { error: \"forbidden\" } }\n\ninterfaces:\n  admin:\n    network:                   # inherits + tightens the baseline\n      ip: { allow: [\"198.51.100.10\"] }\n  health:\n    network: { inherit: false } # public exception\n```",
       "type": "object",
       "properties": {
         "mode": {
@@ -4325,7 +4335,7 @@
       ]
     },
     "IpRule": {
-      "description": "IP-based allow/deny rule. Single addresses or CIDR ranges; IPv4 and IPv6.\n\nWithin a single level, rules evaluate as: `deny` match → block;\nelse `allow` present and no match → block; else pass.",
+      "description": "IP-based allow/deny rule. Single addresses or CIDR ranges; IPv4 and IPv6.\n\nWithin a single level, rules evaluate as: `deny` match \u2192 block;\nelse `allow` present and no match \u2192 block; else pass.",
       "type": "object",
       "properties": {
         "allow": {
@@ -4561,6 +4571,13 @@
             "string",
             "null"
           ]
+        },
+        "server": {
+          "description": "Which declared MCP server this tool belongs to (see [`IntegrationConfig::mcp_servers`]).\nOmitted = the default server, which is what every pre-existing config gets.\n\nThe id may be declared in a *different* config in the same org+environment: an MCP server is\na named group of tools, not a property of one config, so many configs can contribute tools to\none server. A id that resolves to no declaration is a configuration error and the tool is\nomitted from every server rather than published onto the wrong one.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -4716,7 +4733,7 @@
         "conn_max_lifetime": true,
         "timeout": true,
         "synchronous": {
-          "description": "SQLite-only: `PRAGMA synchronous` (`OFF` | `NORMAL` | `FULL` | `EXTRA`). Defaults to `NORMAL`\n(with WAL journaling) when unset — durable against application/process crashes and ~10x faster\nthan `FULL` on writes. Set `FULL`/`EXTRA` for maximum durability, or `OFF` for maximum speed\n(no crash durability). Ignored by non-SQLite drivers.",
+          "description": "SQLite-only: `PRAGMA synchronous` (`OFF` | `NORMAL` | `FULL` | `EXTRA`). Defaults to `NORMAL`\n(with WAL journaling) when unset \u2014 durable against application/process crashes and ~10x faster\nthan `FULL` on writes. Set `FULL`/`EXTRA` for maximum durability, or `OFF` for maximum speed\n(no crash durability). Ignored by non-SQLite drivers.",
           "type": [
             "string",
             "null"
@@ -4896,6 +4913,32 @@
             "string",
             "null"
           ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "McpServer": {
+      "description": "A named MCP server: an identity, plus the tools that join it by id.\n\nDeclared under [`IntegrationConfig::mcp_servers`] and joined by [`McpTool::server`]. Declaring\nand contributing are deliberately separate. Air Pipe's own management MCP is assembled from many\nconfigs but is one server with one identity, so repeating the identity in each contributing\nconfig would leave no single source of truth; conversely one org may publish several distinct\nMCP offerings from different subsets of its configs.\n\n`title` and `instructions` exist because MCP registries (mcp.so, Glama, Smithery, PulseMCP) read\na remote server's listing metadata straight off the `initialize` response \u2014 there is no separate\nplace to write a description. Without them a listing renders as a bare name and a wall of tool\ndescriptions.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "Display name shown to MCP clients and registries (`serverInfo.title`).\nAbsent = clients fall back to the protocol-level server name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "instructions": {
+          "description": "Server-level description, emitted as the `initialize` result's `instructions`.\nThis is the field MCP registries surface as the listing description.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "default": {
+          "description": "Serve this identity on the bare `/<org>/<env>/mcp` route, i.e. adopt the tools that name no\nserver. At most one per org+environment; ties resolve deterministically by config name.",
+          "type": "boolean",
+          "default": false
         }
       },
       "additionalProperties": false

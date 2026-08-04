@@ -34,7 +34,7 @@ const PAGES = [
     file: "02-interfaces",
     title: "Interfaces",
     defs: ["Interface", "InterfaceResponse", "InterfaceLog", "InterfaceLogOn",
-      "InterfaceOutput", "ErrorFallbackStrategy", "McpTool", "Param", "Schedule"],
+      "InterfaceOutput", "ErrorFallbackStrategy", "McpTool", "McpServer", "Param", "Schedule"],
   },
   {
     file: "03-actions",

@@ -45,6 +45,86 @@ Pair MCP tools with [network access control](/docs/configuration/access-control)
 and JWT verification so agent-callable endpoints stay authorized.
 :::
 
+## Server identity
+
+Every MCP client calls `initialize` before it lists or calls anything, and that
+response carries the server's name and description. Declare them with a top-level
+`mcp_servers` block (engine ≥ **1.38.0**):
+
+```yaml
+mcp_servers:
+  tasks:
+    title: Tasks
+    instructions: >-
+      Task management backed by Postgres, scoped to the caller's tenant. Use
+      list_tasks to read tasks and create_task to add one. Every tool requires
+      the bearer token issued by the operator.
+    default: true
+```
+
+| Field | Effect |
+|---|---|
+| `title` | `serverInfo.title` — the display name in the client's UI. |
+| `instructions` | The `initialize` result's `instructions`. MCP registries (mcp.so, Glama, Smithery, PulseMCP) read a remote server's listing description straight off this — there is no other place to write one. |
+| `default` | Adopt every tool that names no server, and serve them on the bare endpoint. At most one per org + environment. |
+
+Without a declaration, tools still publish — under the built-in server name, and a
+registry listing renders as a bare name plus a wall of tool descriptions.
+
+### Named servers
+
+**Declaring a server and contributing tools to it are separate things.** An MCP
+server is a named group of tools, not a property of one config: interfaces in *any*
+config in the same org + environment join a server by id, so one identity can cover
+tools spread across many files, and one deployment can publish several distinct MCP
+offerings from different subsets of its configs.
+
+The id is a route segment, so each declared server is its own endpoint:
+
+| Server | Self-hosted | Managed |
+|---|---|---|
+| the `default` one | `/mcp` | `/<org>/<env>/mcp` |
+| id `tasks-admin` | `/mcp/tasks-admin` | `/<org>/<env>/mcp/tasks-admin` |
+
+A tool joins a named server with `mcp.server`:
+
+```yaml
+mcp_servers:
+  tasks:
+    title: Tasks
+    default: true
+  tasks-admin:
+    title: Tasks (admin)
+
+interfaces:
+  purgeTasks:
+    summary: Delete every completed task
+    mcp:
+      enabled: true
+      tool_name: purge_tasks
+      server: tasks-admin        # published only at /mcp/tasks-admin
+    actions:
+      - name: Purge
+        database: main
+        query: DELETE FROM tasks WHERE status = 'done'
+```
+
+Rules worth knowing:
+
+- **Ids are URL segments** — 1–64 characters of `a-z`, `0-9` or `-`.
+- **Only one server may set `default: true`.** Deploy-time validation rejects a
+  second one in the same config; across configs the first by config name wins and
+  the engine warns.
+- **A tool naming a server nothing declares is published on no server** — never on
+  the default one — and a request to an undeclared route segment is refused rather
+  than served the default server's tools.
+- **A config declaring `mcp_servers` may only reference its own ids.** Naming an id
+  declared elsewhere is fine *if* this config declares nothing itself; mixing the
+  two is a typo often enough that validation treats it as an error.
+- **Keep the declaration in its own config** when tools live across several files
+  (`interfaces: {}` is valid). The identity then survives renaming or deleting
+  whichever config happened to host it, and there is one source of truth.
+
 ## Gating discovery
 
 `tools/call` is protected by the interface's own actions — a `ValidateJwt` step,
