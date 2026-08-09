@@ -262,9 +262,9 @@ second flag to remember.
 
 ## Discovering your own pods
 
-The `discover` action returns the live members of a service as an array, and
-`lookup:` fans actions out across them — so you stop hard-coding a list of
-addresses that is wrong the moment anything scales.
+The [`discover` action](/docs/configuration/discovery) returns the live members
+of a service as an array, and `lookup:` fans actions out across them — so you
+stop hard-coding a list of addresses that is wrong the moment anything scales.
 
 ```yaml title="health-check every peer"
 interfaces:
@@ -289,20 +289,12 @@ interfaces:
               url: a|body::url|/livez
 ```
 
-Four backends, one item shape — `{ name, address, port, url, source, ready,
-namespace, node, image, labels }` — so a config moves between orchestrators by
-changing only the backend block:
+In Kubernetes there are two backends worth knowing:
 
-| Backend | Targeting | What it costs |
-|---|---|---|
-| `dns` | none — addresses only | **nothing**: no API access, no credentials, no RBAC |
-| `kubernetes` | label + field selectors, readiness, node, image | a ServiceAccount with `list` on pods |
-| `docker` | container labels, image | the Docker socket (unix only) |
-| `static` | — | nothing; an explicit list |
-
-**Reach for `dns` first.** It finds the same pods as the Kubernetes backend and
-needs no privilege at all. Use the API backend when you actually need label
-selectors or pod metadata:
+- **`dns`**, above, pointed at the headless Service. No API access, no
+  credentials, no RBAC — reach for this first.
+- **`kubernetes`**, when you need label selectors or pod metadata (readiness,
+  node, image, labels). It needs a ServiceAccount with `list` on pods:
 
 ```yaml
 - name: Members
@@ -310,11 +302,7 @@ selectors or pod metadata:
     kubernetes:
       label_selector: app=api
       port_name: http
-    exclude:
-      name: canary
 ```
-
-That needs a namespace-scoped Role:
 
 ```yaml title="rbac.yaml"
 apiVersion: rbac.authorization.k8s.io/v1
@@ -329,19 +317,10 @@ rules:
 
 `list` on pods, nothing else — no `watch`, no `get`, nothing on secrets or
 configmaps. Discovering another namespace means creating a RoleBinding **in that
-namespace**, which keeps each grant visible where it applies.
+namespace**, so each grant stays visible where it applies.
 
-Two options worth setting deliberately:
-
-- **`cache_ttl_secs`** (default 10). Discovery on a request-path interface would
-  otherwise issue an API call per request, turning a busy route into a
-  denial-of-service against your own API server.
-- **`fail_when_empty`** (default false). An empty result is an empty loop,
-  because a service scaled to zero is not an error.
-
-Fields a backend cannot know are **omitted, not defaulted**: DNS has no image, so
-an `image` filter matches nothing there rather than silently passing.
-`include`/`exclude` take regexes, and **exclusion beats inclusion**.
+Full details of all four backends, filtering and caching are on the
+[container & service discovery](/docs/configuration/discovery) page.
 
 ## Things that catch people out
 

@@ -1,0 +1,301 @@
+---
+sidebar_position: 14
+slug: /configuration/discovery
+displayed_sidebar: featuresSidebar
+title: Container & service discovery
+description: Discover the live members of a service — Kubernetes pods, Docker containers, DNS addresses — and act on every one of them, with label-based targeting and one item shape across every backend.
+keywords:
+  - container discovery
+  - service discovery
+  - kubernetes pod discovery
+  - docker container discovery
+  - dns service discovery
+  - label selector
+---
+
+# Container & service discovery
+
+A hard-coded list of addresses is wrong the moment anything scales. The
+`discover` action returns the **live** members of a service as an array, and
+`lookup:` fans actions out across them:
+
+```yaml
+actions:
+  - name: Members
+    discover:
+      kubernetes:
+        label_selector: app=api
+        port_name: http
+
+  - name: PollAll
+    lookup: a|Members|
+    lookup_partition: true          # -> { succeeded: [...], failed: [...] }
+    actions:
+      - name: Health
+        http:
+          url: a|body::url|/livez
+```
+
+Four backends — Kubernetes, DNS, Docker and a static list — all returning the
+**same item shape**, so a config moves between orchestrators by changing only the
+backend block.
+
+## What you get back
+
+Every backend returns an array of members in one shape:
+
+```json
+{
+  "name":      "api-7d9f8b6c5d-x2ktp",
+  "address":   "10.42.1.3",
+  "port":      8080,
+  "url":       "http://10.42.1.3:8080",
+  "source":    "kubernetes",
+  "ready":     true,
+  "namespace": "default",
+  "node":      "worker-1",
+  "image":     "example/api:1.4.0",
+  "labels":    { "app": "api" }
+}
+```
+
+Inside a `lookup:` loop each member becomes the nested actions' input, so
+`a|body::url|`, `a|body::address|` and `a|body::labels.app|` all work.
+
+:::info Fields are omitted, not faked
+A backend only reports what it can actually know. DNS returns addresses, so its
+members have no `image`, `labels` or `ready`. That matters for filtering: an
+`image` filter matches **nothing** on the DNS backend rather than silently
+matching everything.
+:::
+
+## Choosing a backend
+
+| Backend | Targeting | What it costs |
+|---|---|---|
+| [`dns`](#dns) | none — addresses only | **nothing**: no API access, no credentials, no RBAC, nothing mounted |
+| [`kubernetes`](#kubernetes) | label + field selectors, readiness, node, image, labels | a ServiceAccount with `list` on pods |
+| [`docker`](#docker) | container labels, image | access to the Docker socket (unix only) |
+| [`static`](#static) | — | nothing; an explicit list |
+
+**Reach for `dns` first.** It finds the same pods as the Kubernetes backend and
+needs no privilege whatsoever. Move up to the Kubernetes backend when you
+genuinely need label selectors or pod metadata.
+
+### dns
+
+Resolve a name to every address behind it.
+
+```yaml
+- name: Members
+  discover:
+    dns:
+      name: api-headless
+      exclude_self: a|env::POD_IP->default()|
+    port: 8080
+```
+
+The portable option — it works anywhere there is DNS:
+
+- **Kubernetes**: point it at a **headless** Service (`clusterIP: None`), whose
+  DNS returns one A record per ready pod.
+- **Docker Compose**: point it at a scaled service name; the embedded DNS returns
+  one address per container.
+
+`exclude_self` drops this node's own address, which is what stops a service
+calling itself when it discovers its peers.
+
+### kubernetes
+
+Query the Kubernetes API for pods.
+
+```yaml
+- name: Members
+  discover:
+    kubernetes:
+      namespace: default          # defaults to the agent's own namespace
+      label_selector: app=api,tier!=canary
+      field_selector: status.phase=Running
+      port_name: http             # take the port from a NAMED container port
+      ready_only: true            # default
+```
+
+`label_selector` and `field_selector` use standard Kubernetes syntax — the same
+as `kubectl -l` — and are evaluated by the API server.
+
+`port_name` is preferable to a hard-coded number: the name survives a port
+change. `ready_only` defaults to true, because an unready pod has explicitly said
+not to send it traffic.
+
+The agent authenticates with its own ServiceAccount and needs `list` on pods:
+
+```yaml title="rbac.yaml"
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: airpipe-discovery
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: airpipe-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: airpipe-discovery
+subjects:
+  - kind: ServiceAccount
+    name: airpipe
+```
+
+`list` on pods and nothing else — no `watch`, no `get`, nothing on secrets or
+configmaps. This is a namespace-scoped Role, so discovering **another** namespace
+means creating a RoleBinding in that namespace, which keeps every grant visible
+where it applies.
+
+Without it the action fails with a message naming the fix:
+
+```
+kubernetes api denied listing pods in namespace default (403).
+The ServiceAccount needs `list` on pods …
+```
+
+See [Kubernetes](/docs/install/kubernetes) for the full deployment.
+
+### docker
+
+Query the Docker Engine API for containers — for hosts that are not Kubernetes:
+plain Docker, Compose, Swarm.
+
+```yaml
+- name: Members
+  discover:
+    docker:
+      labels:
+        com.docker.compose.service: api
+      network: backend            # which network's address to report
+    port: 8080
+```
+
+:::caution The Docker socket is host-root-equivalent
+This backend needs `/var/run/docker.sock`. Anything that can reach that socket
+can start a privileged container mounting the host filesystem — it is effectively
+root on that machine. Mount it read-only, only where this backend is genuinely
+needed, and prefer `dns`, which discovers the same Compose containers with no
+socket at all.
+
+Unix only: Windows exposes the daemon on a named pipe, and the backend reports
+that rather than silently failing.
+:::
+
+### static
+
+An explicit list. Not discovery, but the escape hatch for environments with none
+of the above — and the same item shape, so a config can start static and move to
+real discovery without touching the actions that consume it.
+
+```yaml
+- name: Members
+  discover:
+    static: ["10.0.0.1:8080", "10.0.0.2:8080", "api.internal"]
+    port: 8080          # applied to entries that carry no port
+```
+
+## Filtering
+
+`include` and `exclude` take regular expressions matched against `name`, `image`
+and `namespace`:
+
+```yaml
+- name: Members
+  discover:
+    kubernetes:
+      label_selector: app=api
+    include:
+      image: "^registry\\.example\\.com/"
+    exclude:
+      name: canary
+```
+
+**Exclusion beats inclusion.** When the two disagree, "do not touch this one" is
+the safe reading of intent — so a member matching both is dropped.
+
+A pattern against a field the backend does not populate matches nothing, so an
+`image` filter on the DNS backend excludes everything rather than passing
+everything.
+
+## Options
+
+| Option | Default | Notes |
+|---|---|---|
+| `port` | — | Port for members whose backend supplies none. Without it they have no `port` and no `url`. |
+| `scheme` | `http` | Used to build each member's `url`. |
+| `cache_ttl_secs` | `10` | How long to reuse a result before querying again. `0` disables caching. |
+| `fail_when_empty` | `false` | Whether an empty result fails the action. |
+
+:::warning Leave the cache on
+`cache_ttl_secs` defaults to 10 for a reason. A discovery action on a
+request-path interface would otherwise issue an API call **per request** — a busy
+route turns into a denial-of-service against your own API server. The cache is
+keyed by the fully-resolved query, so different selectors never share an entry.
+:::
+
+`fail_when_empty` defaults to false because a service legitimately scaled to zero
+is not an error — an empty result is an empty loop. Set it true where "no
+members" means something is broken.
+
+## Worked example: health-check every replica
+
+Discover the peers, call each one, and report which answered — with
+`lookup_partition` so an unreachable member is visible rather than silently
+dropped:
+
+```yaml
+name: ClusterHealth
+
+interfaces:
+  cluster/health:
+    output: http
+    method: GET
+    actions:
+      - name: Peers
+        discover:
+          dns:
+            name: airpipe-mesh
+            exclude_self: a|env::POD_IP->default()|
+          port: 4111
+        hide_data_on_success: true
+
+      - name: CheckAll
+        run_when_succeeded: [Peers]
+        lookup: a|Peers|
+        lookup_partition: true
+        actions:
+          - name: Livez
+            http:
+              url: a|body::url|/livez
+              timeout: 3s
+            post_transforms:
+              - extract_value: body
+```
+
+```json title="response"
+{
+  "succeeded": [ { "data": { "Livez": { "data": { "status": "ok" } } } } ],
+  "failed": []
+}
+```
+
+The same config works against Docker Compose by changing `name: airpipe-mesh` to
+the scaled service name — nothing else moves.
+
+## See also
+
+- [Lookups / loops](/docs/configuration/interfaces/actions/lookups) — how the
+  fan-out works
+- [Kubernetes](/docs/install/kubernetes) — deploying across multiple nodes
+- [Container](/docs/install/container) — the official image
