@@ -181,6 +181,18 @@ plain Docker, Compose, Swarm.
     port: 8080
 ```
 
+Running the agent in a container, mounting the socket is not enough on its own:
+the official image runs as a non-root user, and the socket is mode `660` owned by
+the host's `docker` group. Without that group every call fails with
+`Permission denied (os error 13)`:
+
+```yaml title="docker-compose.yml"
+    group_add:
+      - "999"          # getent group docker | cut -d: -f3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
 :::caution The Docker socket is host-root-equivalent
 This backend needs `/var/run/docker.sock`. Anything that can reach that socket
 can start a privileged container mounting the host filesystem — it is effectively
@@ -205,18 +217,31 @@ real discovery without touching the actions that consume it.
     port: 8080          # applied to entries that carry no port
 ```
 
-`static` is a **list**: one entry per member, not a single comma-separated
-value. Entries interpolate like anything else, so they can come from variables:
+`static` takes either shape: a sequence with one entry per member, or a single
+comma-separated string — which is how a member list is usually configured, since
+it lets the whole list live in **one** variable:
+
+```yaml
+    static: a|ap_var::MEMBERS|          # "10.0.0.1:4111, 10.0.0.2:4111"
+```
+
+Entries interpolate like anything else, and the list is split **after**
+interpolation. That is what makes the one-variable form work at all, and it means
+a `default()` containing a comma is not cut in half.
+
+An entry whose variable is unset simply drops out, so a half-filled list still
+discovers the members it does have:
 
 ```yaml
     static:
       - a|ap_var::MEMBER_1->default(127.0.0.1:4111)|
+      - a|ap_var::MEMBER_2->default()|     # unset -> no member, not a broken one
 ```
 
-:::caution Never give an entry an empty default
-The config is re-parsed after interpolation, so an entry that resolves to
-nothing (`->default()`) becomes a YAML `null` and the config fails to load. Give
-every entry a real fallback, or remove the line.
+:::info Requires 1.40.2
+Earlier releases split the list before interpolation, so a list arriving from a
+variable became a single malformed member and an unset entry became a phantom
+target at `http://null`.
 :::
 
 ## Filtering
@@ -246,7 +271,7 @@ everything.
 
 | Option | Default | Notes |
 |---|---|---|
-| `port` | — | Port for members whose backend supplies none. Without it they have no `port` and no `url`. |
+| `port` | — | Port for members whose backend supplies none. Without it they have no `port` and no `url`. A number, so it takes a literal rather than a marker — for a per-member port, write it into the address (`host:port`). |
 | `scheme` | `http` | Used to build each member's `url`. |
 | `cache_ttl_secs` | `10` | How long to reuse a result before querying again. `0` disables caching. |
 | `fail_when_empty` | `false` | Whether an empty result fails the action. |
