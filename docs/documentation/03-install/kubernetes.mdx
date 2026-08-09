@@ -1,0 +1,401 @@
+---
+sidebar_position: 7
+displayed_sidebar: documentationSidebar
+slug: /install/kubernetes
+---
+
+# Kubernetes
+
+Air Pipe is a single static binary, so one replica on one node is a perfectly
+good deployment. This page is about the other case: **more than one node**.
+
+That is where a deployment stops being "the same thing, times three" and starts
+having behaviour of its own — a scheduled job that must fire once and not once
+per replica, a WebSocket publish that has to reach subscribers connected to a
+different pod, a set of members that changes under you, and state that cannot
+live in one process's memory.
+
+:::info Requires 1.40.1 or newer
+`/livez`, `/readyz`, DNS-based mesh discovery and the `discover` action all
+landed in 1.40.x. On anything earlier the probes return 404 and pods never become
+Ready. Check the current release at
+[download.airpipe.io/latest.version](https://download.airpipe.io/latest.version).
+:::
+
+## The image
+
+```
+airpipeio/agent:1.40.1
+```
+
+Multi-architecture (`linux/amd64` and `linux/arm64`), Alpine-based, runs as a
+non-root user (uid `10001`) with a read-only root filesystem. Pin a version
+rather than tracking `latest`, so a pod restarting at 3am cannot quietly pick up
+a different engine.
+
+| Port | Purpose |
+|---|---|
+| `4111` | HTTP API + WebSocket, and the token-gated `/internal` mesh routes |
+| `1883` | MQTT v3.1.1 |
+| `1884` | MQTT v5 |
+| `9090` | Prometheus `/metrics` (own listener, loopback by default) |
+
+## First, say that it is a cluster
+
+```
+AIRPIPE__CLUSTERED=true
+```
+
+One declaration, on every pod. Several subsystems behave differently once an
+agent has peers, and this is what tells them — rather than making you configure
+that fact separately in each place, and fail quietly, and differently, wherever
+you forget.
+
+| Subsystem | What changes | When it tells you |
+|---|---|---|
+| Scheduler | An unreachable coordination database becomes fatal, instead of every node running every job | Fatal at startup |
+| Realtime | Warns when cross-node fan-out is unconfigured | Warning at startup |
+| State | Requires a durable backend, so writes are rejected rather than kept per-pod | Warning at startup, error on first write |
+
+Those differ on purpose: each complains as early as it can be **sure**. The
+scheduler can prove its dependency is missing, so it refuses to start. Realtime
+cannot know whether you use channels, so it warns. State warns early and then
+enforces exactly at the write, which is the first moment "is this actually used?"
+can be answered.
+
+**It cannot be inferred**, which is why it must be set. Replica count is
+invisible from inside a container, and every setting that hints at clustering is
+legitimate on a single node too — a lone agent may well use Postgres for
+scheduler run history.
+
+## Quick start
+
+```bash
+kubectl create namespace airpipe
+
+kubectl create secret generic airpipe -n airpipe \
+  --from-literal=api-key="$AIRPIPE_API_KEY" \
+  --from-literal=mesh-token="$(openssl rand -hex 32)" \
+  --from-literal=database-url="postgres://airpipe:PASSWORD@postgres:5432/airpipe"
+
+kubectl create configmap airpipe-configs -n airpipe --from-file=./configs/
+```
+
+Then a Deployment. The parts that matter are below; the rest is an ordinary
+Kubernetes workload.
+
+```yaml title="deployment.yaml (excerpt)"
+spec:
+  replicas: 3
+  template:
+    spec:
+      # One node failure should not be able to take every replica.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: airpipe }
+      containers:
+        - name: airpipe
+          image: airpipeio/agent:1.40.1
+          args: [server, --address, 0.0.0.0, --port, "4111", --config-dir, /app/configs]
+          env:
+            # POD_IP must come first — the mesh self-address below interpolates
+            # it, and Kubernetes only expands $(VAR) against earlier entries.
+            - name: POD_IP
+              valueFrom: { fieldRef: { fieldPath: status.podIP } }
+
+            - name: AIRPIPE__CLUSTERED
+              value: "true"
+
+            # Scheduler coordination + durable state.
+            - name: AIRPIPE__CUSTOMER_DB_URL
+              valueFrom: { secretKeyRef: { name: airpipe, key: database-url } }
+            - name: AIRPIPE__STATE_CONN_STRING
+              valueFrom: { secretKeyRef: { name: airpipe, key: database-url } }
+
+            # Cross-node realtime fan-out.
+            - name: AIRPIPE__WS_MESH_TOKEN
+              valueFrom: { secretKeyRef: { name: airpipe, key: mesh-token } }
+            - name: AIRPIPE__WS_MESH_DNS
+              value: airpipe-mesh          # the headless Service below
+            - name: AIRPIPE__WS_MESH_PORT
+              value: "4111"
+            - name: AIRPIPE__WS_MESH_SELF
+              value: "$(POD_IP):4111"
+
+            # /metrics defaults to loopback, which inside a pod means nothing can
+            # scrape it. It is unauthenticated — restrict it at the network layer.
+            - name: AIRPIPE__METRICS_BIND
+              value: "0.0.0.0:9090"
+          livenessProbe:
+            httpGet: { path: /livez, port: 4111 }
+          readinessProbe:
+            httpGet: { path: /readyz, port: 4111 }
+```
+
+## Probes
+
+| Path | Reports | Use for |
+|---|---|---|
+| `/livez` | The process is serving HTTP | Liveness |
+| `/readyz` | Configs are loaded; 503 until then | Readiness |
+
+`/livez` deliberately ignores dependencies. If it failed because Postgres was
+down, a database blip would become a cluster-wide restart loop — restarting a
+pod does not fix a database.
+
+`/readyz` returning 503 before configs load is what makes a rollout safe: a pod
+that is not ready stays out of the Service, and out of the mesh peer list.
+
+**Probe these paths, never a config route.** Every other path runs through the
+request pipeline and is metered, so probing one at a 10-second interval across
+every replica consumes request units continuously. `/livez` and `/readyz` are
+reserved paths and are never billed.
+
+There is no `/healthz` alias. If you have monitoring pointed at that name,
+repoint it — it will not 404 harmlessly, it will be counted as a request.
+
+## Services
+
+Two Services, doing different jobs.
+
+```yaml title="service.yaml"
+apiVersion: v1
+kind: Service
+metadata:
+  name: airpipe
+spec:
+  selector: { app.kubernetes.io/name: airpipe }
+  ports:
+    - { name: http, port: 4111, targetPort: 4111 }
+---
+# Headless — this is what makes peer discovery work.
+apiVersion: v1
+kind: Service
+metadata:
+  name: airpipe-mesh
+spec:
+  clusterIP: None
+  selector: { app.kubernetes.io/name: airpipe }
+  ports:
+    - { name: http, port: 4111, targetPort: 4111 }
+```
+
+`clusterIP: None` is the important line. A headless Service returns **one DNS A
+record per ready pod** instead of a single virtual IP, so every pod can resolve
+the full membership of the cluster and refresh it in the background. Scale the
+Deployment and the peer list follows on its own.
+
+That is also why this is a **Deployment and not a StatefulSet**: nothing here
+holds local state worth a stable identity, so replicas are free to come and go —
+which is what makes the HorizontalPodAutoscaler safe to use.
+
+:::caution sessionAffinity
+Leave it as `None` unless you specifically want it. `ClientIP` pins a source IP
+to one pod for the affinity window — in testing, 12 requests from one client all
+landed on the same pod. It is the right choice only when long-lived
+MQTT/WebSocket connections dominate and you want reconnects to find their broker
+session.
+:::
+
+## The three things multi-node changes
+
+### 1. Scheduled jobs must fire once, not once per replica
+
+Every node holds the same config, so every node's scheduler sees the same cron
+line. Coordination happens through Postgres: with `AIRPIPE__CUSTOMER_DB_URL`
+set, nodes race for a durable claim on `(config, interface, minute)` and exactly
+one wins.
+
+Without it, **every node runs every tick** — three replicas, three invoice
+emails.
+
+With `AIRPIPE__CLUSTERED=true`, a node that cannot reach that database retries
+for about ten seconds and then **exits**, rather than starting up with
+coordination quietly off. Under Kubernetes that is the useful failure: the pod
+restarts, backs off, and joins properly once the database answers.
+
+The strictness applies **only at startup**. Once running, a failed claim query
+makes the node *skip* that tick rather than run it, so a mid-life database blip
+can never cause a double-run.
+
+If you have used Quartz this will look familiar — a JDBCJobStore gives you
+persistence, and `isClustered=true` is what makes several instances sharing those
+tables coordinate rather than all firing the same trigger.
+
+### 2. A realtime publish lands on one pod; subscribers are on all of them
+
+The node mesh carries the event the rest of the way: the receiving pod POSTs it
+to each peer's `/internal/ws/publish`, and each peer delivers to its own local
+subscribers.
+
+| Setting | Why |
+|---|---|
+| `AIRPIPE__WS_MESH_TOKEN` | Shared secret, identical on every pod. **The mesh is off when unset.** Peers verify it, so nothing else on the pod network can inject events. |
+| `AIRPIPE__WS_MESH_DNS` | The headless Service name. The peer list refreshes in the background, so it follows scaling. |
+| `AIRPIPE__WS_MESH_SELF` | This pod's own `address:port`. The DNS name resolves to *this* pod too — without a self value to exclude, a pod would publish to itself and double-deliver to its own subscribers. |
+
+Miss these and realtime does not fail; it just goes quiet across pods,
+delivering only to subscribers that happened to land on the pod handling the
+publish. That is why `AIRPIPE__CLUSTERED=true` warns at startup when the mesh is
+unconfigured.
+
+:::note MQTT and Ingress
+MQTT is raw TCP and cannot pass through an Ingress, which speaks HTTP. Expose it
+with a LoadBalancer Service, a NodePort, or your ingress controller's TCP
+entrypoint.
+:::
+
+### 3. State cannot live in one process
+
+State is durable key/value — polling cursors, dedupe sets, idempotency keys,
+counters. Point `AIRPIPE__STATE_CONN_STRING` at a shared Postgres.
+
+Without it the backend is in-memory: per-process, lost on restart, shared with
+nobody. On three replicas that means three independent cursors, so a poller
+re-processes the same records once per pod.
+
+`AIRPIPE__CLUSTERED=true` already requires a durable backend, so there is no
+second flag to remember.
+
+## Discovering your own pods
+
+The `discover` action returns the live members of a service as an array, and
+`lookup:` fans actions out across them — so you stop hard-coding a list of
+addresses that is wrong the moment anything scales.
+
+```yaml title="health-check every peer"
+interfaces:
+  cluster/health:
+    output: http
+    method: GET
+    actions:
+      - name: Peers
+        discover:
+          dns:
+            name: airpipe-mesh
+            exclude_self: a|env::POD_IP->default()|
+          port: 4111
+
+      - name: CheckAll
+        run_when_succeeded: [Peers]
+        lookup: a|Peers|
+        lookup_partition: true          # -> { succeeded, failed }
+        actions:
+          - name: Livez
+            http:
+              url: a|body::url|/livez
+```
+
+Four backends, one item shape — `{ name, address, port, url, source, ready,
+namespace, node, image, labels }` — so a config moves between orchestrators by
+changing only the backend block:
+
+| Backend | Targeting | What it costs |
+|---|---|---|
+| `dns` | none — addresses only | **nothing**: no API access, no credentials, no RBAC |
+| `kubernetes` | label + field selectors, readiness, node, image | a ServiceAccount with `list` on pods |
+| `docker` | container labels, image | the Docker socket (unix only) |
+| `static` | — | nothing; an explicit list |
+
+**Reach for `dns` first.** It finds the same pods as the Kubernetes backend and
+needs no privilege at all. Use the API backend when you actually need label
+selectors or pod metadata:
+
+```yaml
+- name: Members
+  discover:
+    kubernetes:
+      label_selector: app=api
+      port_name: http
+    exclude:
+      name: canary
+```
+
+That needs a namespace-scoped Role:
+
+```yaml title="rbac.yaml"
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: airpipe-discovery
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+```
+
+`list` on pods, nothing else — no `watch`, no `get`, nothing on secrets or
+configmaps. Discovering another namespace means creating a RoleBinding **in that
+namespace**, which keeps each grant visible where it applies.
+
+Two options worth setting deliberately:
+
+- **`cache_ttl_secs`** (default 10). Discovery on a request-path interface would
+  otherwise issue an API call per request, turning a busy route into a
+  denial-of-service against your own API server.
+- **`fail_when_empty`** (default false). An empty result is an empty loop,
+  because a service scaled to zero is not an error.
+
+Fields a backend cannot know are **omitted, not defaulted**: DNS has no image, so
+an `image` filter matches nothing there rather than silently passing.
+`include`/`exclude` take regexes, and **exclusion beats inclusion**.
+
+## Things that catch people out
+
+**Agent identity.** Self-hosted agents sign their usage reports with a per-agent
+keypair, generated on first run and kept on disk. A container has no persistent
+filesystem, so without help the agent enrols a **new identity on every pod
+start**. Nothing looks broken — enrollment succeeds, and only the persist step
+fails. Set `AIRPIPE_STATE_DIR` to a writable path, and for production supply a
+pre-enrolled identity via `AIRPIPE_AGENT_UUID` and `AIRPIPE_AGENT_KEY`, which is
+the documented approach for container runtimes.
+
+**NetworkPolicy is default-deny.** Once any policy selects your pods, every
+ingress port it does not explicitly allow is dropped. Keep the metrics rule and
+the application-port rule in **one** policy — split across two, deleting either
+one leaves the other blackholing the service. And NodePort/LoadBalancer traffic
+is SNAT'd by the node, so it matches no `namespaceSelector`: a policy that only
+allows named namespaces drops all external traffic.
+
+**Keep `/internal/*` off the internet.** Those are the mesh routes and they share
+the API port. They are token-gated, but restrict them at the network layer too.
+Refuse the path at your proxy rather than rewriting it — a rewrite still reaches
+the request pipeline and is metered.
+
+**Postgres major versions.** Postgres refuses to start against a data directory
+written by a different major version, so bumping the image tag on a database that
+already has data gives you a CrashLoopBackOff, not an upgrade.
+
+## Docker Compose
+
+The same shape works without Kubernetes. Compose's embedded DNS returns every
+container's address for a scaled service name, exactly as a headless Service
+returns every pod IP:
+
+```yaml title="docker-compose.yml (excerpt)"
+services:
+  airpipe:
+    image: airpipeio/agent:1.40.1
+    environment:
+      AIRPIPE__CLUSTERED: "true"
+      AIRPIPE__WS_MESH_TOKEN: ${AIRPIPE_MESH_TOKEN:?set it}
+      AIRPIPE__WS_MESH_DNS: airpipe        # the scaled service name
+      AIRPIPE__WS_MESH_PORT: "4111"
+    entrypoint:
+      - /bin/sh
+      - -c
+      # The container's own address is only known at runtime.
+      - 'export AIRPIPE__WS_MESH_SELF="$$(hostname -i):4111"; exec /usr/local/bin/airpipe server --address 0.0.0.0 --port 4111 --config-dir /app/configs'
+```
+
+```bash
+docker compose up -d --scale airpipe=3
+```
+
+If you put a proxy in front, make sure it re-resolves the service name. Caddy's
+`reverse_proxy airpipe:4111` resolves once and treats the result as a *single*
+upstream, so every request lands on the same container — use `dynamic a`
+upstreams instead.

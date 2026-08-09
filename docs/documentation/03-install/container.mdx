@@ -6,6 +6,39 @@ slug: /install/container
 
 # Container
 
+## Official image
+
+There is a published multi-architecture image, so most deployments need no
+Dockerfile at all:
+
+```
+airpipeio/agent:1.40.1
+```
+
+`linux/amd64` and `linux/arm64`, Alpine-based, running as a non-root user (uid
+`10001`). Configs are mounted rather than baked in, so editing one does not mean
+rebuilding an image:
+
+```bash
+docker run -d \
+  -p 4111:4111 \
+  -e AIRPIPE_API_KEY="$AIRPIPE_API_KEY" \
+  -v "$(pwd)/configs:/app/configs:ro" \
+  airpipeio/agent:1.40.1
+```
+
+Pin the version rather than tracking `latest`, so a container restarting
+unattended cannot quietly pick up a different engine.
+
+Running more than one replica? See [Kubernetes](/docs/install/kubernetes) — scheduled
+jobs, realtime fan-out and state all behave differently once there are peers, and
+the same settings apply to Docker Compose.
+
+## Build your own image
+
+Prefer to control the base image, add your own tooling, or bake configs in? The
+rest of this page builds an image from scratch.
+
 ### Retrieve API Key
 
 Log in and retrieve an API key from https://app.airpipe.io/apikeys
