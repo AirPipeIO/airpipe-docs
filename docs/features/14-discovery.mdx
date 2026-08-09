@@ -205,6 +205,20 @@ real discovery without touching the actions that consume it.
     port: 8080          # applied to entries that carry no port
 ```
 
+`static` is a **list**: one entry per member, not a single comma-separated
+value. Entries interpolate like anything else, so they can come from variables:
+
+```yaml
+    static:
+      - a|ap_var::MEMBER_1->default(127.0.0.1:4111)|
+```
+
+:::caution Never give an entry an empty default
+The config is re-parsed after interpolation, so an entry that resolves to
+nothing (`->default()`) becomes a YAML `null` and the config fails to load. Give
+every entry a real fallback, or remove the line.
+:::
+
 ## Filtering
 
 `include` and `exclude` take regular expressions matched against `name`, `image`
