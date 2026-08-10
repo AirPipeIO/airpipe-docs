@@ -271,7 +271,7 @@ everything.
 
 | Option | Default | Notes |
 |---|---|---|
-| `port` | — | Port for members whose backend supplies none. Without it they have no `port` and no `url`. A number, so it takes a literal rather than a marker — for a per-member port, write it into the address (`host:port`). |
+| `port` | — | Port for members whose backend supplies none. Without it they have no `port` and no `url`. Takes a number or a variable (`a\|ap_var::SERVICE_PORT->default(4111)\|`), resolved after interpolation — **1.40.4+**; earlier releases refused to start. For a per-member port, write it into the address instead (`host:port`). |
 | `scheme` | `http` | Used to build each member's `url`. |
 | `cache_ttl_secs` | `10` | How long to reuse a result before querying again. `0` disables caching. |
 | `fail_when_empty` | `false` | Whether an empty result fails the action. |
