@@ -25,7 +25,7 @@ Ready. Check the current release at
 ## The image
 
 ```
-airpipeio/agent:1.40.3
+airpipeio/agent:1.40.4
 ```
 
 Multi-architecture (`linux/amd64` and `linux/arm64`), Alpine-based, runs as a
@@ -98,7 +98,7 @@ spec:
             matchLabels: { app.kubernetes.io/name: airpipe }
       containers:
         - name: airpipe
-          image: airpipeio/agent:1.40.3
+          image: airpipeio/agent:1.40.4
           args: [server, --address, 0.0.0.0, --port, "4111", --config-dir, /app/configs]
           env:
             # POD_IP must come first — the mesh self-address below interpolates
@@ -357,7 +357,7 @@ returns every pod IP:
 ```yaml title="docker-compose.yml (excerpt)"
 services:
   airpipe:
-    image: airpipeio/agent:1.40.3
+    image: airpipeio/agent:1.40.4
     environment:
       AIRPIPE__CLUSTERED: "true"
       AIRPIPE__WS_MESH_TOKEN: ${AIRPIPE_MESH_TOKEN:?set it}
