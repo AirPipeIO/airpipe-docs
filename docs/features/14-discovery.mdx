@@ -28,6 +28,7 @@ actions:
         port_name: http
 
   - name: PollAll
+    run_when_succeeded: [Members]   # wait for discovery before fanning out
     lookup: a|Members|
     lookup_partition: true          # -> { succeeded: [...], failed: [...] }
     actions:
