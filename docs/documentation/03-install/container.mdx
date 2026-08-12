@@ -12,7 +12,7 @@ There is a published multi-architecture image, so most deployments need no
 Dockerfile at all:
 
 ```
-airpipeio/agent:1.41.6
+airpipeio/agent:1.42.1
 ```
 
 `linux/amd64` and `linux/arm64`, Alpine-based, running as a non-root user (uid
@@ -24,7 +24,7 @@ docker run -d \
   -p 4111:4111 \
   -e AIRPIPE_API_KEY="$AIRPIPE_API_KEY" \
   -v "$(pwd)/configs:/app/configs:ro" \
-  airpipeio/agent:1.41.6
+  airpipeio/agent:1.42.1
 ```
 
 Pin the version rather than tracking `latest`, so a container restarting

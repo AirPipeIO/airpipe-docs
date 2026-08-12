@@ -25,7 +25,7 @@ Ready. Check the current release at
 ## The image
 
 ```
-airpipeio/agent:1.41.6
+airpipeio/agent:1.42.1
 ```
 
 Multi-architecture (`linux/amd64` and `linux/arm64`), Alpine-based, runs as a
@@ -98,7 +98,7 @@ spec:
             matchLabels: { app.kubernetes.io/name: airpipe }
       containers:
         - name: airpipe
-          image: airpipeio/agent:1.41.6
+          image: airpipeio/agent:1.42.1
           args: [server, --address, 0.0.0.0, --port, "4111", --config-dir, /app/configs]
           env:
             # POD_IP must come first — the mesh self-address below interpolates
@@ -109,10 +109,9 @@ spec:
             - name: AIRPIPE__CLUSTERED
               value: "true"
 
-            # Scheduler coordination + durable state.
-            - name: AIRPIPE__CUSTOMER_DB_URL
-              valueFrom: { secretKeyRef: { name: airpipe, key: database-url } }
-            - name: AIRPIPE__STATE_CONN_STRING
+            # The engine's database: scheduler coordination, run history and
+            # durable state. One URL covers all three.
+            - name: AIRPIPE__DATABASE_URL
               valueFrom: { secretKeyRef: { name: airpipe, key: database-url } }
 
             # Cross-node realtime fan-out.
@@ -205,7 +204,7 @@ session.
 ### 1. Scheduled jobs must fire once, not once per replica
 
 Every node holds the same config, so every node's scheduler sees the same cron
-line. Coordination happens through Postgres: with `AIRPIPE__CUSTOMER_DB_URL`
+line. Coordination happens through Postgres: with `AIRPIPE__DATABASE_URL`
 set, nodes race for a durable claim on `(config, interface, minute)` and exactly
 one wins.
 
@@ -251,7 +250,9 @@ entrypoint.
 ### 3. State cannot live in one process
 
 State is durable key/value — polling cursors, dedupe sets, idempotency keys,
-counters. Point `AIRPIPE__STATE_CONN_STRING` at a shared Postgres.
+counters. It uses the same `AIRPIPE__DATABASE_URL` as above, so a clustered
+deployment that has named its database already has durable state. (Set
+`AIRPIPE__STATE_DATABASE_URL` only to keep state in a *different* database.)
 
 Without it the backend is in-memory: per-process, lost on restart, shared with
 nobody. On three replicas that means three independent cursors, so a poller
@@ -357,7 +358,7 @@ returns every pod IP:
 ```yaml title="docker-compose.yml (excerpt)"
 services:
   airpipe:
-    image: airpipeio/agent:1.41.6
+    image: airpipeio/agent:1.42.1
     environment:
       AIRPIPE__CLUSTERED: "true"
       AIRPIPE__WS_MESH_TOKEN: ${AIRPIPE_MESH_TOKEN:?set it}
