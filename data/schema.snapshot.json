@@ -623,6 +623,17 @@
             }
           ]
         },
+        "discover": {
+          "description": "Discover the live members of a service — container endpoints, pods,\nreplicas — as an array, so a later action can fan out over them with\n`lookup:` instead of a hard-coded address list.\n\n## Example\n```yaml\n- name: Members\n  discover:\n    kubernetes:\n      label_selector: app=api\n      port_name: http\n- name: PollAll\n  lookup: a|Members|\n  actions:\n    - name: Health\n      http:\n        url: a|body::url|/healthz\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Discover"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "delay": {
           "description": "Pause for a fixed duration before continuing — pacing / throttling between steps.\nAccepts a duration string (`\"2s\"`, `\"500ms\"`, `\"1m\"`) or a number of milliseconds.\nBounded by `AIRPIPE__MAX_DELAY_SECS` (default 300s); longer values are rejected.\nThis is an in-process wait, not a durable long-running delay.\n\n## Example\n```yaml\ndelay: \"2s\"\n```"
         },
@@ -2607,6 +2618,250 @@
       "required": [
         "key",
         "id"
+      ]
+    },
+    "Discover": {
+      "description": "Discover the live members of a service — container endpoints, pods, replicas —\nand hand them to the rest of the pipeline as an array.\n\nThe point is to stop hard-coding a list of addresses that changes every time\nsomething scales, restarts or reschedules. A `discover` action returns one\nentry per member, and any later action fans out across them with `lookup:`:\n\n```yaml\nactions:\n  - name: Members\n    discover:\n      kubernetes:\n        label_selector: app=api\n        port_name: http\n\n  - name: PollAll\n    lookup: a|Members|\n    lookup_partition: true          # -> { succeeded: [...], failed: [...] }\n    actions:\n      - name: Health\n        http:\n          url: a|body::url|/healthz\n```\n\nEvery backend returns the SAME item shape, so a config written against one\norchestrator moves to another by changing only the backend block:\n\n```json\n{\n  \"name\":      \"api-7d9f8b6c5d-x2ktp\",\n  \"address\":   \"10.42.1.3\",\n  \"port\":      8080,\n  \"url\":       \"http://10.42.1.3:8080\",\n  \"source\":    \"kubernetes\",\n  \"ready\":     true,\n  \"namespace\": \"default\",\n  \"node\":      \"worker-1\",\n  \"image\":     \"example/api:1.4.0\",\n  \"labels\":    { \"app\": \"api\" }\n}\n```\n\nFields a backend cannot know are omitted rather than faked — DNS returns\naddresses only, so it has no `labels`, `image` or `ready`. Filtering on a field\na backend does not provide therefore matches nothing, which is why\n`label_selector` belongs to the backends that actually have labels.",
+      "type": "object",
+      "properties": {
+        "dns": {
+          "description": "Resolve a DNS name to every address behind it.\n\nThe portable option: no API access, no credentials, no RBAC, nothing to\nmount. In Kubernetes point it at a **headless** Service (`clusterIP: None`)\nand it returns one entry per ready pod; under Docker Compose point it at a\nscaled service name and it returns one entry per container. Anything with\nDNS works the same way.\n\nAddresses only — no labels or image, so no label-based targeting.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DiscoverDns"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kubernetes": {
+          "description": "Query the Kubernetes API for pods.\n\nThe richest option: real label selectors, plus namespace, node, readiness\nand image per pod. Requires a ServiceAccount with `list` on pods, bound\nby a namespace-scoped Role — see\n<https://docs.airpipe.io/docs/install/kubernetes>.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DiscoverKubernetes"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "docker": {
+          "description": "Query the Docker Engine API for containers.\n\nFor container hosts that are not Kubernetes: plain Docker, Compose, Swarm.\nRequires access to the Docker socket, which is equivalent to root on that\nhost — mount it deliberately, read-only, and prefer DNS where it will do.\n\n**Unix only.** The Engine is reached over a unix domain socket; on Windows\nthe daemon listens on a named pipe instead, so this backend returns an\nerror there. `dns` discovers the same Compose containers on every platform,\nwith no socket and no privilege.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DiscoverDocker"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "static": {
+          "description": "An explicit list of `host:port` entries.\n\nNot discovery — the escape hatch for environments with none of the above,\nand what tests pin against. Keeping it in the same shape means a config can\nstart static and move to real discovery without touching the actions that\nconsume it.\n\nAccepts either a YAML sequence or a single comma-separated string, so the\nwhole list can come from ONE variable — which is how a member list is\nusually configured, and how `AIRPIPE__WS_MESH_PEERS` already works:\n\n```yaml\nstatic: \"10.0.0.1:8080, 10.0.0.2:8080\"     # one variable\nstatic: a|ap_var::MEMBERS|                 # ...including from a variable\nstatic: [\"10.0.0.1:8080\", \"10.0.0.2:8080\"] # or a sequence\n```\n\nEmpty and null entries are dropped rather than rejected. Configs are\nre-parsed AFTER interpolation, so an entry whose variable resolves to\nnothing (`a|ap_var::MEMBER_2->default()|`) arrives here as a bare `-`,\ni.e. YAML null. Failing there would break the config only in the\nenvironment where that variable happened to be unset — in production,\nhaving passed every test.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "include": {
+          "description": "Keep only members matching these patterns. Applied before `exclude`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DiscoverFilter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exclude": {
+          "description": "Drop members matching these patterns.\n\nExclusion wins over inclusion, deliberately: when the two disagree the safe\nreading of the operator's intent is \"do not touch this one\".",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DiscoverFilter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "port": {
+          "description": "Port to use when the backend does not supply one (DNS always, Kubernetes\nwhen neither `port` nor `port_name` is set). Without it those members are\nreturned with no port and no `url`.\n\nA number, or a marker that resolves to one — see [`DiscoverPort`].",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DiscoverPort"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scheme": {
+          "description": "Scheme used to build each member's `url`. Defaults to `http`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cache_ttl_secs": {
+          "description": "How long to reuse a result before querying again, in seconds. Defaults to\n10; `0` disables caching.\n\nThis matters more than it looks. Without it, a discovery action on a\nrequest-path interface issues an API call per request — a busy route turns\ninto a denial-of-service against your own API server. The cache is keyed by\nthe fully-resolved query, so different selectors do not share entries.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "fail_when_empty": {
+          "description": "Fail the action when discovery returns nothing. Defaults to false, so an\nempty result is an empty loop rather than an error — a service legitimately\nscaled to zero is not a failure. Set true when \"no members\" means something\nis broken.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "DiscoverDns": {
+      "description": "DNS-based discovery.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The name to resolve — `airpipe-mesh`, `api.default.svc.cluster.local`, or a\nCompose service name. A bare name takes the action's `port`; `name:port` is\nhonoured as written.",
+          "type": "string"
+        },
+        "exclude_self": {
+          "description": "Drop this node's own address from the results. Useful when a service\ndiscovers its peers and should not call itself. Needs the address to\nexclude, e.g. `a|env::POD_IP|`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "DiscoverKubernetes": {
+      "description": "Kubernetes API discovery.",
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "description": "Namespace to search. Defaults to the agent's own namespace, read from the\nServiceAccount token mount — so the common case needs no configuration and\nstays inside the namespace-scoped RBAC that ships by default.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "label_selector": {
+          "description": "Standard Kubernetes label selector, e.g. `app=api,tier!=canary`. Passed\nthrough to the API server, so the same syntax as `kubectl -l`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "field_selector": {
+          "description": "Standard field selector, e.g. `status.phase=Running`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "port_name": {
+          "description": "Take the port from a named container port (`http`, `metrics`). Preferred\nover a hard-coded number: the name survives a port change.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ready_only": {
+          "description": "Return only pods whose containers are all ready. Defaults to true — an\nunready pod is one that has told you not to send it traffic.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "DiscoverDocker": {
+      "description": "Docker Engine API discovery.",
+      "type": "object",
+      "properties": {
+        "labels": {
+          "description": "Container labels to match, e.g. `com.docker.compose.service: api`. All\nlisted labels must match.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "network": {
+          "description": "Docker network whose address should be reported for each container. With\nseveral networks attached and no choice made, the first is used.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "socket": {
+          "description": "Path or URL of the Docker Engine socket. Defaults to\n`/var/run/docker.sock`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "DiscoverFilter": {
+      "description": "Regex patterns matched against a member's fields. An unset field matches\neverything; a field the backend does not populate never matches.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Regex against the member name (pod or container name).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "image": {
+          "description": "Regex against the full image reference, including registry and tag.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "namespace": {
+          "description": "Regex against the namespace (Kubernetes only).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "DiscoverPort": {
+      "description": "A port: a literal number, or a marker that resolves to one.\n\nEvery other field of a `discover` block interpolates, because they are\nstrings. A bare `u16` could not, so `port: a|ap_var::SERVICE_PORT|` did not\nmerely fail to resolve — the marker was still marker TEXT when serde reached\nit, and the agent died at load with `invalid type: string ... expected u16`.\nA config that names its port the same way it names everything else should\nwork, so the string form is accepted and parsed after interpolation.",
+      "anyOf": [
+        {
+          "description": "`port: 8080`",
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        {
+          "description": "`port: a|ap_var::SERVICE_PORT->default(8080)|`, or a quoted `\"8080\"`.\nStill a marker at parse time; resolved once interpolation has run.",
+          "type": "string"
+        }
       ]
     },
     "Email": {
