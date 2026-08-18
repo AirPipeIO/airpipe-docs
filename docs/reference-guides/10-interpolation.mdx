@@ -56,9 +56,9 @@ action's output. Use `jq::` for richer extraction: `a|FetchUser::jq::.items[0].i
 Chain with `->`. Common filters:
 
 `to_string`, `to_number`, `upper`, `lower`, `length`, `single_quote`,
-`double_quote`, `json_esc`, `json_array`, `array_values`, `raw`, `some`,
-`map(...)`, `default(...)`, `wrap(...)`, `prefix(...)`, `suffix(...)`,
-`join(...)`, `access(...)`, `path(...)`.
+`double_quote`, `json_esc`, `json_escape`, `json_stringify` (alias `tojson`),
+`json_array`, `array_values`, `raw`, `some`, `map(...)`, `default(...)`,
+`wrap(...)`, `prefix(...)`, `suffix(...)`, `join(...)`, `access(...)`, `path(...)`.
 
 ```yaml
 # Uppercase a param, defaulting when absent
@@ -69,7 +69,26 @@ url: "https://api.example.com/a|params::region->upper->default(US)|"
 
 Wrap a marker to coerce its rendering: `single_quote(...)`, `double_quote(...)`,
 `json_esc(...)`, `json_stringify(...)`. These are useful when injecting values
-into SQL or JSON bodies.
+into SQL or JSON bodies. A wrapper applies wherever the marker appears — on its
+own, or inside a longer string such as an HTTP body field.
+
+`json_stringify` follows `JSON.stringify` semantics: an object or array is
+emitted as its compact JSON document, anything else as a JSON string literal.
+The typical use is handing a structured result to an API that wants it as a
+**string** — an LLM tool message, say:
+
+```yaml
+- role: tool
+  tool_call_id: a|Plan::callId|
+  content: json_stringify(a|Tool|)   # or: a|Tool->json_stringify|
+```
+
+:::note
+A marker that is a field's whole value normally keeps its type — `content: a|Tool|`
+sends an object. The text filters (`json_stringify`/`tojson`, `json_escape`,
+`to_string`) are the exception: they exist to produce text, so their result stays
+a string rather than being re-read as JSON.
+:::
 
 ## Multi-line values
 
