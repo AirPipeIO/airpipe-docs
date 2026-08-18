@@ -60,6 +60,68 @@ http:
 successful outcome of a conditional request whose validator matched — a poller using
 `If-None-Match` gets one on its happy path.
 
+### The outcome is declared, not inferred
+
+`expect_status` decides whether the action failed. An `assert` validates the data and never
+decides the outcome, so this does **not** do what it looks like:
+
+```yml
+# WRONG — the action fails on the 403 before the assert runs
+http: {url: https://api.example.com/thing}
+assert:
+  tests:
+    - value: status
+      is_equal_to: 403
+```
+
+```yml
+# RIGHT — say what you expect
+http: {url: https://api.example.com/thing, expect_status: 403}
+```
+
+One rule, in one place: read an action and you can see what counts as failure without
+tracing which assertions happen to mention `status`. The engine says so when you get it
+wrong — the failure message names the `expect_status` line to add.
+
+### One declaration for a whole interface
+
+An interface whose actions share an expectation — a test runner hitting routes that answer
+403 and 500 on purpose, a health-check fan-out that records whatever comes back — declares
+it once. An action that sets its own always wins.
+
+```yml
+interfaces:
+  tests/all:
+    defaults:
+      expect_status: any
+    actions:
+      - name: ChecksA
+        http: {url: http://localhost:44111/route-a}   # inherits `any`
+      - name: ChecksB
+        http: {url: http://localhost:44111/route-b, expect_status: 2xx}  # overrides
+```
+
+### Polling for something that is not there yet
+
+A `GET` that answers 404 until a record exists now fails on the first attempt, and 404 is
+not in the default retry set, so the action gives up immediately. Say which one you mean:
+
+```yml
+# 404 is data; retry until the assert passes
+http: {url: https://api.example.com/orders/42, expect_status: [2xx, 404]}
+retry: {attempts: 10, delay: 500, exponential_backoff: true}
+assert:
+  tests:
+    - value: body.id
+      is_not_null: true
+```
+
+### Responses with no body
+
+`204 No Content` and `304 Not Modified` carry no body by definition, and a `200` with
+`content-length: 0` is legal. The body decodes to `null` rather than failing the action, so
+a `DELETE` that answers 204 succeeds and `a|Delete::status|` still reads 204.
+
 ## Retrying safely: `idempotency`
 
 Retrying a POST can mean charging a customer twice. RFC 9110 §9.2.2 permits automatically
