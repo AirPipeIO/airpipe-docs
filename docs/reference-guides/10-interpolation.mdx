@@ -90,6 +90,26 @@ sends an object. The text filters (`json_stringify`/`tojson`, `json_escape`,
 a string rather than being re-read as JSON.
 :::
 
+## Pipes inside a marker
+
+A marker ends at its first `|`, so a jq expression written inside one needs to say which
+pipes belong to it. Two rules do that:
+
+- a `|` inside `(...)`, `[...]` or `{...}` is part of the expression;
+- `\|` escapes a top-level pipe.
+
+```yaml
+params:
+  # bracketed — the pipes are inside [ ... ]
+  - 'a|Process::jq::[.failed[] | {id: .item.id, reason: .error}]|'
+  # top-level pipe, escaped
+  - 'a|Rows::jq::.[0] \| .id|'
+```
+
+Quotes are deliberately not tracked, so an apostrophe (`->default(can't)`) never swallows
+the closing pipe. A marker also still ends at a newline: keep the expression on one line, or
+put it in a `post_transforms` step where pipes need no escaping at all.
+
 ## Multi-line values
 
 For templates, HTML or JSON, use a YAML literal block so the marker expands
