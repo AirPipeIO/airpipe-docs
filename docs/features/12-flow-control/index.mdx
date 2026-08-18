@@ -52,4 +52,27 @@ For `run_on_assertion` this uses uses the identical `assert` system used for val
           is_not_null: true
 ```
 
+## When a branch does not apply
+
+`run_when_failed` on an action whose dependency **succeeded** means "this branch does not
+apply". That is a clean skip, not a failure: the action carries no error, contributes
+nothing to the interface's error status, and its own dependents skip in turn — exactly how
+`run_when_succeeded` treats a skipped dependency.
+
+```yml
+- name: Pay
+  http: {url: https://api.example.com/payments, method: POST}
+
+- name: Confirm
+  run_when_succeeded: [Pay]      # runs when Pay succeeded
+
+- name: Refund
+  run_when_failed: [Pay]         # runs when Pay failed; skipped cleanly otherwise
+```
+
+Only an *unresolvable* gate is an error — naming an action that does not exist in the
+interface.
+
+This matters when you set `http_code_fallback_strategy: any_action`: the unused half of a
+branch must not report the whole request as failed.
 
