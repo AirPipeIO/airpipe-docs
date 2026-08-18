@@ -68,3 +68,32 @@ Two narrowings worth knowing:
   that returned a fine status and failed its `assert` — polling until a record appears — is
   retried as it always was.
 
+### Retrying anything that is not an HTTP call
+
+A database, command, email or state action has no status code to classify, so **every**
+failure of one is retryable — a query error, a failed `assert`, a non-zero `expect_exit`.
+That is unchanged, and it is what makes the common shapes work:
+
+```yml
+# retry until the row shows up
+- name: WaitForRow
+  database: main
+  query: SELECT id FROM orders WHERE external_id = $1;
+  params: [a|body::externalId|]
+  retry: {attempts: 5, delay: 200, exponential_backoff: true}
+  assert:
+    tests:
+      - value: count()
+        is_greater_than: 0
+```
+
+Two things follow from that:
+
+- `on` / `except` match statuses and transport failures, so on a non-http action they match
+  nothing and the filter is inert. The config-load lint warns if you set one there. To
+  narrow *what counts as a failure* on these actions, use `assert` (or `expect_exit` for a
+  command) — that is the knob with meaning here.
+- `delay` is an upper bound, not a fixed wait, because jitter applies to every action type:
+  `delay: 500` sleeps somewhere in `[0, 500)`. Set `jitter: none` if you need the exact
+  curve (a test asserting on elapsed time, say).
+
