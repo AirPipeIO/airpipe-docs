@@ -108,10 +108,69 @@ function resolveConfigModules(config, modules) {
   return clone;
 }
 
+// The non-HTTP transports an interface can also be exposed on.
+const TRANSPORT_KEYS = ["mqtt", "ws", "mcp"];
+
+// Whether an interface that also declares a transport is reachable over HTTP in its own
+// right. It has to say so explicitly — a `method`, or `output: http`. A pure MQTT or
+// WebSocket interface declares neither, so absence is NOT an HTTP surface here. (This is
+// only consulted for interfaces that carry a transport key; a plain interface has none
+// and falls through to "http" regardless.)
+function isHttpExposed(cfg) {
+  return !!cfg.method || cfg.output === "http";
+}
+
+// What fires this interface, as a PRIMARY kind plus any additional surfaces.
+//
+// An interface is frequently exposed on more than one surface at once — 12 of the 18
+// non-HTTP-trigger interfaces in the marketplace corpus are also HTTP routes, and
+// mcp-quickstart's whole premise is that every interface is both an HTTP route and an
+// MCP tool. Letting a transport win outright would hide that interface's method and
+// route, so HTTP keeps the primary identity whenever it applies and the transports are
+// reported alongside it. `schedule` still wins outright: a cron interface is driven by
+// its schedule even when it also declares a route.
+function interfaceTriggerKind(interfaceConfig) {
+  if (!interfaceConfig || typeof interfaceConfig !== "object") return "http";
+  if (interfaceConfig.schedule) return "schedule";
+  if (!isHttpExposed(interfaceConfig)) {
+    const transport = TRANSPORT_KEYS.find((key) => interfaceConfig[key]);
+    if (transport) return transport;
+  }
+  return "http";
+}
+
+// Transports carried by this interface that the primary kind doesn't already convey,
+// as [{ kind, target }] — rendered as extra chips so a dual-surface interface shows both.
+function interfaceExtraTriggers(interfaceConfig, primaryKind) {
+  if (!interfaceConfig || typeof interfaceConfig !== "object") return [];
+  return TRANSPORT_KEYS.filter(
+    (key) => interfaceConfig[key] && key !== primaryKind
+  ).map((kind) => ({
+    kind,
+    target: interfaceTriggerTarget(interfaceConfig, kind)
+  }));
+}
+
+// The line shown under the interface name — a topic for MQTT, a channel for WS, the
+// tool name for MCP, and the route for plain HTTP.
+function interfaceTriggerTarget(interfaceConfig, kind) {
+  const cfg = interfaceConfig || {};
+  switch (kind) {
+    case "mqtt":
+      return typeof cfg.mqtt === "string" ? cfg.mqtt : null;
+    case "ws":
+      return typeof cfg.ws === "string" ? cfg.ws : null;
+    case "mcp":
+      return cfg.mcp?.tool_name || cfg.tool_name || null;
+    default:
+      return cfg.route || null;
+  }
+}
+
 /**
  * Analyze conditions and dependencies
  */
-function analyzeConditions(action, actionIndex, allActions) {
+function analyzeConditions(action) {
   const conditions = [];
 
   if (action.depends_on) {
@@ -259,13 +318,18 @@ function createActionNode(id, name, action, interfaceName, position) {
     textColor = "#fff";
     nodeType = "httpActionNode";
   } else if (action.command) {
+    // NB: `defaultActionNode` already renders a Command skin (terminal icon, green
+    // badge) off the action shape. Emitting a bespoke "command" type here would need a
+    // matching entry in WorkFlowEditor's `nodeTypes` map — without one React Flow falls
+    // back to its built-in node and the action silently loses its menu, delete and
+    // add-after button. Same for `email` below.
     nodeColor = "#10b981";
     textColor = "#fff";
-    nodeType = "command";
+    nodeType = "defaultActionNode";
   } else if (action.email) {
     nodeColor = "#8b5cf6";
     textColor = "#fff";
-    nodeType = "email";
+    nodeType = "defaultActionNode";
   } else if (action.database || action.query || action.document_operation) {
     nodeColor = "#4a5568";
     textColor = "#fff";
@@ -425,7 +489,7 @@ function createFlatLookup(
       const dependencies = extractDependencies(nestedAction, i, nestedActions);
 
       if (dependencies.length > 0) {
-        const conditionInfo = analyzeConditions(nestedAction, i, nestedActions);
+        const conditionInfo = analyzeConditions(nestedAction);
         const dependenciesBySource = groupDependenciesBySource(
           dependencies,
           i,
@@ -912,8 +976,12 @@ function convertConfigToReactFlow(
     const actions = normalizeActions(interfaceConfig.actions);
     const actionNodeMap = new Map();
 
-    // Detect schedule vs HTTP interface
-    const isSchedule = !!interfaceConfig.schedule;
+    // Detect what actually triggers this interface. The engine supports more than HTTP
+    // and cron — `mqtt`, `ws` and `mcp` interfaces carry no method/route, so treating
+    // everything non-schedule as HTTP made them render as `GET /<name>`, which is a
+    // route that does not exist.
+    const triggerKind = interfaceTriggerKind(interfaceConfig);
+    const isSchedule = triggerKind === "schedule";
     const interfaceNodeId = `interface-${nodeId++}`;
     const interfaceNode = {
       id: interfaceNodeId,
@@ -921,6 +989,9 @@ function convertConfigToReactFlow(
       position: { x: 0, y: 0 },
       data: {
         interfaceName,
+        triggerKind,
+        triggerTarget: interfaceTriggerTarget(interfaceConfig, triggerKind),
+        extraTriggers: interfaceExtraTriggers(interfaceConfig, triggerKind),
         method: interfaceConfig.method || "GET",
         route: interfaceConfig.route,
         schedule: interfaceConfig.schedule,
@@ -1026,7 +1097,7 @@ function convertConfigToReactFlow(
       if (!currentNodeId) return;
 
       const dependencies = extractDependencies(action, originalIndex, actions);
-      const conditionInfo = analyzeConditions(action, originalIndex, actions);
+      const conditionInfo = analyzeConditions(action);
 
       if (dependencies.length === 0) {
         // No deps → connect from interface

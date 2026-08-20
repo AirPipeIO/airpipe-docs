@@ -5,6 +5,7 @@ import { dump as dumpYaml } from "js-yaml";
 import {
   IconApi, IconClock, IconTerminal, IconMail, IconDatabase,
   IconGitBranch, IconRepeat, IconSettings, IconBolt, IconChartBar,
+  IconAntenna, IconPlugConnected, IconTool,
   IconTestPipe, IconTransform, IconPlus, IconStack2,
 } from "@tabler/icons-react";
 
@@ -123,25 +124,53 @@ function ModuleChip({ label, handle, moduleType, spec }) {
   );
 }
 
+// Non-HTTP triggers carry no method and no route, so they get their own badge, icon and
+// subtitle instead of falling back to `GET` against an empty path.
+const TRIGGERS = {
+  schedule: { badge: "CRON", color: "#a855f7", Icon: IconClock, describe: () => null },
+  mqtt: { badge: "MQTT", color: "#f59e0b", Icon: IconAntenna, describe: (t) => (t ? `topic: ${t}` : "MQTT subscription") },
+  ws: { badge: "WS", color: "#06b6d4", Icon: IconPlugConnected, describe: (t) => (t ? `channel: ${t}` : "WebSocket channel") },
+  mcp: { badge: "MCP", color: "#7c3aed", Icon: IconTool, describe: (t) => (t ? `tool: ${t}` : "MCP tool") },
+};
+
 export function InterfaceNode({ data }) {
-  const isSchedule = !!data?.schedule;
+  // `triggerKind` comes from the converter; fall back to the old schedule sniff so an
+  // older cached converter still renders cron correctly.
+  const kind = data?.triggerKind || (data?.schedule ? "schedule" : "http");
+  const trigger = TRIGGERS[kind] || null;
   const method = (data?.method || "GET").toUpperCase();
-  const accent = isSchedule ? "#a855f7" : (METHOD_COLOR[method] || "#2a8af6");
+  const accent = trigger ? trigger.color : (METHOD_COLOR[method] || "#2a8af6");
+  const subtitle = trigger ? trigger.describe(data?.triggerTarget) : data?.route;
+  const extras = Array.isArray(data?.extraTriggers) ? data.extraTriggers : [];
   return (
     <Shell gradient="linear-gradient(135deg, #228be6, #40c057)" width={230}>
       {tgtHandles}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <span style={{ display: "inline-flex", width: 26, height: 26, borderRadius: 7, alignItems: "center", justifyContent: "center", background: `${accent}22`, color: accent, flexShrink: 0 }}>
-          {isSchedule ? <IconClock size={15} /> : <IconApi size={15} />}
+          {trigger ? <trigger.Icon size={15} /> : <IconApi size={15} />}
         </span>
         <strong style={{ fontSize: 13.5, color: "#f8f9fa", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data?.interfaceName}</strong>
         <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: accent, padding: "2px 7px", borderRadius: 5 }}>
-          {isSchedule ? "CRON" : method}
+          {trigger ? trigger.badge : method}
         </span>
       </div>
-      {data?.route ? (
-        <div style={{ padding: "7px 14px", fontSize: 11.5, color: "#9ca3af", fontFamily: "var(--ifm-font-family-monospace)" }}>{data.route}</div>
+      {subtitle ? (
+        <div style={{ padding: "7px 14px", fontSize: 11.5, color: "#9ca3af", fontFamily: "var(--ifm-font-family-monospace)" }}>{subtitle}</div>
       ) : null}
+      {/* An interface can be an HTTP route AND an MCP tool / MQTT topic at once — show
+          the extra surfaces rather than letting one replace the method. */}
+      {extras.length > 0 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "0 14px 9px" }}>
+          {extras.map(({ kind, target }) => {
+            const t = TRIGGERS[kind];
+            return t ? (
+              <Chip key={kind} active color={t.color} Icon={t.Icon}>
+                {t.badge}{target ? ` \u00b7 ${target}` : ""}
+              </Chip>
+            ) : null;
+          })}
+        </div>
+      )}
       {(data?.assertModule || data?.networkModule) && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "0 14px 9px" }}>
           {data.assertModule ? <Chip active color="#a855f7" Icon={IconStack2}>auth · {data.assertModule}</Chip> : null}
