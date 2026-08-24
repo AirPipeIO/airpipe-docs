@@ -14,6 +14,7 @@ actions:
           is_not_null: true
           is_not_empty: true
         - value: age
+          data_type: Number # a body or query value can arrive as text
           is_greater_than_or_equal_to: 18
 ```
 
