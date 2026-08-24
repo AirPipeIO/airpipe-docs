@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "IntegrationConfig",
-  "description": "AirPipe integration configuration. Defines the structure for API configurations\nwith interfaces, actions, and global settings.\n\n## Example\n```yaml\nname: my-api-config           # Required: Name of the configuration\nversion: 0.1.0                # Optional: Version string\ndescription: My API config    # Optional: Description\n\nglobal:                       # Optional: Global settings\n  variables:                  # Global variables accessible in all interfaces\n    api_base_url: https://api.example.com\n  secrets:                    # Global secrets (values are encrypted)\n    my_secret:\n      value: secret_value\n  databases:                  # Global database connections\n    main_db:\n      connection_string: postgres://user:pass@localhost/db\n\ninterfaces:                   # Required: Map of interface definitions\n  myEndpoint:                 # Interface name (if http used as route, unless route itself is defined)\n    method: POST              # HTTP method\n    actions:                  # Actions to execute\n      - name: ValidateInput\n        input: a|body\n```",
+  "description": "AirPipe integration configuration. Defines the structure for API configurations\nwith interfaces, actions, and global settings.\n\n## Example\n```yaml\nname: my-api-config           # Required: Name of the configuration\nversion: 0.1.0                # Optional: Version string\ndescription: My API config    # Optional: Description\n\nglobal:                       # Optional: Global settings\n  variables:                  # Global variables accessible in all interfaces\n    api_base_url: https://api.example.com\n  secrets:                    # Global secrets (values are encrypted)\n    my_secret:\n      value: secret_value\n  databases:                  # Global database connections\n    main_db:\n      connection_string: postgres://user:pass@localhost/db\n\ninterfaces:                   # Required: Map of interface definitions\n  myEndpoint:                 # Interface name (if http used as route, unless route itself is defined)\n    method: POST              # HTTP method\n    actions:                  # Actions to execute\n      - name: ValidateInput\n        input: a|body|\n```",
   "type": "object",
   "properties": {
     "expose_metrics": {
@@ -74,6 +74,17 @@
       "additionalProperties": {
         "$ref": "#/$defs/McpServer"
       }
+    },
+    "on_error": {
+      "description": "Run an interface whenever a run of this config fails.\n\nThe engine already knows every failure — it decides the status code and records\nthe run — so this turns that into an alert, a ticket or a dead-letter write\nwithout a second system polling for it.\n\n## Example\n```yaml\non_error:\n  interface: NotifyOps\n  status: [500, 502, 503]\n  max_per_minute: 6\n```",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OnError"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "additionalProperties": false,
@@ -83,9 +94,19 @@
   ],
   "$defs": {
     "Interface": {
-      "description": "Air Pipe interface definition. An interface represents an endpoint that can be\ninvoked (via HTTP, schedule, etc.) and executes a chain of actions.\n\n## Example\n```yaml\nmyApiEndpoint:              # Interface name (can be used as route path)\n  summary: Get users        # Short description for documentation\n  description: |            # Long description (optional)\n    Retrieves a list of all\n    users in the organization.\n  method: POST              # HTTP method (for HTTP interfaces)\n  route: /users             # URL path (optional, defaults to interface name)\n  tags:                     # OpenAPI tags for grouping\n    - Users\n    - API\n  output: http              # Output type: http\n\n  templates:                # Interface-specific response templates\n    success_template: |\n      { \"status\": \"ok\" }\n\n  actions:                  # Ordered list of actions to execute\n    - name: ValidateJwt     # Action name (used for references)\n        input: a|headers    # Input source (a|headers, a|body, etc.)\n      - name: FetchData\n        database: main      # Database connection to use, assuming global is defined\n        query: SELECT * FROM users WHERE org_uuid = $1\n        params:\n          - a|CheckBody::organization_uuid|\n\n  assert:                   # Final assertion against action results\n    tests:\n      - value: count()\n        is_equal_to: 1\n\n  response:                 # Response configuration\n    http_code_on_error: 400 # HTTP status code on error\n    http_code_inherit_error: [FetchData]  # Inherit error code from action\n```",
       "type": "object",
       "properties": {
+        "defaults": {
+          "description": "Defaults handed to every action in this interface (see [`ActionDefaults`]). An action\nthat sets the field itself always wins.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActionDefaults"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "summary": {
           "type": [
             "string",
@@ -270,11 +291,33 @@
             "null"
           ]
         },
+        "accepts": {
+          "description": "What this interface ACCEPTS: the shape of the payload its trigger delivers, and\nan example of it.\n\nTransport-neutral on purpose. An interface is not always an HTTP endpoint — it may\nbe an MQTT subscription, a WebSocket channel, an MCP tool or a cron schedule — and\n\"request\" is only the right word for one of those. A schedule accepts nothing and\nsimply omits this; an MQTT interface accepts the message published to its topic.\n\nThe schema is DERIVED from the interface's `assert` tests when absent (see\n[`crate::interface_schema::input_schema`]), so this only needs filling in to\noverride the derivation or to add an example.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InterfaceContract"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "produces": {
+          "description": "What this interface PRODUCES: the shape of its result, and an example of it.\n\nFor an HTTP interface that is the response body; for a schedule it is what the run\nyielded; for MQTT/WS it is what the interface publishes. Note this is documentation\nof the payload — `response` next to it stays what it always was, the HTTP response\n*behaviour* (status codes, headers, fallbacks).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InterfaceContract"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "request_example": {
-          "description": "Example request body shown in generated API documentation."
+          "description": "Example request body shown in generated API documentation.\n\nDEPRECATED: use `request: { example: … }`. Still read so existing configs keep\nworking; `request.example` wins when both are present."
         },
         "response_example": {
-          "description": "Example successful response body shown in generated API documentation."
+          "description": "Example successful response body shown in generated API documentation.\n\nDEPRECATED: use `response: { example: … }`. Still read so existing configs keep\nworking; `response.example` wins when both are present."
         },
         "notes": {
           "description": "Additional free-form documentation notes shown under the endpoint description.",
@@ -307,6 +350,52 @@
         }
       },
       "additionalProperties": false
+    },
+    "ActionDefaults": {
+      "description": "Air Pipe interface definition. An interface represents an endpoint that can be\ninvoked (via HTTP, schedule, etc.) and executes a chain of actions.\n\n## Example\n```yaml\nmyApiEndpoint:              # Interface name (can be used as route path)\n  summary: Get users        # Short description for documentation\n  description: |            # Long description (optional)\n    Retrieves a list of all\n    users in the organization.\n  method: POST              # HTTP method (for HTTP interfaces)\n  route: /users             # URL path (optional, defaults to interface name)\n  tags:                     # OpenAPI tags for grouping\n    - Users\n    - API\n  output: http              # Output type: http\n\n  templates:                # Interface-specific response templates\n    success_template: |\n      { \"status\": \"ok\" }\n\n  actions:                  # Ordered list of actions to execute\n    - name: ValidateJwt     # Action name (used for references)\n        input: a|headers    # Input source (a|headers, a|body, etc.)\n      - name: FetchData\n        database: main      # Database connection to use, assuming global is defined\n        query: SELECT * FROM users WHERE org_uuid = $1\n        params:\n          - a|CheckBody::organization_uuid|\n\n  assert:                   # Final assertion against action results\n    tests:\n      - value: count()\n        is_equal_to: 1\n\n  response:                 # Response configuration\n    http_code_on_error: 400 # HTTP status code on error\n    http_code_inherit_error: [FetchData]  # Inherit error code from action\n```\nField defaults an interface hands to every action it contains.\n\nThe outcome of an action is DECLARED (`expect_status` / `expect_exit`), never inferred from\nan assert. Declaring it per action is right for a pipeline where each call has its own\ncontract, and tedious for an interface where they share one — a test runner asserting on the\nstatus of thirty routes under test, a health-check fan-out that records whatever it gets. So\nthe interface can say it once and each action may still override it.\n\nResolved at config load (see `IntegrationConfig::compile_expressions`), so the interpreter\nand the compiled fast path both see a plain action-level value and the request path pays\nnothing for it.\n\n## Example\n```yaml\ninterfaces:\n  tests/all:\n    defaults:\n      expect_status: any        # the statuses ARE what this interface tests\n    actions: [...]\n```",
+      "type": "object",
+      "properties": {
+        "expect_status": {
+          "description": "Seeds `http.expect_status` on every action of this interface that does not set its own.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatusExpectation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "StatusExpectation": {
+      "description": "`expect_status:` — either a single matcher or a list of them.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StatusMatcher"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StatusMatcher"
+          }
+        }
+      ]
+    },
+    "StatusMatcher": {
+      "description": "One entry in an `expect_status` / `retry.on` list.\n\nAccepts an exact code (`404`), a class (`2xx`, `4xx`, `5xx`), `any`, or — for\n`retry.on` only — a transport class (`timeout`, `connect`).",
+      "anyOf": [
+        {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        {
+          "type": "string"
+        }
+      ]
     },
     "CustomLog": {
       "type": "object",
@@ -407,7 +496,7 @@
           "description": "Maximum execution time for this action in milliseconds.\n\n## Example\n```yaml\ntimeout: 5000    # 5 seconds\n```"
         },
         "input": {
-          "description": "Specify the input source for the action. Common sources:\n- `a|body|` - HTTP request body\n- `a|params|` - URL parameters\n- `a|action_name::field|` - Output from a previous action\n\n## Example\n```yaml\ninput: a|body\n```\n\n## Example\n```yaml\ninput: a|LoginBody::email\n```",
+          "description": "Where this action's data comes from. Common sources:\n- `a|body|` - HTTP request body\n- `a|params|` - URL parameters\n- `a|action_name::field|` - output from an earlier action\n\n## Example\n```yaml\ninput: a|body|\n```\n\n## Example\n```yaml\ninput: a|LoginBody::email|\n```\n\n## Closing pipe\n\n`input` accepts the bare form too — `a|body`, with no trailing pipe — because\nthis field names a source directly rather than interpolating one into a larger\nstring. It is the only field where that is true.\n\n**Everywhere else the closing pipe is required and its absence is silent.**\n`url: https://x/a|body` does not resolve to anything; it sends the literal text\n`a|body`, because the scanner that finds references only matches a closed\nmarker. Nothing warns, and the request goes out wrong.\n\nWrite `a|body|` everywhere, including here. The bare form is kept for configs\nthat already use it and is not offered in new examples.",
           "type": [
             "string",
             "null"
@@ -617,6 +706,28 @@
           "anyOf": [
             {
               "$ref": "#/$defs/StateAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sftp": {
+          "description": "Move files over SFTP: list a directory, fetch a file, write one, move or delete it.\n\n## Example\n```yaml\nsftp:\n  host: files.example.com\n  user: airpipe\n  private_key: a|secret::SFTP_KEY|\n  host_key: \"SHA256:kW8xDm2YuGv9NsLzalFWnMJ3j28XTnQJzw7/5GkE9+w\"\n  operation: list\n  path: /incoming\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Sftp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "only_new": {
+          "description": "Keep only the records this config has not already handled.\n\nPolling is the shape behind most \"trigger\" integrations — fetch a page on a\nschedule, act on what is new, remember what you acted on. Every piece was already\nhere (`schedule`, `http`, `state.seen`), but assembling them meant iterating the\npage with `lookup`, asking about each record separately and gating on the answer:\ncorrect, verbose, and one state round trip per record.\n\n## Example\n```yaml\n- name: NewOrders\n  input: a|Fetch->orders|\n  only_new:\n    id: .id\n    key: orders\n    ttl: 30d\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OnlyNew"
             },
             {
               "type": "null"
@@ -942,7 +1053,7 @@
           ]
         },
         "value": {
-          "description": "JSON path to the target value within the input data (e.g., `email`, `user.name`).\nAlso supports `count()` to get the length of an array.\n\n## Example\n```yaml\nvalue: email             # simple key\nvalue: user.address.city # nested path\nvalue: count()           # array length\n```",
+          "description": "JSON path to the target value within the input data (e.g., `email`, `user.name`).\nAlso supports `count()`: elements of an array, keys of an object, characters of a\nstring, 0 for null. It works the same way with `action:`, against that action's data.\n\n## Example\n```yaml\nvalue: email             # simple key\nvalue: user.address.city # nested path\nvalue: count()           # how many\n```",
           "type": [
             "string",
             "null"
@@ -956,7 +1067,7 @@
           ]
         },
         "action_value": {
-          "description": "Reference a previous action's output using interpolation syntax.\n\n## Example\n```yaml\naction_value: a|FetchUser::email|\n```",
+          "description": "Reference a previous action's output using interpolation syntax. The full marker\ngrammar applies — paths, `jq::`, and filters — and the result keeps its JSON type.\n\n## Example\n```yaml\naction_value: a|FetchUser::email|\naction_value: a|Rows->length|\n```",
           "type": [
             "string",
             "null"
@@ -1025,22 +1136,22 @@
           ]
         },
         "is_equal_to": {
-          "description": "Assert the value equals the expected value. Behavior varies by type:\nstrings compare as text, numbers as numeric value, booleans as bool,\narrays and objects compare as full JSON equality.\n\n## Example\n```yaml\nis_equal_to: \"active\"      # string\nis_equal_to: 42            # number\nis_equal_to: true          # boolean\n```"
+          "description": "Assert the value equals the expected value. Behavior varies by type:\nstrings compare as text, numbers as numeric value, booleans as bool,\narrays and objects compare as full JSON equality.\n\n## Example\n```yaml\nis_equal_to: \"active\"      # string\nis_equal_to: 42            # number\nis_equal_to: true          # boolean\n```\n**Not for null.** `is_equal_to: null` asserts nothing — YAML null and an absent\nkey deserialise identically, so the check is skipped silently. Use `is_null: true`."
         },
         "is_not_equal_to": {
-          "description": "Assert the value does not equal the expected value.\n\n## Example\n```yaml\nis_not_equal_to: \"deleted\"\n```"
+          "description": "Assert the value does not equal the expected value.\n\n## Example\n```yaml\nis_not_equal_to: \"deleted\"\n```\n**Not for null.** `is_not_equal_to: null` asserts nothing — see `is_equal_to`.\nUse `is_not_null: true`."
         },
         "is_less_than": {
-          "description": "Assert the value is less than the threshold. For strings and arrays,\ncompares the length. For numbers, compares the numeric value.\n\n## Example\n```yaml\n# String: length < 256\nvalue: title\nis_less_than: 256\n\n# Number: value < 100\nvalue: percentage\nis_less_than: 100\n\n# Array: length < 10\nvalue: items\nis_less_than: 10\n```"
+          "description": "Assert the value is less than the threshold. For arrays, compares the length;\nfor numbers, the numeric value. A **string** needs `data_type` to say which is\nmeant — `Number` for its value, `String` for its length — and is an error\nwithout one, because `\"3650\"` could be either.\n\n## Example\n```yaml\n# String: length < 256\nvalue: title\nis_less_than: 256\n\n# Number: value < 100\nvalue: percentage\nis_less_than: 100\n\n# Array: length < 10\nvalue: items\nis_less_than: 10\n```"
         },
         "is_less_than_or_equal_to": {
-          "description": "Assert the value is less than or equal to the threshold.\nSame type-dependent behavior as `is_less_than`."
+          "description": "Assert the value is less than or equal to the threshold.\nSame type-dependent behaviour as `is_less_than`, including needing\n`data_type` for a string."
         },
         "is_greater_than": {
-          "description": "Assert the value is greater than the threshold.\nSame type-dependent behavior as `is_less_than`.\n\n## Example\n```yaml\nvalue: age\nis_greater_than: 0\n```"
+          "description": "Assert the value is greater than the threshold.\nSame type-dependent behaviour as `is_less_than`, including needing\n`data_type` for a string.\n\n## Example\n```yaml\nvalue: age\nis_greater_than: 0\n```"
         },
         "is_greater_than_or_equal_to": {
-          "description": "Assert the value is greater than or equal to the threshold.\nSame type-dependent behavior as `is_less_than`."
+          "description": "Assert the value is greater than or equal to the threshold.\nSame type-dependent behaviour as `is_less_than`, including needing\n`data_type` for a string."
         },
         "starts_with": {
           "description": "Assert the string value starts with the given prefix.\n\n## Example\n```yaml\nvalue: url\nstarts_with: \"https://\"\n```"
@@ -1158,6 +1269,172 @@
         },
         "is_array": {
           "description": "Assert the value is a JSON array.\n\n## Example\n```yaml\nvalue: items\nis_array: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_empty": {
+          "description": "Assert the value is empty: an empty string, an empty array, an empty object, or\nnull. The inverse of `is_not_empty`, which existed without it.\n\n## Example\n```yaml\nvalue: middle_name\nis_empty: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_string": {
+          "description": "Assert the value is a string.\n\n## Example\n```yaml\nvalue: user_id\nis_string: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_number": {
+          "description": "Assert the value is a number. A numeric *string* does not satisfy this — use\n`regex` if you mean \"looks like a number\".\n\n## Example\n```yaml\nvalue: quantity\nis_number: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_boolean": {
+          "description": "Assert the value is a boolean.\n\n## Example\n```yaml\nvalue: enabled\nis_boolean: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_object": {
+          "description": "Assert the value is an object.\n\n## Example\n```yaml\nvalue: address\nis_object: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_in": {
+          "description": "Assert the value is one of a fixed set.\n\nThis is the opposite direction from `contains`: `contains` asks whether the\ntarget holds a given item, `is_in` asks whether the target is a member of a list\nyou supply. Comparison is deep, so objects and arrays can be members.\n\n## Example\n```yaml\nvalue: status\nis_in: [200, 201, 204]\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": true
+        },
+        "not_in": {
+          "description": "Assert the value is not one of a fixed set.\n\n## Example\n```yaml\nvalue: role\nnot_in: [\"banned\", \"deleted\"]\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": true
+        },
+        "is_between": {
+          "description": "Assert a number — or the size of an array or object — falls within an\ninclusive range.\n\n## Example\n```yaml\nvalue: age\nis_between: { min: 18, max: 120 }\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BetweenRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data_type": {
+          "description": "What this value is, so a comparison does not have to guess.\n\nThe ordering operators — `is_greater_than` and friends — need to know whether\nthey are being asked about a value or a size, and the runtime type cannot tell\nthem: query parameters, form fields, headers and CSV columns all deliver numbers\nas strings, so \"it arrived as a string\" does not mean \"compare its length\".\n\nDeclaring the type settles it:\n\n```yaml\n- value: older_than_days     # arrives as \"3650\" from the query string\n  data_type: Number          # so compare 3650, not the 4 characters\n  is_less_than: 365\n\n- value: password\n  data_type: String          # so compare how many characters it has\n  is_greater_than: 7\n```\n\nAccepts `Number`, `String`, `Array`, `Object` — the same names `verify_schema`\nuses. `String` means the comparison is about **length**; `Array` and `Object`\nmean **how many elements or keys**; `Number` means the value itself.\n\n**Required when the value is a string.** Ordering a string without this is an\nerror, because the runtime type cannot say whether `\"3650\"` means the value 3650\nor a length of 4 — query parameters, form fields, headers, CSV columns and\n`NUMERIC`/`DECIMAL` database columns all deliver numbers as text.\n\nNumbers, arrays and objects still infer from their runtime type and need no\ndeclaration. Inside `verify_schema`, an ordering check in a `validate` block\ninherits the field's own `type:` and needs nothing extra.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "Number",
+            "String",
+            "Array",
+            "Object"
+          ]
+        },
+        "is_before": {
+          "description": "Assert the value is strictly before the given moment.\n\n## Example\n```yaml\nvalue: expires_at\nis_before: now\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_after": {
+          "description": "Assert the value is strictly after the given moment.\n\n## Example\n```yaml\nvalue: created_at\nis_after: now-24h\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_on_or_before": {
+          "description": "Assert the value is before, or the same instant as the given moment.\n\n## Example\n```yaml\nvalue: starts_at\nis_on_or_before: \"2026-12-31\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_on_or_after": {
+          "description": "Assert the value is after, or the same instant as the given moment.\n\n## Example\n```yaml\nvalue: valid_from\nis_on_or_after: \"2026-01-01T00:00:00Z\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_same_time_as": {
+          "description": "Assert the value is the same instant as the given moment.\n\n## Example\n```yaml\nvalue: updated_at\nis_same_time_as: a|Fetch->updated_at|\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_not_same_time_as": {
+          "description": "Assert the value is a different instant from the given moment.\n\n## Example\n```yaml\nvalue: modified_at\nis_not_same_time_as: a|Original->modified_at|\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_date": {
+          "description": "Assert the value parses as a date at all, in any of the accepted formats.\n\n## Example\n```yaml\nvalue: published_at\nis_date: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "not_regex": {
+          "description": "Assert the string value does NOT match a regular expression. The negated form of\n`regex`, which had `not_contains`, `not_starts_with` and `not_ends_with` as\ncounterparts but no negation of its own.\n\n## Example\n```yaml\nvalue: comment\nnot_regex: \"(?i)<script\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "not_like": {
+          "description": "SQL LIKE-style pattern that must NOT match (case-sensitive). Uses `%` as wildcard.\n\n## Example\n```yaml\nvalue: email\nnot_like: \"%@example.com\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "not_ilike": {
+          "description": "SQL ILIKE-style pattern that must NOT match (case-insensitive).\n\n## Example\n```yaml\nvalue: email\nnot_ilike: \"%@EXAMPLE.com\"\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_email": {
+          "description": "Assert the value parses as an email address.\n\n## Example\n```yaml\nvalue: email\nis_email: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_url": {
+          "description": "Assert the value parses as an absolute URL with a scheme and a host.\n\n## Example\n```yaml\nvalue: callback_url\nis_url: true\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_ip": {
+          "description": "Assert the value parses as an IPv4 or IPv6 address.\n\n## Example\n```yaml\nvalue: client_ip\nis_ip: true\n```",
           "type": [
             "boolean",
             "null"
@@ -1329,6 +1606,27 @@
       "required": [
         "values",
         "at_least"
+      ]
+    },
+    "BetweenRange": {
+      "description": "An inclusive range for `is_between`.",
+      "type": "object",
+      "properties": {
+        "min": {
+          "description": "Lowest accepted value, inclusive.",
+          "type": "number",
+          "format": "double"
+        },
+        "max": {
+          "description": "Highest accepted value, inclusive.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max"
       ]
     },
     "JwtConfig": {
@@ -1628,21 +1926,76 @@
       "type": "object",
       "properties": {
         "attempts": {
+          "description": "How many times to attempt the action in total, including the first try.\n`1` (the default) means no retry.",
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "examples": [
+            3
+          ]
         },
         "delay": {
+          "description": "Milliseconds to wait between attempts. With `exponential_backoff` this is the\nbase the delay grows from rather than a fixed pause.",
           "type": [
             "integer",
             "null"
           ],
-          "format": "int32"
+          "format": "int32",
+          "examples": [
+            1000
+          ]
         },
         "exponential_backoff": {
+          "description": "Double the wait after each failed attempt instead of using `delay` unchanged.\nWorth setting against an upstream that is rate limiting or overloaded, where\nretrying at a fixed interval keeps the pressure on.",
           "type": [
             "boolean",
             "null"
           ]
+        },
+        "on": {
+          "description": "Which failures are worth repeating. Accepts codes (`429`), classes (`5xx`),\n`any`, and the transport classes `timeout` / `connect`.\n\nUnset uses the default set — `408, 429, 500, 502, 503, 504` plus transport\nfailures — which is the intersection of what Polly, the AWS and Azure SDKs and\nurllib3 all treat as transient. A 400 or a 401 will never succeed on a second\nattempt, so repeating it only wastes the upstream's capacity and your own.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/StatusMatcher"
+          }
+        },
+        "except": {
+          "description": "Subtracted from whatever `on` resolves to, including the default set. Use it to\ncarve an exception out without restating the whole list.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/StatusMatcher"
+          }
+        },
+        "respect_retry_after": {
+          "description": "Honour a `Retry-After` response header when the upstream sends one (RFC 9110\n§10.2.3), in preference to the computed backoff. Defaults to true: a server that\ntells you when to come back knows better than a fixed curve does.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "jitter": {
+          "description": "Randomisation applied to the computed backoff. Defaults to `full`, per AWS's\n\"Exponential Backoff and Jitter\": without it, every client that failed together\nretries together, and the recovering upstream is hit by the same synchronised\nwave it just fell over to.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Jitter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_delay": {
+          "description": "Upper bound on a single wait, in milliseconds. Without it, exponential backoff on\na late attempt can schedule a wait longer than any caller is willing to hold for.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int64"
         }
       },
       "additionalProperties": false,
@@ -1650,31 +2003,60 @@
         "attempts"
       ]
     },
+    "Jitter": {
+      "description": "How much randomisation to apply to a retry delay.",
+      "oneOf": [
+        {
+          "description": "Sleep a random duration in `[0, computed]` — AWS's \"full jitter\", the default.",
+          "type": "string",
+          "const": "full"
+        },
+        {
+          "description": "Sleep exactly the computed backoff. Predictable, and synchronises clients.",
+          "type": "string",
+          "const": "none"
+        }
+      ]
+    },
     "CommandRun": {
       "type": "object",
       "properties": {
         "timeout": {
+          "description": "How long to let the command run before it is killed, e.g. `30s`, `2m`.",
           "type": [
             "string",
             "null"
+          ],
+          "examples": [
+            "30s",
+            "2m"
           ]
         },
         "name": {
+          "description": "Label for this command in traces and logs. Cosmetic — it does not affect the run.",
           "type": [
             "string",
             "null"
           ]
         },
         "shell": {
+          "description": "Shell to execute `run` with. Defaults to the platform shell; set it when the\ncommand depends on a specific one.",
           "type": [
             "string",
             "null"
+          ],
+          "examples": [
+            "/bin/sh",
+            "/bin/bash",
+            "powershell"
           ]
         },
         "run": {
+          "description": "The command line to execute.\n\n```yaml\nrun: curl -s https://example.com/health\n```",
           "type": "string"
         },
         "parse": {
+          "description": "How to read the command's stdout. Unparsed output stays a plain string, so set\nthis when the command emits structured data you want to use downstream.",
           "anyOf": [
             {
               "$ref": "#/$defs/CommandParse"
@@ -1685,9 +2067,21 @@
           ]
         },
         "parse_stderr": {
+          "description": "How to read stderr, when the command reports structured errors there.",
           "anyOf": [
             {
               "$ref": "#/$defs/CommandParse"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expect_exit": {
+          "description": "Which exit codes count as a SUCCESSFUL action. Defaults to `0`.\n\nAn exit code is a command's own failure signal, exactly as a status code is an HTTP\nserver's, so it decides the action's outcome the same way — which is what makes\n`retry`, `run_when_failed` and error branches work against a failing command.\nAccepts one code (`0`), a list (`[0, 2]`), or `any` for the old behaviour where the\nexit code was ignored entirely.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExitExpectation"
             },
             {
               "type": "null"
@@ -1832,43 +2226,95 @@
         "keys"
       ]
     },
+    "ExitExpectation": {
+      "description": "`expect_exit:` — one code, a list of codes, or `any`.",
+      "anyOf": [
+        {
+          "type": "integer",
+          "format": "int64"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        {
+          "description": "Only `any` is meaningful here; anything else never matches, which is the safe way\nfor a typo to behave.",
+          "type": "string"
+        }
+      ]
+    },
     "HttpRequest": {
       "type": "object",
       "properties": {
         "url": {
+          "description": "The URL to call. Interpolation applies, so it can be built from earlier steps or\nvariables.\n\n```yaml\nurl: https://api.example.com/users/a|params::id|\n```",
           "type": "string"
         },
+        "expect_status": {
+          "description": "Which response statuses count as a SUCCESSFUL action. Defaults to `2xx`, so a\n4xx/5xx fails the action — which is what makes `retry`, `run_when_failed` and\n`http_code_inherit_error` work against a failing upstream.\n\nAccepts a class (`2xx`), an exact code (`404`), a list (`[2xx, 404]`), or\n`any` for the pre-1.x behaviour where the status was only ever data.\nA failed action still carries its status, headers and body, so an error\nbranch can read them.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatusExpectation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "idempotency": {
+          "description": "Send an idempotency key with this request, so a RETRY cannot be processed twice.\n\nThe engine sends the same key on every attempt of one action execution — that is\nthe whole point, and it is the part a config cannot do for itself: `a|uuid|` would\nmint a fresh key per attempt, which is just a second charge.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Idempotency"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "digest_auth_user": {
+          "description": "Username for HTTP Digest authentication.",
           "type": [
             "string",
             "null"
           ]
         },
         "digest_auth_pass": {
+          "description": "Password for HTTP Digest authentication. Keep it in a secret or variable rather\nthan in the config: `a|ap_secret::UPSTREAM_PASS|`.",
           "type": [
             "string",
             "null"
           ]
         },
         "user": {
+          "description": "Username for HTTP Basic authentication.",
           "type": [
             "string",
             "null"
           ]
         },
         "pass": {
+          "description": "Password for HTTP Basic authentication. As with digest, reference a secret.",
           "type": [
             "string",
             "null"
           ]
         },
         "proxy": {
+          "description": "Send this request through an HTTP proxy.",
           "type": [
             "string",
             "null"
+          ],
+          "examples": [
+            "http://proxy.internal:8080"
           ]
         },
         "headers": {
+          "description": "Request headers. Values interpolate, which is how a token is passed without\nwriting it into the config.\n\n```yaml\nheaders:\n  content-type: application/json\n  authorization: Bearer a|ap_var::API_TOKEN|\n```",
           "type": [
             "object",
             "null"
@@ -1877,20 +2323,34 @@
             "type": "string"
           }
         },
-        "body": true,
+        "body": {
+          "description": "Request body. A mapping is sent as JSON; a string is sent as-is, which is what\nyou want for a pre-rendered payload."
+        },
         "base64_bytes": {
+          "description": "Send raw bytes decoded from base64, for binary uploads that are not multipart.",
           "type": [
             "string",
             "null"
           ]
         },
         "method": {
+          "description": "HTTP method. Defaults to `GET`.\n\nDeliberately a string rather than a closed set: the engine passes it through as\na token, so an extension method a private API expects still works. The common\nones are offered as examples.",
           "type": [
             "string",
             "null"
+          ],
+          "examples": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "HEAD",
+            "OPTIONS"
           ]
         },
         "data_type": {
+          "description": "How to encode the body and read the response. Inferred when unset.",
           "anyOf": [
             {
               "$ref": "#/$defs/DataType"
@@ -1901,6 +2361,7 @@
           ]
         },
         "bearer_auth": {
+          "description": "Token for `Authorization: Bearer`. Reference a secret or variable rather than\nwriting the token into the config: `a|ap_var::API_TOKEN|`.",
           "type": [
             "string",
             "null"
@@ -2012,6 +2473,27 @@
       "required": [
         "url"
       ]
+    },
+    "Idempotency": {
+      "description": "Idempotency-key configuration for an HTTP action.\n\nRFC 9110 §9.2.2 says a client should not automatically retry a non-idempotent request\n\"unless it has some means to know that the request semantics are actually idempotent...\nor some means to detect that the original request was never applied\". An idempotency\nkey is that means, and is being standardised as the `Idempotency-Key` header\n(draft-ietf-httpapi-idempotency-key-header). Providers differ on the header name —\nStripe uses `Idempotency-Key`, PayPal `PayPal-Request-Id` — so it is configurable.",
+      "type": "object",
+      "properties": {
+        "key": {
+          "description": "The key to send. Omit it and the engine generates a UUID per action execution,\nreused across that execution's retries.\n\nSet it to derive the key from your own data (`a|body::orderId|`) when the caller\nmay retry the whole workflow and you want those attempts deduplicated too — an\nengine-generated key only covers retries WITHIN one execution.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "header": {
+          "description": "Header to carry the key. Defaults to `Idempotency-Key`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "MultipartPart": {
       "description": "A single part in a `multipart/form-data` request.\n\nExactly one of `value`, `b64`, or `file_path` must be provided per part.\nAll other fields are optional.",
@@ -2620,6 +3102,162 @@
         "id"
       ]
     },
+    "Sftp": {
+      "description": "One SFTP operation against one server.",
+      "type": "object",
+      "properties": {
+        "host": {
+          "description": "Hostname or address of the SFTP server.",
+          "type": "string"
+        },
+        "port": {
+          "description": "Port. Defaults to 22.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "user": {
+          "description": "Username to authenticate as.",
+          "type": "string"
+        },
+        "password": {
+          "description": "Password. Use `a|secret::NAME|` rather than a literal.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "private_key": {
+          "description": "Private key in PEM/OpenSSH form, preferred over a password. Use\n`a|secret::NAME|` rather than a literal.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "private_key_passphrase": {
+          "description": "Passphrase for `private_key`, if it has one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "host_key": {
+          "description": "The server's host key fingerprint, as `ssh-keygen -lf` prints it:\n`SHA256:kW8xDm2YuGv9NsLzalFWnMJ3j28XTnQJzw7/5GkE9+w`.\n\n**Required** unless `accept_any_host_key` is set. SSH's security rests on this\ncheck: without it, anyone on the network path can answer the connection, take the\ncredentials sent to them, and proxy to the real server so that nothing looks wrong.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "accept_any_host_key": {
+          "description": "Connect without verifying the server's identity. Defaults to `false`.\n\nOnly for a server you reach over a network you already trust end to end. Setting it\nmeans credentials in this action can be taken by a machine-in-the-middle.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "timeout": {
+          "description": "How long to wait to connect and how long the session may sit idle, e.g. `30s`.\nDefaults to 30 seconds.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation": {
+          "description": "What to do: `list`, `get`, `put`, `delete`, `rename` or `mkdir`.\n\n`list` returns an array of `{name, path, size, is_dir, modified}`, where\n`modified` is epoch seconds — so it feeds `only_new` and the date operators\nwithout a second convention.",
+          "type": "string",
+          "examples": [
+            "list",
+            "get",
+            "put",
+            "delete",
+            "rename",
+            "mkdir"
+          ]
+        },
+        "path": {
+          "description": "The remote path the operation applies to.",
+          "type": "string"
+        },
+        "to": {
+          "description": "Destination path, for `rename`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content": {
+          "description": "The bytes to write, for `put`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encoding": {
+          "description": "`text` (default) or `base64`. Use `base64` for anything that is not UTF-8 —\na `get` of a binary file as text is an error rather than mangled output.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "text",
+            "base64"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "host",
+        "user",
+        "operation",
+        "path"
+      ]
+    },
+    "OnlyNew": {
+      "description": "Filter a list down to the records this config has not seen before.\n\nTakes the action's `input` (a list, or a single record treated as a list of one),\nworks out each record's identity, and passes on only those whose identity is new —\nrecording them as it goes, in a single state write for the whole page.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "A jq expression selecting each record's identity. Defaults to `.id`.\n\nWhatever it returns is compared as text, so a number, a string or a composite all\nwork. Use a composite when no single field is unique:\n\n```yaml\nid: '.user_id + \"/\" + .updated_at'\n```\n\nA record whose id comes back null or missing is passed through rather than\nsilently dropped — losing records because a field was misspelled is the failure\nthis is meant to prevent, not cause.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "key": {
+          "description": "The dedupe set to remember ids in. Two actions sharing a key share their memory.",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Optional namespace for the set. Defaults to the config name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ttl": {
+          "description": "How long an id stays remembered, e.g. `30d`. Without one it is remembered until\nevicted by the size cap (the oldest 5000 ids are kept).\n\nSet this to slightly longer than the window in which a source can re-present a\nrecord. Too short and records are handled twice; too long only costs storage.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "skip_when_empty": {
+          "description": "Skip this action — and anything that depends on it — when nothing is new.\nDefaults to `true`.\n\nA poll that finds nothing new almost always wants to do nothing, and a skip is\nhow the engine already expresses that: dependents do not run, and it is reported\nas a skip rather than a failure. Set `false` to have the action succeed with an\nempty list instead, when the steps after it should run regardless.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key"
+      ]
+    },
     "Discover": {
       "description": "Discover the live members of a service — container endpoints, pods, replicas —\nand hand them to the rest of the pipeline as an array.\n\nThe point is to stop hard-coding a list of addresses that changes every time\nsomething scales, restarts or reschedules. A `discover` action returns one\nentry per member, and any later action fans out across them with `lookup:`:\n\n```yaml\nactions:\n  - name: Members\n    discover:\n      kubernetes:\n        label_selector: app=api\n        port_name: http\n\n  - name: PollAll\n    lookup: a|Members|\n    lookup_partition: true          # -> { succeeded: [...], failed: [...] }\n    actions:\n      - name: Health\n        http:\n          url: a|body::url|/healthz\n```\n\nEvery backend returns the SAME item shape, so a config written against one\norchestrator moves to another by changing only the backend block:\n\n```json\n{\n  \"name\":      \"api-7d9f8b6c5d-x2ktp\",\n  \"address\":   \"10.42.1.3\",\n  \"port\":      8080,\n  \"url\":       \"http://10.42.1.3:8080\",\n  \"source\":    \"kubernetes\",\n  \"ready\":     true,\n  \"namespace\": \"default\",\n  \"node\":      \"worker-1\",\n  \"image\":     \"example/api:1.4.0\",\n  \"labels\":    { \"app\": \"api\" }\n}\n```\n\nFields a backend cannot know are omitted rather than faked — DNS returns\naddresses only, so it has no `labels`, `image` or `ready`. Filtering on a field\na backend does not provide therefore matches nothing, which is why\n`label_selector` belongs to the backends that actually have labels.",
       "type": "object",
@@ -2868,12 +3506,14 @@
       "type": "object",
       "properties": {
         "aws_ses": {
+          "description": "Send through AWS SES using the engine's AWS credentials instead of SMTP.\nMutually exclusive with `smtp` in practice — set one or the other.",
           "type": [
             "boolean",
             "null"
           ]
         },
         "smtp": {
+          "description": "SMTP server to send through. Omit when using `aws_ses`.",
           "anyOf": [
             {
               "$ref": "#/$defs/EmailSmtp"
@@ -2884,24 +3524,36 @@
           ]
         },
         "from": {
-          "type": "string"
+          "description": "Sender address. Must be one the SMTP server or SES identity is allowed to send as.",
+          "type": "string",
+          "examples": [
+            "noreply@example.com"
+          ]
         },
         "reply_to": {
+          "description": "Address replies should go to, when it differs from `from`.",
           "type": [
             "string",
             "null"
           ]
         },
         "to": {
-          "type": "string"
+          "description": "Recipient. Comma-separate for several.",
+          "type": "string",
+          "examples": [
+            "a|body::email|",
+            "one@example.com, two@example.com"
+          ]
         },
         "cc": {
+          "description": "Carbon copy recipients, comma-separated.",
           "type": [
             "string",
             "null"
           ]
         },
         "bcc": {
+          "description": "Blind carbon copy recipients, comma-separated.",
           "type": [
             "string",
             "null"
@@ -2915,27 +3567,32 @@
           ]
         },
         "subject": {
+          "description": "Subject line. Interpolation applies.",
           "type": "string"
         },
         "header": {
+          "description": "Extra raw headers to attach to the message.",
           "type": [
             "string",
             "null"
           ]
         },
         "html": {
+          "description": "HTML body. Send `html`, `text`, or both — both is the polite form, since a\nclient that cannot render HTML falls back to the text part.",
           "type": [
             "string",
             "null"
           ]
         },
         "text": {
+          "description": "Plain-text body.",
           "type": [
             "string",
             "null"
           ]
         },
         "params": {
+          "description": "Positional values substituted into the body, for templates that use placeholders\nrather than interpolation refs.",
           "type": [
             "array",
             "null"
@@ -3505,7 +4162,7 @@
           }
         },
         "math": {
-          "description": "Perform mathematical operations on numeric values with expressions.\n\n`target` is OPTIONAL and defaults to the root object — omit it to read and\nwrite fields at the top level (as below). Inside an expression, reference a\nfield with the `target.` prefix; that prefix is the substitution token and is\nresolved against the target object, so a bare `price` is left as-is and will\nnot resolve. Set `target:` only to scope to a nested object (e.g. `.data`).\n\n## Example\n```yaml\nmath:\n  expressions:                     # key = output field name\n    total: target.price * target.quantity\n    discounted: target.total * 0.9\n  decimal_places: 2                # optional: round to 2 places\n```",
+          "description": "Perform mathematical operations on numeric values with expressions.\n\n`target` is OPTIONAL and defaults to the root object — omit it to read and\nwrite fields at the top level (as below). Inside an expression, reference a\nfield with the `target.` prefix; that prefix is the substitution token and is\nresolved against the target object, so a bare `price` is left as-is and will\nnot resolve. Set `target:` only to scope to a nested object (e.g. `.data`).\n\n## Example\n```yaml\nmath:\n  expressions:                     # key = output field name\n    total: target.price * target.quantity\n    discounted: target.total * 0.9\n  decimal_places: 2                # optional: round to 2 places (half away from zero)\n  to_string: true                  # optional: render as text, keeping trailing zeros\n```",
           "anyOf": [
             {
               "$ref": "#/$defs/TransformMath"
@@ -3940,24 +4597,28 @@
       "type": "object",
       "properties": {
         "target": {
+          "description": "Where to apply the expressions (JSONPath). Defaults to the root.",
           "type": [
             "string",
             "null"
           ]
         },
         "expressions": {
+          "description": "Output field name → expression, e.g. `total: target.price * target.quantity`.",
           "type": "object",
           "additionalProperties": {
             "type": "string"
           }
         },
         "to_string": {
+          "description": "Render the result as a string. With `decimal_places` this keeps trailing zeros —\n`10.00` rather than `10` — which is what a money value usually wants to look like.",
           "type": [
             "boolean",
             "null"
           ]
         },
         "decimal_places": {
+          "description": "Round the result to this many decimal places, half away from zero (2.125 → 2.13).\nThe value stays a NUMBER unless `to_string` (or `eval_type: string`) asks for text.",
           "type": [
             "integer",
             "null"
@@ -3965,6 +4626,7 @@
           "format": "int64"
         },
         "eval_type": {
+          "description": "Force the result type. `decimal_places` applies to any float result on its own; this\nis for coercing (e.g. `int` to truncate).",
           "anyOf": [
             {
               "$ref": "#/$defs/MathEvalType"
@@ -4257,20 +4919,48 @@
       "type": "object",
       "properties": {
         "database": {
+          "description": "Database name on the connection — the Mongo/Cosmos/DocumentDB database, not the\n`database:` key of the action, which names the *connection* in `global.databases`.",
           "type": "string"
         },
         "collection": {
+          "description": "Collection to operate on.",
           "type": "string"
         },
         "operation": {
-          "type": "string"
+          "description": "Which operation to perform.\n\nThe engine dispatches on this string, and an unrecognised value fails the action\nrather than defaulting to anything. Supported:\n`find`, `findOne`, `findOneAndDelete`, `findOneAndReplace`, `insertOne`,\n`insertMany`, `updateOne`, `updateMany`, `deleteOne`, `deleteMany`, `aggregate`.",
+          "type": "string",
+          "examples": [
+            "find",
+            "findOne",
+            "findOneAndDelete",
+            "findOneAndReplace",
+            "insertOne",
+            "insertMany",
+            "updateOne",
+            "updateMany",
+            "deleteOne",
+            "deleteMany",
+            "aggregate"
+          ]
         },
-        "filter": true,
-        "pipeline": true,
-        "insert": true,
-        "delete": true,
-        "update": true,
-        "options": true
+        "filter": {
+          "description": "Query selector, for the read, update and delete operations.\n\n```yaml\nfilter: '{\"email\": \"a|body::email|\"}'\n```"
+        },
+        "pipeline": {
+          "description": "Stages for `aggregate`. Ignored by every other operation."
+        },
+        "insert": {
+          "description": "Document(s) to write, for `insertOne` and `insertMany`."
+        },
+        "delete": {
+          "description": "Reserved for delete payloads; `filter` selects what a delete removes."
+        },
+        "update": {
+          "description": "Update document, for `updateOne` and `updateMany` — including its operators, e.g.\n`{\"$set\": {...}}`."
+        },
+        "options": {
+          "description": "Driver options passed through for this operation, such as `projection`, `sort`,\n`limit` or `upsert`. Which keys apply depends on the operation."
+        }
       },
       "additionalProperties": false,
       "required": [
@@ -4452,6 +5142,19 @@
         "success",
         "any"
       ]
+    },
+    "InterfaceContract": {
+      "description": "What an interface accepts or returns, as a contract: a shape and an example of it.\n\nOne type for both directions so the two sides stay symmetric, and named for what an\ninterface does rather than for HTTP: interfaces are also MQTT subscriptions, WebSocket\nchannels, MCP tools and cron schedules, and only one of those has a \"request\".\n\nBefore this, the inbound side had a derived schema plus a flat `request_example` and\nthe outbound side had only a flat `response_example` — two different shapes for the\nsame idea, and 299 hand-written examples across the marketplace packs that nothing\nvalidated against reality.\n\nBoth fields are optional: the schema is derived when it can be, and the example is\nbest produced by promoting a recorded run rather than typing one out.",
+      "type": "object",
+      "properties": {
+        "schema": {
+          "description": "JSON Schema for this side of the call. Derived from assertions when omitted."
+        },
+        "example": {
+          "description": "A representative payload, shown in the generated docs."
+        }
+      },
+      "additionalProperties": false
     },
     "NetworkPolicy": {
       "description": "Network access-control policy. Set it config-wide (top-level `network:`, applies\nto every interface as a baseline) and/or per-interface (`interface.network:`,\nwhich inherits and **tightens** the config-wide policy).\n\n## Inheritance (tighten-only)\n- `deny` lists (ip/geo/asn) **union** across levels — a config-level deny can\n  never be weakened by an interface.\n- `allow` lists **intersect** — the request must satisfy every level that\n  declares an allow list.\n- An interface sets `inherit: false` to ignore the config-wide policy entirely\n  (a deliberate public exception, e.g. a health route).\n- Scalar settings (`mode`, `source`, `trusted_proxies`, `on_deny`) are taken\n  from the interface when present, otherwise inherited from the config level.\n\n## Evaluation order (per level)\n`ip.deny` → `geo.deny` → `asn.deny` → `*.allow` → `rate_limit`. The first rule\nthat rejects wins. In `monitor` mode nothing is blocked; matches are logged.\n\n## Example\n```yaml\nnetwork:                       # config-wide baseline\n  mode: enforce                # enforce (default) | monitor\n  source: client               # client (default) | socket | real_ip\n  trusted_proxies:             # validate XFF chain (anti-spoofing)\n    - \"10.0.0.0/8\"\n  ip:\n    allow: [\"203.0.113.0/24\", \"2001:db8::/32\"]\n    deny:  [\"1.2.3.4\"]\n    deny_check: source         # source (default) | all\n  geo:   { deny: [\"RU\", \"KP\"] }\n  asn:   { deny: [13335] }\n  rate_limit: { per: ip, requests: 100, window: \"60s\" }\n  on_deny: { status: 403, body: { error: \"forbidden\" } }\n\ninterfaces:\n  admin:\n    network:                   # inherits + tightens the baseline\n      ip: { allow: [\"198.51.100.10\"] }\n  health:\n    network: { inherit: false } # public exception\n```",
@@ -5197,6 +5900,42 @@
         }
       },
       "additionalProperties": false
+    },
+    "OnError": {
+      "description": "A handler that runs when a run of this config fails.\n\nIt runs **after** the response has been decided and is never awaited, so it cannot add\nlatency to the request that failed, and its own failure cannot change what the caller\nreceived. A handler that fails is logged and dropped.",
+      "type": "object",
+      "properties": {
+        "interface": {
+          "description": "Name of an interface in this config to run. It receives a JSON body describing\nwhat failed:\n\n```json\n{\n  \"config\": \"orders-api\",\n  \"interface\": \"CreateOrder\",\n  \"http_code\": 500,\n  \"run_uuid\": \"0199...\",\n  \"at\": \"2026-08-22T04:15:00Z\",\n  \"data\": { }\n}\n```\n\nso a handler reads `a|body->interface|`, `a|body->http_code|` and the rest.",
+          "type": "string"
+        },
+        "status": {
+          "description": "Which status codes count as a failure worth handling. Defaults to any non-2xx.\n\n## Example\n```yaml\nstatus: [500, 502, 503, 504]\n```",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0,
+            "maximum": 65535
+          }
+        },
+        "max_per_minute": {
+          "description": "The most handler runs to start in any one minute, per config. Defaults to 12.\n\nThis is a guard, not a tuning knob. An error handler that fires per request turns\nan outage into a second outage: every failing request would start another run,\nagainst a dependency that is already unhealthy, and bill for it. Beyond the limit\nthe failure is still counted and logged — only the handler is skipped.\n\n## Example\n```yaml\nmax_per_minute: 6\n```",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "interface"
+      ]
     }
   }
 }
