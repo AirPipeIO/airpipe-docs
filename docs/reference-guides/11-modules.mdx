@@ -88,7 +88,7 @@ sibling actions by name — as long as the consuming config defines them:
 ```yml
 name: CheckOrgAccess
 run_when_succeeded: [ValidateJwt, CheckBody]
-input: a|ValidateJwt
+input: a|ValidateJwt|
 hide_data_on_success: true
 assert:
   error_message: you are not a member of this organization
@@ -170,7 +170,7 @@ interfaces:
     route: /orders
     actions:
       - name: RequireAuth
-        input: a|headers
+        input: a|headers|
         assert: a|module::require-auth|
       - name: InsertOrder
         run_when_succeeded: { actions: [RequireAuth] }

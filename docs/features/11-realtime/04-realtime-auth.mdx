@@ -80,7 +80,7 @@ The client brings a JWT signed with a secret you store in Air Pipe:
 authorize-channel:                # internal authorizer — run by the socket, not an HTTP route
   actions:
     - name: Verify
-      input: a|headers
+      input: a|headers|
       assert:
         http_code_on_error: 403
         tests:
