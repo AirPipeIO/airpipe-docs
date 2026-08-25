@@ -1035,7 +1035,7 @@
       ]
     },
     "Test": {
-      "description": "Test definition for asserting conditions against a resolved value.\nTests support value resolution (via `value`, `jq`, `pointer`, or `action`),\ntype-aware comparisons, pattern matching, and structural schema validation.\n\nWhen used inside an `assert` block, multiple tests run concurrently.\nWhen used inside `verify_schema` via `FieldType.validate`, the test\nruns against the leaf value at that schema path.\n\n## Example - Basic value checks\n```yaml\ntests:\n  - value: email\n    is_not_empty: true\n    regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n    error_message: \"Invalid email\"\n    http_code_on_error: 422\n```\n\n## Example - Numeric comparisons\n```yaml\ntests:\n  - value: age\n    is_greater_than: 0\n    is_less_than: 150\n  - value: count()\n    is_greater_than_or_equal_to: 1\n```\n\n## Example - Using jq for nested access\n```yaml\ntests:\n  - jq: \".data.users | length\"\n    is_greater_than: 0\n```\n\n## Example - Cross-action reference\n```yaml\ntests:\n  - action: FetchUser\n    value: email\n    is_not_null: true\n```\n\n## Example - Allowed/disallowed values\n```yaml\ntests:\n  - value: status\n    contains:\n      allowed:\n        - \"active\"\n        - \"pending\"\n        - \"suspended\"\n      disallowed:\n        - \"deleted\"\n```\n\n## Example - Schema validation with deep nested assertions\n```yaml\ntests:\n  - verify_schema:\n      disallow_unknown_keys: true\n      structure:\n        email:\n          type: String\n          validate:\n            is_not_empty: true\n            regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n        age:\n          type: Number\n          validate:\n            is_greater_than: 0\n        settings:\n          theme:\n            type: String\n          notifications:\n            type: Boolean\n```",
+      "description": "Test definition for asserting conditions against a resolved value.\nTests support value resolution (via `value`, `jq`, `pointer`, or `action`),\ntype-aware comparisons, pattern matching, and structural schema validation.\n\nWhen used inside an `assert` block, multiple tests run concurrently.\nWhen used inside `verify_schema` via `FieldType.validate`, the test\nruns against the leaf value at that schema path.\n\n## Example - Basic value checks\n```yaml\ntests:\n  - value: email\n    is_not_empty: true\n    regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n    error_message: \"Invalid email\"\n    http_code_on_error: 422\n```\n\n## Example - Numeric comparisons\n```yaml\ntests:\n  - value: age\n    data_type: Number\n    is_greater_than: 0\n    is_less_than: 150\n  - value: count()\n    is_greater_than_or_equal_to: 1\n```\n\n## Example - Using jq for nested access\n```yaml\ntests:\n  - jq: \".data.users | length\"\n    data_type: Number\n    is_greater_than: 0\n```\n\n## Example - Cross-action reference\n```yaml\ntests:\n  - action: FetchUser\n    value: email\n    is_not_null: true\n```\n\n## Example - Allowed/disallowed values\n```yaml\ntests:\n  - value: status\n    contains:\n      allowed:\n        - \"active\"\n        - \"pending\"\n        - \"suspended\"\n      disallowed:\n        - \"deleted\"\n```\n\n## Example - Schema validation with deep nested assertions\n```yaml\ntests:\n  - verify_schema:\n      disallow_unknown_keys: true\n      structure:\n        email:\n          type: String\n          validate:\n            is_not_empty: true\n            regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n        age:\n          type: Number\n          validate:\n            is_greater_than: 0\n        settings:\n          theme:\n            type: String\n          notifications:\n            type: Boolean\n```",
       "type": "object",
       "properties": {
         "name": {
@@ -1142,13 +1142,13 @@
           "description": "Assert the value does not equal the expected value.\n\n## Example\n```yaml\nis_not_equal_to: \"deleted\"\n```\n**Not for null.** `is_not_equal_to: null` asserts nothing — see `is_equal_to`.\nUse `is_not_null: true`."
         },
         "is_less_than": {
-          "description": "Assert the value is less than the threshold. For arrays, compares the length;\nfor numbers, the numeric value. A **string** needs `data_type` to say which is\nmeant — `Number` for its value, `String` for its length — and is an error\nwithout one, because `\"3650\"` could be either.\n\n## Example\n```yaml\n# String: length < 256\nvalue: title\nis_less_than: 256\n\n# Number: value < 100\nvalue: percentage\nis_less_than: 100\n\n# Array: length < 10\nvalue: items\nis_less_than: 10\n```"
+          "description": "Assert the value is less than the threshold. For arrays, compares the length;\nfor numbers, the numeric value. A **string** needs `data_type` to say which is\nmeant — `Number` for its value, `String` for its length — and is an error\nwithout one, because `\"3650\"` could be either.\n\n## Example\n```yaml\n# String: fewer than 256 characters. The declaration is required --\n# without it the engine cannot tell this from a value comparison.\nvalue: title\ndata_type: String\nis_less_than: 256\n\n# Number: value under 100. Declare it too wherever the value can arrive\n# as text -- a query parameter always does.\nvalue: percentage\ndata_type: Number\nis_less_than: 100\n\n# Array: fewer than 10 elements. Arrays infer, so nothing to declare.\nvalue: items\nis_less_than: 10\n```"
         },
         "is_less_than_or_equal_to": {
           "description": "Assert the value is less than or equal to the threshold.\nSame type-dependent behaviour as `is_less_than`, including needing\n`data_type` for a string."
         },
         "is_greater_than": {
-          "description": "Assert the value is greater than the threshold.\nSame type-dependent behaviour as `is_less_than`, including needing\n`data_type` for a string.\n\n## Example\n```yaml\nvalue: age\nis_greater_than: 0\n```"
+          "description": "Assert the value is greater than the threshold.\nSame type-dependent behaviour as `is_less_than`, including needing\n`data_type` for a string.\n\n## Example\n```yaml\n# `age` can arrive as text from a query parameter, so say which reading\n# is meant. Undeclared, a string here is an error.\nvalue: age\ndata_type: Number\nis_greater_than: 0\n```"
         },
         "is_greater_than_or_equal_to": {
           "description": "Assert the value is greater than or equal to the threshold.\nSame type-dependent behaviour as `is_less_than`, including needing\n`data_type` for a string."
@@ -1326,7 +1326,7 @@
           "items": true
         },
         "is_between": {
-          "description": "Assert a number — or the size of an array or object — falls within an\ninclusive range.\n\n## Example\n```yaml\nvalue: age\nis_between: { min: 18, max: 120 }\n```",
+          "description": "Assert a number — or the size of an array or object — falls within an\ninclusive range.\n\n## Example\n```yaml\nvalue: age\ndata_type: Number\nis_between: { min: 18, max: 120 }\n```",
           "anyOf": [
             {
               "$ref": "#/$defs/BetweenRange"
@@ -3831,7 +3831,7 @@
       ]
     },
     "Assert": {
-      "description": "Assertion block for validating action output or interface results.\nGroups one or more tests with shared error handling and HTTP response codes.\n\n## Example - Action-level assertion\n```yaml\nactions:\n  - name: ValidateBody\n    input: a|body|\n    assert:\n      tests:\n        - value: email\n          is_not_empty: true\n          regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n        - value: age\n          is_greater_than: 0\n      error_message: \"Validation failed\"\n      http_code_on_error: 400\n```\n\n## Example - Interface-level assertion\n```yaml\ninterfaces:\n  getUser:\n    method: GET\n    actions:\n      - name: FetchUser\n        database: main\n        query: SELECT * FROM users WHERE id = $1\n        params:\n          - a|params::id|\n    assert:\n      tests:\n        - value: count()\n          is_equal_to: 1\n      error_message: \"User not found\"\n      http_code_on_error: 404\n      http_code_on_success: 200\n```",
+      "description": "Assertion block for validating action output or interface results.\nGroups one or more tests with shared error handling and HTTP response codes.\n\n## Example - Action-level assertion\n```yaml\nactions:\n  - name: ValidateBody\n    input: a|body|\n    assert:\n      tests:\n        - value: email\n          is_not_empty: true\n          regex: \"^[^@]+@[^@]+\\\\.[^@]+$\"\n        - value: age\n          data_type: Number\n          is_greater_than: 0\n      error_message: \"Validation failed\"\n      http_code_on_error: 400\n```\n\n## Example - Interface-level assertion\n```yaml\ninterfaces:\n  getUser:\n    method: GET\n    actions:\n      - name: FetchUser\n        database: main\n        query: SELECT * FROM users WHERE id = $1\n        params:\n          - a|params::id|\n    assert:\n      tests:\n        - value: count()\n          is_equal_to: 1\n      error_message: \"User not found\"\n      http_code_on_error: 404\n      http_code_on_success: 200\n```",
       "type": "object",
       "properties": {
         "success_message": {
@@ -3869,7 +3869,7 @@
           "maximum": 65535
         },
         "tests": {
-          "description": "List of test definitions to evaluate. All tests run concurrently;\nerrors from all tests are collected and returned together.\n\n## Example\n```yaml\ntests:\n  - value: username\n    is_not_empty: true\n    error_message: \"Username is required\"\n    http_code_on_error: 422\n  - value: password\n    is_not_empty: true\n    contains_upper: true\n    contains_number: true\n    is_greater_than: 7\n```",
+          "description": "List of test definitions to evaluate. All tests run concurrently;\nerrors from all tests are collected and returned together.\n\n## Example\n```yaml\ntests:\n  - value: username\n    is_not_empty: true\n    error_message: \"Username is required\"\n    http_code_on_error: 422\n  - value: password\n    is_not_empty: true\n    contains_upper: true\n    contains_number: true\n    data_type: String\n    is_greater_than: 7\n```",
           "type": [
             "array",
             "null"
