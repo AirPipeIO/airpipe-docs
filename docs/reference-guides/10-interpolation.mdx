@@ -53,17 +53,91 @@ action's output. Use `jq::` for richer extraction: `a|FetchUser::jq::.items[0].i
 
 ## Filters
 
-Chain with `->`. Common filters:
-
-`to_string`, `to_number`, `upper`, `lower`, `length`, `single_quote`,
-`double_quote`, `json_esc`, `json_escape`, `json_stringify` (alias `tojson`),
-`json_array`, `array_values`, `raw`, `some`, `map(...)`, `default(...)`,
-`wrap(...)`, `prefix(...)`, `suffix(...)`, `join(...)`, `access(...)`, `path(...)`.
+Chain with `->`. A filter takes the value on its left and hands the next one its
+result, so they read left to right.
 
 ```yaml
 # Uppercase a param, defaulting when absent
 url: "https://api.example.com/a|params::region->upper->default(US)|"
 ```
+
+### Text
+
+| Filter | Does |
+|---|---|
+| `upper` / `lower` | change case wholesale |
+| `snake_case` / `kebab_case` / `camel_case` / `pascal_case` | re-case an identifier — `Order Ref ID` → `order_ref_id` |
+| `title_case` / `sentence_case` | re-case prose |
+| `length` | characters in a string, elements in an array, keys in an object |
+| `prefix('x')` / `suffix('x')` / `wrap('x')` | add text around the value |
+| `hash` / `hash('sha256')` / `hash('sha256','base64')` | unkeyed digest — `sha1`, `sha256` (default), `sha384`, `sha512`; encoded `hex` (default), `base64` or `base64url`. For a **signature**, use the `hmac` transform instead: a digest proves nothing about origin |
+| `extract_email` / `extract_domain` / `extract_url` / `extract_url_path` | pull the first one out of free text; `null` when there is none, so pair with `default(...)` |
+| `encode_uri_component` (alias `url_encode`) | percent-encode a value going into a URL as ONE query value or path segment — `:` `/` and spaces escaped, the unreserved `-` `_` `.` `~` left alone so a provider comparing a `redirect_uri` literally still matches |
+| `encode_uri` | percent-encode a WHOLE URL, leaving `:` `/` `?` `#` `&` `=` intact so it stays a URL |
+| `decode_uri` / `decode_uri_component` (alias `url_decode`) | the inverse of each |
+| `strip_tags` / `strip_markdown` | HTML or Markdown reduced to the prose inside it. `strip_tags` parses the page the way a browser does, so `<script>` bodies and attribute text never leak into the result and block elements keep their words apart. For pulling out a *specific* element instead, use the `extract_with_css` transform |
+
+### Numbers
+
+| Filter | Does |
+|---|---|
+| `to_number` | parse the value as a number |
+| `number_format(2)` | fixed decimals, grouped thousands — `1,234,567.89` |
+| `number_format(2,'.',',')` | the same with the separators swapped — `1.234.567,89` |
+
+### Dates
+
+Every date filter accepts RFC 3339, RFC 2822, `YYYY-MM-DD[ HH:MM:SS]`, or an epoch
+number (10 digits seconds, 13 milliseconds), and emits RFC 3339 UTC — so they chain.
+
+| Filter | Does |
+|---|---|
+| `date_format('%Y-%m-%d')` | strftime rendering; a second argument names an IANA timezone |
+| `date_tz('Australia/Sydney')` | the same instant, written in another zone |
+| `date_add('7d')` / `date_sub('12h')` | shift by `90s`, `15m`, `12h`, `7d`, `2w` |
+| `start_of('day')` / `end_of('month')` | truncate to `second`, `minute`, `hour`, `day`, `week` (Monday), `month`, `quarter`, `year`. A second argument reads the calendar in a timezone — the start of the Sydney day is not the start of the UTC one |
+| `date_part('month')` | one field as a number: `year`, `quarter`, `month`, `day`, `hour`, `minute`, `second`, `millisecond`, `weekday` (Monday = 1), `week` (ISO), `day_of_year` |
+| `is_weekend` | Saturday or Sunday, in the given timezone |
+| `since('hours')` / `until('days')` | whole units elapsed since, or remaining until, the value — `milliseconds`, `seconds`, `minutes`, `hours`, `days`, `weeks` |
+| `epoch` / `days_since` | epoch seconds; whole days old |
+
+```yaml
+# Everything since the start of the month, in the customer's timezone
+query: |
+  SELECT * FROM orders
+   WHERE created_at >= 'a|timestamp:s->start_of('month','Australia/Sydney')|'
+```
+
+### Arrays and objects
+
+| Filter | Does |
+|---|---|
+| `unique` | drop duplicates, keeping first-seen order |
+| `sort` / `sort('field')` / `sort('field','desc')` | order an array; `sort('desc')` descends a list of scalars |
+| `reverse` | reverse the order |
+| `first` / `last` | one element, or `null` when the array is empty |
+| `chunk(100)` | split into runs of N — batching an API that takes 100 ids at a time |
+| `compact` | drop `null` and `""` entries from an array or object. `0` and `false` are kept: they are values somebody sent |
+| `join(', ')` | join into a string |
+| `array_values` / `json_array` | the elements without brackets / the array as JSON |
+| `map(...)` | template each element (`$item`, `$index`) |
+| `access('key')` / `path(...)` | read into an object |
+
+An array filter pointed at something that is not an array **fails the action**
+rather than passing the value through, so the mistake surfaces at the marker
+instead of in the output.
+
+### Rendering
+
+| Filter | Does |
+|---|---|
+| `to_string` | render as text |
+| `single_quote` / `double_quote` | quote for SQL / JSON |
+| `json_esc` / `json_escape` | escape for embedding inside a JSON string |
+| `json_stringify` (alias `tojson`) | serialise as a JSON document |
+| `raw` / `literal` | keep any `a\|...\|` in the value literal instead of resolving it |
+| `some` | `true` when the value is present and non-empty |
+| `default(...)` | substitute when the value is null or empty |
 
 ## Function wrappers
 

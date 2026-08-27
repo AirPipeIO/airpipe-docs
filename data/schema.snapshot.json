@@ -96,6 +96,17 @@
     "Interface": {
       "type": "object",
       "properties": {
+        "capture": {
+          "description": "How much of this interface's runs to record for execution history.\n\nAbsent means off, which is also the fleet-wide default: capture is opt-in per interface,\nthen bounded again by the org's tier, allowance and the node's rate buckets.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CaptureSetting"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "defaults": {
           "description": "Defaults handed to every action in this interface (see [`ActionDefaults`]). An action\nthat sets the field itself always wins.",
           "anyOf": [
@@ -351,8 +362,68 @@
       },
       "additionalProperties": false
     },
+    "CaptureSetting": {
+      "description": "`capture:` on an interface — either a mode, or a mode that switches itself off.\n\nThe window form is what keeps the fleet's resting state at \"capture off\" no matter how many\npeople click the button. Permanent capture stays a deliberate, tier-gated choice rather than\nthe easy path.\n\n```yaml\ncapture: errors                 # plain mode\n\ncapture:                        # self-expiring window\n  mode: all\n  for_minutes: 30\n  for_runs: 500                 # whichever comes first\n```",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CaptureMode"
+        },
+        {
+          "$ref": "#/$defs/CaptureWindow"
+        }
+      ]
+    },
+    "CaptureMode": {
+      "description": "How much of a run to record.",
+      "oneOf": [
+        {
+          "description": "Record nothing. The fleet-wide default.",
+          "type": "string",
+          "const": "off"
+        },
+        {
+          "description": "Record failed runs only.\n\nThe mode worth defaulting to when capture is wanted at all: volume then tracks the ERROR\nRATE rather than throughput, so a healthy system at a million runs an hour writes almost\nnothing, and generating capture load requires generating failures — which the request\nrate limiter already governs. Successes are already counted in metrics; a stored row adds\nnothing a metric does not.",
+          "type": "string",
+          "const": "errors"
+        },
+        {
+          "description": "Record successful runs too. The expensive mode, and the one tiers actually buy.",
+          "type": "string",
+          "const": "all"
+        }
+      ]
+    },
+    "CaptureWindow": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/CaptureMode"
+        },
+        "for_minutes": {
+          "description": "Switch off this many minutes after the window opens.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "for_runs": {
+          "description": "Switch off after this many runs.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ]
+    },
     "ActionDefaults": {
-      "description": "Air Pipe interface definition. An interface represents an endpoint that can be\ninvoked (via HTTP, schedule, etc.) and executes a chain of actions.\n\n## Example\n```yaml\nmyApiEndpoint:              # Interface name (can be used as route path)\n  summary: Get users        # Short description for documentation\n  description: |            # Long description (optional)\n    Retrieves a list of all\n    users in the organization.\n  method: POST              # HTTP method (for HTTP interfaces)\n  route: /users             # URL path (optional, defaults to interface name)\n  tags:                     # OpenAPI tags for grouping\n    - Users\n    - API\n  output: http              # Output type: http\n\n  templates:                # Interface-specific response templates\n    success_template: |\n      { \"status\": \"ok\" }\n\n  actions:                  # Ordered list of actions to execute\n    - name: ValidateJwt     # Action name (used for references)\n        input: a|headers    # Input source (a|headers, a|body, etc.)\n      - name: FetchData\n        database: main      # Database connection to use, assuming global is defined\n        query: SELECT * FROM users WHERE org_uuid = $1\n        params:\n          - a|CheckBody::organization_uuid|\n\n  assert:                   # Final assertion against action results\n    tests:\n      - value: count()\n        is_equal_to: 1\n\n  response:                 # Response configuration\n    http_code_on_error: 400 # HTTP status code on error\n    http_code_inherit_error: [FetchData]  # Inherit error code from action\n```\nField defaults an interface hands to every action it contains.\n\nThe outcome of an action is DECLARED (`expect_status` / `expect_exit`), never inferred from\nan assert. Declaring it per action is right for a pipeline where each call has its own\ncontract, and tedious for an interface where they share one — a test runner asserting on the\nstatus of thirty routes under test, a health-check fan-out that records whatever it gets. So\nthe interface can say it once and each action may still override it.\n\nResolved at config load (see `IntegrationConfig::compile_expressions`), so the interpreter\nand the compiled fast path both see a plain action-level value and the request path pays\nnothing for it.\n\n## Example\n```yaml\ninterfaces:\n  tests/all:\n    defaults:\n      expect_status: any        # the statuses ARE what this interface tests\n    actions: [...]\n```",
       "type": "object",
       "properties": {
         "expect_status": {
@@ -492,6 +563,13 @@
     "Action": {
       "type": "object",
       "properties": {
+        "replayable": {
+          "description": "Whether a captured run containing this action may be replayed.\n\nReplay re-runs an action for real, so an action with a side effect the world can see —\ncharging a card, sending an email, publishing to a topic — must say so. Any action\nmarked `replayable: false` makes the whole run **inspect-only**, and the run records\nwhich action did it so the answer is \"ChargeCard cannot be replayed\" rather than a\ndisabled button with no explanation.\n\nDeclared rather than inferred, in the same spirit as `expect_status`: guessing which\nactions are safe to repeat is exactly the judgement that should not be automatic. n8n\nsimply re-runs, and it bites people.\n\n## Example\n```yaml\n- name: ChargeCard\n  replayable: false\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "timeout": {
           "description": "Maximum execution time for this action in milliseconds.\n\n## Example\n```yaml\ntimeout: 5000    # 5 seconds\n```"
         },
@@ -786,6 +864,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/MqttPublish"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agent": {
+          "description": "Run a tool-calling AI agent loop: ask a model, run whatever tools it asks for,\nfeed the results back, repeat until it answers or the iteration budget runs out.\n\nThe tools are **this config's own interfaces**. Their JSON Schemas come from the\nasserts those interfaces already declare, so a tool is documented, validated and\ncallable over HTTP and MCP by the same definition — there is no second place to\ndescribe it, and nothing to keep in step.\n\n## Example\n```yaml\n- name: Assistant\n  agent:\n    url: https://api.openai.com/v1/chat/completions\n    model: gpt-4o-mini\n    headers:\n      authorization: \"Bearer a|ap_var::OPENAI_API_KEY|\"\n    system: \"You help staff answer order questions.\"\n    input: a|body::messages|\n    tools: [orders/search, orders/refund]\n    max_iterations: 6\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentAction"
             },
             {
               "type": "null"
@@ -1462,6 +1551,17 @@
             }
           ]
         },
+        "is_valid_totp": {
+          "description": "Assert the value is a currently-valid RFC 6238 time-based one-time password for the\nshared secret — the second factor an authenticator app shows.\n\nFails closed: a target that is not a string (an absent header, a null field) is a\nfailure, never a pass.\n\n## Example\n```yaml\n- value: body.code\n  is_valid_totp:\n    secret: a|secret::totp::user_seed|\n    skew: 1        # also accept the code from one step either side\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IsValidTotpConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "is_authorization": {
           "description": "Parse an HTTP Authorization header value. Supports `Basic` (decodes\nbase64 username:password) and `Bearer` (extracts token). Decoded\ndata is stored in `ok_data` keyed by scheme name.\n\n## Example\n```yaml\nvalue: authorization\nis_authorization: true\n```",
           "type": [
@@ -1692,7 +1792,6 @@
       "additionalProperties": false
     },
     "IsValidHmacConfig": {
-      "description": "Configuration for the `is_valid_hmac` assertion.",
       "type": "object",
       "properties": {
         "secret": {
@@ -1729,6 +1828,61 @@
       "required": [
         "secret",
         "body"
+      ]
+    },
+    "IsValidTotpConfig": {
+      "description": "Configuration for the `is_valid_hmac` assertion.",
+      "type": "object",
+      "properties": {
+        "secret": {
+          "description": "The shared secret, base32 by default — the form an authenticator app hands out.",
+          "type": "string"
+        },
+        "encoding": {
+          "description": "How `secret` is written: `base32` (default), `hex`, or `ascii`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "digits": {
+          "description": "Code length, 6 (default) to 10.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "period": {
+          "description": "Seconds per step. Default 30.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "algorithm": {
+          "description": "`sha1` (default — what authenticator apps implement), `sha256`, `sha512`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "skew": {
+          "description": "How many steps either side of now to also accept. Default 1, which absorbs the\nclock drift and human latency that make a strictly-current-step check reject codes\nthat were correct when they were typed. Each extra step widens the window a stolen\ncode stays usable in, so keep it small.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "secret"
       ]
     },
     "CompareValue": {
@@ -2185,12 +2339,21 @@
       "additionalProperties": false
     },
     "DataType": {
-      "type": "string",
-      "enum": [
-        "text",
-        "json",
-        "csv",
-        "xml"
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "text",
+            "json",
+            "csv",
+            "xml"
+          ]
+        },
+        {
+          "description": "Newline-delimited JSON — one complete JSON document per line.\n\nIts own variant rather than a fallback when JSON parsing fails, because guessing would\nmean a genuinely truncated document silently became \"the lines that happened to parse\".\nThe server says which it is, so we believe it.",
+          "type": "string",
+          "const": "ndjson"
+        }
       ]
     },
     "CommandRegex": {
@@ -3785,6 +3948,171 @@
         "topics"
       ]
     },
+    "AgentAction": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "An OpenAI-compatible chat-completions endpoint. Anything speaking that shape works:\nOpenAI, Azure OpenAI, Groq, Together, vLLM, Ollama, or a gateway of your own.",
+          "type": "string"
+        },
+        "model": {
+          "description": "Model id, passed through verbatim.",
+          "type": "string"
+        },
+        "headers": {
+          "description": "Headers for the model call — where the API key goes.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "system": {
+          "description": "System prompt, prepended as the first message.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "input": {
+          "description": "The conversation. Either a plain string (becomes one user message) or an array of\n`{role, content}` objects — the shape a chat UI already holds."
+        },
+        "tools": {
+          "description": "Interfaces in THIS config to offer as tools, by name.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "mcp": {
+          "description": "Remote MCP servers to draw tools from, in addition to `tools`.\n\nTheir tools are discovered at run time via `tools/list`, so the model is offered\nwhatever the server currently publishes — no second copy of the schema to maintain\nhere. A name that collides with another tool is refused rather than shadowed.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/AgentMcpServer"
+          }
+        },
+        "max_iterations": {
+          "description": "How many model round trips the loop may take. Default 4, hard ceiling 12.\n\nThis is the bound that makes an agent safe to expose: each iteration is a model\ncall plus every tool it asked for, and a model that keeps calling tools would\notherwise run until something else stopped it. Reaching the budget is reported,\nnever silent.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "memory": {
+          "description": "Remember this conversation across requests.\n\nWithout it an agent starts every request with an empty history: it cannot answer \"and\nwhat about tomorrow?\" because it never saw yesterday's question. With it, the last\nexchanges for a session are replayed into the next call.\n\n## Example\n```yaml\nmemory:\n  key: a|body::session_id|   # what makes one conversation distinct from another\n  window: 10                 # how many past messages to replay\n  ttl: 24h                   # how long a silent conversation survives\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentMemory"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "temperature": {
+          "description": "Sampling temperature, passed through when set.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "timeout": {
+          "description": "Seconds to allow each model call. Default 60.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "model"
+      ]
+    },
+    "AgentMcpServer": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "The server's JSON-RPC endpoint.",
+          "type": "string"
+        },
+        "headers": {
+          "description": "Headers for every call to it — where its credential goes.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "only": {
+          "description": "Offer only these of the server's tools. Absent means all of them.\n\nWorth setting deliberately: a remote server decides what it publishes, so without a\nlist the model's abilities change when somebody else edits their config.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ]
+    },
+    "AgentMemory": {
+      "description": "Air Pipe interface definition. An interface represents an endpoint that can be\ninvoked (via HTTP, schedule, etc.) and executes a chain of actions.\n\n## Example\n```yaml\nmyApiEndpoint:              # Interface name (can be used as route path)\n  summary: Get users        # Short description for documentation\n  description: |            # Long description (optional)\n    Retrieves a list of all\n    users in the organization.\n  method: POST              # HTTP method (for HTTP interfaces)\n  route: /users             # URL path (optional, defaults to interface name)\n  tags:                     # OpenAPI tags for grouping\n    - Users\n    - API\n  output: http              # Output type: http\n\n  templates:                # Interface-specific response templates\n    success_template: |\n      { \"status\": \"ok\" }\n\n  actions:                  # Ordered list of actions to execute\n    - name: ValidateJwt     # Action name (used for references)\n        input: a|headers    # Input source (a|headers, a|body, etc.)\n      - name: FetchData\n        database: main      # Database connection to use, assuming global is defined\n        query: SELECT * FROM users WHERE org_uuid = $1\n        params:\n          - a|CheckBody::organization_uuid|\n\n  assert:                   # Final assertion against action results\n    tests:\n      - value: count()\n        is_equal_to: 1\n\n  response:                 # Response configuration\n    http_code_on_error: 400 # HTTP status code on error\n    http_code_inherit_error: [FetchData]  # Inherit error code from action\n```\nField defaults an interface hands to every action it contains.\n\nThe outcome of an action is DECLARED (`expect_status` / `expect_exit`), never inferred from\nan assert. Declaring it per action is right for a pipeline where each call has its own\ncontract, and tedious for an interface where they share one — a test runner asserting on the\nstatus of thirty routes under test, a health-check fan-out that records whatever it gets. So\nthe interface can say it once and each action may still override it.\n\nResolved at config load (see `IntegrationConfig::compile_expressions`), so the interpreter\nand the compiled fast path both see a plain action-level value and the request path pays\nnothing for it.\n\n## Example\n```yaml\ninterfaces:\n  tests/all:\n    defaults:\n      expect_status: any        # the statuses ARE what this interface tests\n    actions: [...]\n```\nConversation memory for an `agent:` action.",
+      "type": "object",
+      "properties": {
+        "key": {
+          "description": "What makes one conversation distinct from another — a session id, a chat id, a user id.\n\nUsually a marker: `a|body::session_id|`. There is no default on purpose. A shared\nconstant would put every caller's conversation in one history, which leaks one user's\nmessages into another user's prompt.",
+          "type": "string"
+        },
+        "window": {
+          "description": "How many stored messages to replay. Defaults to 10, capped at 50.\n\nEvery replayed message is sent to the model on every call, so a larger window means a\nlarger prompt. Whether that fits — and what it costs — depends on the model this agent\nis pointed at, which is yours to choose.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "ttl": {
+          "description": "How long a conversation survives without activity, e.g. `24h`, `7d`. Defaults to 24h.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "namespace": {
+          "description": "State namespace to store under. Defaults to the config name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key"
+      ]
+    },
     "RunCondition": {
       "anyOf": [
         {
@@ -4009,6 +4337,72 @@
           "anyOf": [
             {
               "$ref": "#/$defs/ExtractWithRegex"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extract_with_css": {
+          "description": "Extract values from an HTML document with a CSS selector — the counterpart to\n`extract_with_jq` for pages instead of JSON. Point `value` at the HTML string\n(usually an http action's body) and the result lands under `key`.\n\n## Example\n```yaml\nextract_with_css:\n  value: \"\"                      # the whole action data is the HTML string\n  selector: \"article h2.title\"\n  key: titles\n  all: true                      # every match, not just the first\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExtractWithCss"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "compress": {
+          "description": "Compress a value with gzip/zlib/deflate and store it as text.\n\nCPU-bound, so on AirPipe-hosted infrastructure it is gated by the `compression`\nentitlement per organization; a self-hosted agent spends its own CPU and is on by\ndefault. Both are additionally bounded by `max_compress_bytes` (8 MiB default).\n\n## Example\n```yaml\ncompress:\n  value: rows          # what to compress (\"\" = the whole action data)\n  key: packed\n  algorithm: gzip      # gzip (default) | zlib | deflate\n  encoding: base64     # base64 (default) | base64url | hex\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformCompress"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decompress": {
+          "description": "The inverse of `compress`. Same entitlement and the same byte bound, which here\nbounds the OUTPUT too — a small archive that expands past the limit is refused\nrather than expanded.\n\n## Example\n```yaml\ndecompress:\n  value: packed\n  key: rows\n  algorithm: gzip\n  json: true           # parse the result as JSON instead of keeping it as text\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformDecompress"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "totp": {
+          "description": "Generate the current RFC 6238 one-time password for a shared secret — for calling an\nupstream API that demands a second factor. The verifying counterpart is the\n`is_valid_totp` assertion.\n\n## Example\n```yaml\ntotp:\n  secret: a|secret::vendor::totp_seed|\n  key: otp\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformTotp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parse_xlsx": {
+          "description": "Read a spreadsheet (`.xlsx`/`.xls`/`.ods`) that arrived as base64 into rows.\n\nCPU- and memory-bound on a file somebody else produced, so on AirPipe-hosted\ninfrastructure it is gated by the `document_parsing` entitlement and bounded by\n`max_document_bytes` (16 MiB default). Self-hosted is on by default.\n\n## Example\n```yaml\nparse_xlsx:\n  value: file          # base64 of the workbook\n  key: rows\n  sheet: Orders        # optional — the first sheet otherwise\n  limit: 5000          # optional row cap (default 10000)\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformParseXlsx"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parse_pdf": {
+          "description": "Extract the text of a PDF that arrived as base64. Same entitlement and byte bound\nas `parse_xlsx`.\n\n## Example\n```yaml\nparse_pdf:\n  value: file\n  key: text\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformParsePdf"
             },
             {
               "type": "null"
@@ -4396,6 +4790,253 @@
         "value",
         "expr",
         "keys"
+      ]
+    },
+    "ExtractWithCss": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "JSON path to the HTML string within the action's data. An empty string means the\ndata IS the HTML — which is what an http action fetching a page gives you.",
+          "type": "string"
+        },
+        "selector": {
+          "description": "A CSS selector, the same grammar a browser takes: `article h2.title`,\n`a[href^=\"/docs\"]`, `tr td:nth-child(2)`.",
+          "type": "string"
+        },
+        "key": {
+          "description": "Key to write the result under.",
+          "type": "string"
+        },
+        "attribute": {
+          "description": "Take this attribute from each matched element instead of its text. An element that\nmatches but lacks the attribute contributes `null`, so an `all: true` result stays\nindex-aligned with the elements on the page.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "html": {
+          "description": "Take each matched element's inner HTML instead of its text. Mutually exclusive with\n`attribute`.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "all": {
+          "description": "Every match, as an array. Without it, the first match alone — or `null` when the\nselector matched nothing.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "selector",
+        "key"
+      ]
+    },
+    "TransformCompress": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "JSON path to the value to compress. An empty string means the whole action data.\nA non-string value is compressed as its compact JSON.",
+          "type": "string"
+        },
+        "key": {
+          "description": "Key to write the compressed text under.",
+          "type": "string"
+        },
+        "algorithm": {
+          "description": "`gzip` (default), `zlib`, or `deflate` (raw, no wrapper).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encoding": {
+          "description": "How to render the compressed bytes as text: `base64` (default), `base64url`, `hex`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "level": {
+          "description": "0 (store) to 9 (smallest). Default 6 — zlib's own default, and the point past which\nmore CPU stops buying much.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "key"
+      ]
+    },
+    "TransformDecompress": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "JSON path to the compressed text.",
+          "type": "string"
+        },
+        "key": {
+          "description": "Key to write the decompressed value under.",
+          "type": "string"
+        },
+        "algorithm": {
+          "description": "`gzip` (default), `zlib`, or `deflate`. Must match how it was compressed.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encoding": {
+          "description": "How the text is encoded: `base64` (default), `base64url`, `hex`. The two base64\nalphabets are accepted interchangeably, so a value that lost its padding crossing a\nURL still decodes.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "json": {
+          "description": "Parse the result as JSON instead of keeping it as text.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "key"
+      ]
+    },
+    "TransformTotp": {
+      "type": "object",
+      "properties": {
+        "secret": {
+          "description": "The shared secret, base32 by default.",
+          "type": "string"
+        },
+        "key": {
+          "description": "Key to write the generated code under.",
+          "type": "string"
+        },
+        "encoding": {
+          "description": "How `secret` is written: `base32` (default), `hex`, or `ascii`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "digits": {
+          "description": "Code length, 6 (default) to 10.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "period": {
+          "description": "Seconds per step. Default 30.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "algorithm": {
+          "description": "`sha1` (default), `sha256`, `sha512`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "secret",
+        "key"
+      ]
+    },
+    "TransformParseXlsx": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "JSON path to the base64 of the workbook. An empty string means the whole action data.",
+          "type": "string"
+        },
+        "key": {
+          "description": "Key to write the rows under.",
+          "type": "string"
+        },
+        "sheet": {
+          "description": "Sheet name. The first sheet when omitted.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "headers": {
+          "description": "Treat the first row as column names, so each later row becomes an object. Default\ntrue. Set false when the first row is data and every row should be an array.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "limit": {
+          "description": "Rows to read. Default 10000 — a sheet can hold a million, and returning all of them\nas JSON is never what a caller wanted.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
+        },
+        "encoding": {
+          "description": "How the file is encoded: `base64` (default) or `base64url`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "key"
+      ]
+    },
+    "TransformParsePdf": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "JSON path to the base64 of the PDF. An empty string means the whole action data.",
+          "type": "string"
+        },
+        "key": {
+          "description": "Key to write the extracted text under.",
+          "type": "string"
+        },
+        "encoding": {
+          "description": "How the file is encoded: `base64` (default) or `base64url`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "key"
       ]
     },
     "AddJWT": {
