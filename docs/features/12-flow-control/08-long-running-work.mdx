@@ -88,6 +88,81 @@ as an error instead of an empty result.
 If the upstream reports failure as a status of its own (`failed`, `errored`), add a test for it
 so a dead job stops the poll immediately instead of retrying to the ceiling.
 
+## Waiting until a specific time
+
+A duration is what `delay` takes, but a deadline is often what you have. `until(seconds)` is
+the gap between now and a datetime, and the trailing `s` makes it a duration:
+
+```yaml
+- name: HoldUntilDue
+  delay: "a|body::due_at->until(seconds)|s"
+```
+
+Same behaviour as any other long wait — parked if it is past the in-process window, resumed
+when it comes due.
+
+## Waiting for a person
+
+Sometimes the thing you are waiting for is not a time at all. An approval, a signature, a
+third party's webhook: you cannot predict when it arrives, and a `delay` long enough to cover
+it would be a guess in both directions.
+
+`wait_for_callback` parks the run until someone calls in:
+
+```yaml
+- name: Ticket
+  json_output: '{"token": "a|uuid|"}'
+
+- name: AskApprover
+  run_when_succeeded: [Ticket]
+  email:
+    to: approvals@example.com
+    subject: Approve this refund
+    body: |
+      Approve: https://api.example.com/_ap/resume/a|org_uuid|/a|Ticket::token|
+
+- name: Approval
+  run_when_succeeded: [AskApprover]
+  wait_for_callback:
+    token: a|Ticket::token|
+    timeout: "7d"
+
+- name: Refund
+  run_when_succeeded: [Approval]
+  http:
+    url: https://api.example.com/refunds
+    method: POST
+    body: '{"order": "a|body::order_id|", "approved_by": "a|Approval::approved_by|"}'
+```
+
+`POST /_ap/resume/<org_uuid>/<token>` resumes the run, and **whatever was posted becomes the
+waiting action's output** — so `a|Approval::approved_by|` above reads a field from the
+approver's own request body.
+
+### The token is the credential
+
+You mint it, because you are the one who has to put it in a link. Use `a|uuid|`, not something
+predictable like an order number: anyone holding the token can resume the run, exactly as with
+a password-reset link.
+
+The organisation is in the URL and is not a secret — it already appears in every managed
+route. It is there so a token guessed in one organisation cannot reach a run in another, which
+matters because every managed tenant shares one table of parked runs. `a|org_uuid|` resolves
+it, so a config can build its own link.
+
+An unknown token, an already-used one, an expired one, and one belonging to another
+organisation all answer the same bare `404`. Telling them apart would tell someone guessing
+which tokens exist.
+
+### A deadline that passes is a failure
+
+`timeout` is required and cannot be unbounded — a wait nobody ever answers would hold a row
+forever. When it expires the waiting action **fails**, so everything gated on it with
+`run_when_succeeded` does not run.
+
+That is deliberate. If a timed-out approval completed quietly, the refund above would go out
+unapproved.
+
 ## What it costs
 
 | | held open | survives a restart | returns when ready |
@@ -95,6 +170,7 @@ so a dead job stops the poll immediately instead of retrying to the ceiling.
 | `delay` under the window | yes, briefly | no | n/a — fixed wait |
 | `delay` over the window | no | yes | no — wakes once |
 | `retry` + `assert` | only until the window | yes, once suspended | yes |
+| `wait_for_callback` | no | yes | yes — the moment someone calls |
 
 A resume is picked up on a 30-second tick, so it can be up to half a minute late. That is
 immaterial for hours and days; it is not a precise timer.
@@ -107,6 +183,20 @@ Suspending needs somewhere durable to write.
 - **Self-hosted** — set `AIRPIPE__DATABASE_URL`. The scheduler already uses this database, and
   the suspended runs live alongside its own tables.
 
+### How many runs may wait at once
+
+A parked run is a row now and a whole interface execution later, so the number one
+organisation may hold is capped.
+
+- **Managed** — `max_deferred_runs`, 1,000 by default, raisable for your organisation without
+  a deploy. Ask if your workload genuinely needs more.
+- **Self-hosted** — `AIRPIPE__MAX_DEFERRED_RUNS`, 100,000 by default. The database is yours;
+  this is a runaway guard, not a commercial limit.
+
+At the ceiling a new suspension is **refused**, with an error saying so. It is not queued
+silently — a caller told `202` for a run that was never stored would wait for something that
+is never going to happen.
+
 Without it a long `delay` is **refused**, with an error saying so. It is deliberately not
 shortened to fit the in-process window: that would continue the run at the wrong time and
 report nothing unusual.
@@ -116,9 +206,17 @@ report nothing unusual.
 In `ap_deferred_runs`, one row per parked run, which you can inspect like any other table:
 
 ```sql
+-- what is waiting, and when it comes due
 SELECT run_uuid, config_name, interface_name, resume_at, attempts
 FROM ap_deferred_runs
 ORDER BY resume_at;
+
+-- how close an organisation is to its ceiling
+SELECT org_uuid, count(*) FROM ap_deferred_runs GROUP BY org_uuid ORDER BY 2 DESC;
+
+-- runs waiting on a person rather than a clock
+SELECT run_uuid, config_name, resume_at AS deadline
+FROM ap_deferred_runs WHERE callback_token IS NOT NULL;
 ```
 
 Rows are claimed with `FOR UPDATE SKIP LOCKED`, so several engines share one queue without two
