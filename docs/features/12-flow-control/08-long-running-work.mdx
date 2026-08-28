@@ -223,6 +223,19 @@ Rows are claimed with `FOR UPDATE SKIP LOCKED`, so several engines share one que
 of them resuming the same run. A claim defers the row rather than deleting it, so an engine
 that dies mid-resume returns the work instead of losing it.
 
+### Seeing them on managed Air Pipe
+
+A managed organisation has no database of its own to query, so the same two answers are a
+screen instead. **Waiting Runs**, under the organisation menu in the app, lists what is
+parked — config, interface, when it comes due, how many attempts it has already made — and
+cancels a run that should not resume. The list is scoped to your organisation and paginated
+at 100 a page.
+
+Both are gated by the role scopes you already use for executions: `execution:list` to see the
+list, `execution:delete` to cancel. Cancelling deletes the parked run, so the rest of that
+workflow never happens and its callback token stops working. It does not undo the actions
+that already ran before the run parked — there is nothing to roll back to.
+
 ## See also
 
 - The [Async Job Polling](/docs/examples/marketplace/async-job-polling) pack — the whole pattern, with a fake job API

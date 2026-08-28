@@ -1,0 +1,147 @@
+---
+sidebar_position: 2
+slug: /features/vector-search
+displayed_sidebar: featuresSidebar
+---
+
+# Vector search
+
+Retrieval-augmented generation needs three things: something that turns text into a vector,
+somewhere to keep the vectors, and a query that finds the nearest ones. Air Pipe has no
+dedicated vector action, and does not need one — an embedding is an HTTP call, and a vector
+is a column. Both are things the engine already does.
+
+That matters more than it sounds. There is no vector-store abstraction to learn, no separate
+service to run, and nothing that has to be kept in sync with your database. Your embeddings
+live in the same Postgres transaction as the rows they describe.
+
+## Postgres with pgvector
+
+Enable the extension and give the table a `vector` column sized to your model's output
+(1536 for OpenAI's `text-embedding-ada-002`):
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE rag_documents (
+  id        BIGSERIAL PRIMARY KEY,
+  title     TEXT NOT NULL,
+  content   TEXT NOT NULL,
+  embedding vector(1536)
+);
+```
+
+Store one by passing the embedding as an ordinary JSON array of numbers and casting the
+parameter:
+
+```yaml
+- name: StoreDoc
+  database: main
+  query: |
+    INSERT INTO rag_documents (title, content, embedding)
+    VALUES ($1, $2, $3::vector)
+  params:
+    - a|body::title|
+    - a|body::content|
+    - a|EmbedDoc::body.data[0].embedding|
+```
+
+Search with pgvector's distance operators — `<=>` is cosine, `<->` is L2. Subtract cosine
+distance from 1 if you want a similarity score:
+
+```yaml
+- name: RetrieveContext
+  database: main
+  query: |
+    SELECT title, content, 1 - (embedding <=> $1::vector) AS similarity
+    FROM rag_documents
+    ORDER BY embedding <=> $1::vector
+    LIMIT 5
+  params:
+    - a|EmbedQuestion::body.data[0].embedding|
+```
+
+The cast is not decoration. `vector` is an extension type with a dynamic OID, and the
+Postgres driver binds parameters in binary, so the engine matches the type by name and
+encodes your JSON array into pgvector's binary wire format. Reading a `vector` column back
+reverses it, so a selected embedding arrives as a JSON array of numbers. Without `::vector`
+the parameter is a JSON value and the operator has nothing to compare.
+
+### Indexes
+
+Exact search is a sequential scan. That is correct, and fast enough into the tens of
+thousands of rows — start there. When you do add an approximate index, know what you are
+trading:
+
+```sql
+CREATE INDEX ON rag_documents USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+```
+
+An `ivfflat` index searches `probes` lists out of `lists` and returns whatever it finds
+there. With a small corpus and the default `probes = 1` it can return *nothing* while the
+rows sit in the table — the classic "my RAG demo finds no sources" bug. Raise `probes` for
+recall, or leave the index off until the corpus justifies it.
+
+## MongoDB Atlas
+
+Atlas does the same job through an aggregation stage, against an index you define in Atlas
+rather than in the query:
+
+```yaml
+- name: RetrieveContext
+  database: mongo
+  document_operation:
+    database: ragdb
+    collection: rag_documents
+    operation: aggregate
+    pipeline: |
+      [
+        {
+          "$vectorSearch": {
+            "index": "vector_index",
+            "path": "embedding",
+            "queryVector": a|EmbedQuestion::body.data[0].embedding|,
+            "numCandidates": 100,
+            "limit": 5
+          }
+        },
+        { "$project": { "_id": 0, "content": 1, "score": { "$meta": "vectorSearchScore" } } }
+      ]
+```
+
+The query embedding is a bare marker inside the JSON, not a quoted string. It resolves to a
+float array in place, so the pipeline Atlas receives is ordinary JSON — there is no parameter
+binding step and nothing to cast.
+
+## Where the embedding comes from
+
+Anywhere that speaks HTTP. There is no provider list to be on:
+
+```yaml
+- name: EmbedQuestion
+  http:
+    url: https://api.openai.com/v1/embeddings
+    method: POST
+    headers:
+      Authorization: Bearer a|ap_var::OPENAI_API_KEY|
+    body:
+      model: text-embedding-ada-002
+      input: a|body::question|
+```
+
+Use the same model to store and to search. Embeddings from different models are not
+comparable, and the failure is silent — you get results, they are just meaningless.
+
+## Working examples
+
+Two marketplace packs are the whole pattern end to end, including ingestion, retrieval and
+the answer step:
+
+- [RAG Chatbot](/docs/examples/marketplace/rag-chatbot) — Postgres and pgvector, self-contained.
+- [MongoDB Atlas Vector RAG](/docs/examples/marketplace/mongodb-atlas-vector-search-rag) — the
+  same shape on Atlas.
+
+## See also
+
+- [Databases](/docs/features/databases) — connections, parameters and drivers.
+- [Build with AI](/docs/features/build-with-ai) — generating configs, and Air Pipe as an MCP server.
