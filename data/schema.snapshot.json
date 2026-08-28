@@ -824,7 +824,18 @@
           ]
         },
         "delay": {
-          "description": "Pause for a fixed duration before continuing — pacing / throttling between steps.\nAccepts a duration string (`\"2s\"`, `\"500ms\"`, `\"1m\"`) or a number of milliseconds.\nBounded by `AIRPIPE__MAX_DELAY_SECS` (default 300s); longer values are rejected.\nThis is an in-process wait, not a durable long-running delay.\n\n## Example\n```yaml\ndelay: \"2s\"\n```"
+          "description": "Pause before continuing. Accepts a duration string (`\"2s\"`, `\"500ms\"`, `\"1m\"`, `\"1d\"`)\nor a number of milliseconds.\n\nShort and long delays behave differently, and the difference matters. Up to\n`AIRPIPE__MAX_DELAY_SECS` (default 300s) the run simply sleeps — pacing between steps.\nPast that a sleep would be the wrong instrument, so the run is **suspended** instead:\nwhat has completed is written to a durable store, the caller is answered `202` with a\nrun id, and the scheduler resumes the rest when it comes due. Nothing is held open and\na restart does not lose the run.\n\nSuspending needs somewhere to write. Managed has one; self-hosted needs\n`AIRPIPE__DATABASE_URL`. Without it a long delay is **refused** rather than quietly\nshortened into a sleep a restart would drop.\n\nA delay wakes once, at the time you asked for. If you are waiting on work that might\nnot be finished by then, poll for it instead — an `assert` that fails until the job\nreports done, plus a `retry`, which suspends between attempts in the same way.\n\n## Example\n```yaml\n# sleeps in process\ndelay: \"2s\"\n\n# suspends the run and resumes it tomorrow\ndelay: \"1d\"\n```"
+        },
+        "wait_for_callback": {
+          "description": "Suspend the run until something outside calls back — an approval, a signature, a\nthird-party webhook saying the job is done.\n\nUnlike `delay`, which waits for a time you chose, this waits for an event you cannot\npredict. The run is parked in the durable store and the caller is answered `202`; when\n`POST /_ap/resume/<token>` arrives the run continues from the next action, and whatever\nwas posted becomes this action's output.\n\nThe token is yours to choose, and must be unguessable — anyone holding it can resume\nthe run. Mint one with `a|uuid|` in an earlier action and build the link from it:\n\n## Example\n```yaml\n- name: Ticket\n  json_output: '{\"token\": \"a|uuid|\"}'\n\n- name: AskApprover\n  email:\n    to: approvals@example.com\n    subject: Approve this refund\n    body: 'Approve: https://api.example.com/_ap/resume/a|Ticket::token|'\n\n- name: Approval\n  wait_for_callback:\n    token: a|Ticket::token|\n    timeout: \"7d\"\n\n- name: Refund\n  run_when_succeeded: [Approval]\n  http:\n    url: https://api.example.com/refunds\n    body: '{\"approved_by\": \"a|Approval::approver|\"}'\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WaitForCallback"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "email": {
           "description": "Email sending action.\n\n## Example\n```yaml\nemail:\n  from: noreply@example.com\n  to: user@example.com\n  subject: Hello\n  text: Body text\n```",
@@ -2077,6 +2088,7 @@
       ]
     },
     "Retry": {
+      "description": "Try an action again when it fails.\n\nRetry is also how you **poll**. An upstream job that is still running answers `200` with a\nstatus that is not \"done\" — a success as far as HTTP is concerned — so pair `retry` with an\n`assert` that fails until the job reports finished, and the action repeats until the answer\nchanges rather than only after an error.\n\nA poll is a series of short waits whose total is long, so once they add up past\n`AIRPIPE__MAX_DELAY_SECS` the run is **suspended** between attempts instead of sleeping\nthrough them: parked in the durable store, the request closed, resumed by the scheduler for\nthe next attempt. A job that finishes quickly never touches the store; one that does not is\npolled for as long as `attempts × delay` allows without holding anything open. The budget\nis spent across resumes, not restarted by them, so a job that never finishes still stops.\n\nSuspending needs a durable store — managed has one, self-hosted needs\n`AIRPIPE__DATABASE_URL`. Without one the waits simply happen in process as before.\n\n## Example\n```yaml\n# poll a render every minute for up to 40 minutes, suspending between attempts\nassert:\n  tests:\n    - value: body.status\n      is_equal_to: completed\nretry:\n  attempts: 40\n  delay: 60000\n```",
       "type": "object",
       "properties": {
         "attempts": {
@@ -3663,6 +3675,25 @@
           "description": "`port: a|ap_var::SERVICE_PORT->default(8080)|`, or a quoted `\"8080\"`.\nStill a marker at parse time; resolved once interpolation has run.",
           "type": "string"
         }
+      ]
+    },
+    "WaitForCallback": {
+      "description": "Wait for something outside to call back before continuing.\n\nNeeds a durable run store, the same as a long `delay`: managed has one, self-hosted needs\n`AIRPIPE__DATABASE_URL`. Without one the wait is refused rather than becoming an in-process\npause that a restart would lose.",
+      "type": "object",
+      "properties": {
+        "token": {
+          "description": "The secret that identifies this wait. Anyone holding it can resume the run, so it must\nbe unguessable — mint it with `a|uuid|` in an earlier action rather than using\nsomething predictable like an order number.",
+          "type": "string"
+        },
+        "timeout": {
+          "description": "How long to wait before giving up, as a duration (`\"7d\"`, `\"2h\"`).\n\nRequired, and there is no unbounded option: a wait nobody ever answers would hold a row\nforever. When it expires the action FAILS, so the actions after it do not run and the\ntimeout is visible rather than silently looking like an approval.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "token",
+        "timeout"
       ]
     },
     "Email": {
