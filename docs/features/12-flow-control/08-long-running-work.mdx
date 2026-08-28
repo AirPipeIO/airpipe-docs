@@ -1,0 +1,133 @@
+---
+sidebar_position: 8
+slug: /configuration/interfaces/actions/long-running-work
+displayed_sidebar: featuresSidebar
+---
+
+# Waiting a long time
+
+Some work is not finished when you ask for it. A video render, a model inference job, a
+bulk import: you submit it, get an id, and the answer arrives minutes or hours later.
+
+Holding the request open for that is the wrong instrument. The connection stays occupied, a
+proxy or client timeout cuts it off long before an hour is up, and a restart loses the run
+entirely, halfway through, after the first API call has already been made.
+
+So past a threshold Air Pipe **suspends** the run instead of waiting in it. What has completed
+is written to a durable store, the caller is answered immediately, and the scheduler resumes
+the rest when it comes due.
+
+## A fixed wait
+
+```yaml
+- name: Confirm
+  json_output: '{"confirmed": true}'
+
+- name: Remind
+  run_when_succeeded: [Confirm]
+  delay: "1d"
+
+- name: SendFollowUp
+  run_when_succeeded: [Remind]
+  email:
+    to: a|body::email|
+    subject: How did it go?
+```
+
+Under `AIRPIPE__MAX_DELAY_SECS` (default 300s) a `delay` simply sleeps — that is ordinary
+pacing between steps and nothing changes. Above it the run is suspended, and the caller gets:
+
+```json
+{ "deferred": true, "run_uuid": "01a0463b-…", "resume_in_secs": 86400 }
+```
+
+with HTTP `202`. A day later the scheduler picks the run up, restores what had already run,
+and continues from `SendFollowUp`. `Confirm` is **not** run again — its result comes back out
+of the store, so `a|Confirm::id|` resolves exactly as it did the day before.
+
+## Waiting for something to finish
+
+A `delay` wakes once, at the time you asked for. That is fine for "tomorrow" and wrong for
+"when the render is done", because you are guessing: too short and you read an unfinished job,
+too long and you wait for nothing.
+
+Poll instead. An `assert` that fails while the job is still running turns `retry` into a poll:
+
+```yaml
+- name: Submit
+  http:
+    url: https://api.example.com/jobs
+    method: POST
+    body: a|body|
+
+- name: AwaitResult
+  run_when_succeeded: [Submit]
+  http:
+    url: https://api.example.com/jobs/a|Submit::body.id|
+  assert:
+    http_code_on_error: 504
+    error_message: the job did not finish in time
+    tests:
+      - value: body.status
+        is_equal_to: completed
+  retry:
+    attempts: 40
+    delay: 60000
+```
+
+A job still running answers `200` with a status that is not `completed` — a success as far as
+HTTP is concerned — so the assert is what decides to go round again. `retry` here means "until
+the answer changes", not only "after an error".
+
+The waits add up past the in-process window almost immediately, so from then on the run is
+suspended between polls rather than sleeping through them. Forty attempts a minute apart is a
+forty-minute ceiling that costs a database row, not an open request. When the ceiling is
+reached the action fails with its `http_code_on_error`, so a job that never finishes surfaces
+as an error instead of an empty result.
+
+If the upstream reports failure as a status of its own (`failed`, `errored`), add a test for it
+so a dead job stops the poll immediately instead of retrying to the ceiling.
+
+## What it costs
+
+| | held open | survives a restart | returns when ready |
+|---|---|---|---|
+| `delay` under the window | yes, briefly | no | n/a — fixed wait |
+| `delay` over the window | no | yes | no — wakes once |
+| `retry` + `assert` | only until the window | yes, once suspended | yes |
+
+A resume is picked up on a 30-second tick, so it can be up to half a minute late. That is
+immaterial for hours and days; it is not a precise timer.
+
+## Requirements
+
+Suspending needs somewhere durable to write.
+
+- **Managed** — already there, nothing to configure.
+- **Self-hosted** — set `AIRPIPE__DATABASE_URL`. The scheduler already uses this database, and
+  the suspended runs live alongside its own tables.
+
+Without it a long `delay` is **refused**, with an error saying so. It is deliberately not
+shortened to fit the in-process window: that would continue the run at the wrong time and
+report nothing unusual.
+
+## Where suspended runs live
+
+In `ap_deferred_runs`, one row per parked run, which you can inspect like any other table:
+
+```sql
+SELECT run_uuid, config_name, interface_name, resume_at, attempts
+FROM ap_deferred_runs
+ORDER BY resume_at;
+```
+
+Rows are claimed with `FOR UPDATE SKIP LOCKED`, so several engines share one queue without two
+of them resuming the same run. A claim defers the row rather than deleting it, so an engine
+that dies mid-resume returns the work instead of losing it.
+
+## See also
+
+- The [Async Job Polling](/examples/marketplace) pack — the whole pattern, with a fake job API
+  you can run against with no credentials.
+- [Scheduling](/configuration/scheduling) — for work that starts on a clock rather than
+  continuing after a wait.
