@@ -4041,6 +4041,9 @@
             "$ref": "#/$defs/AgentMcpServer"
           }
         },
+        "schema": {
+          "description": "Pin the model's final answer to a JSON Schema.\n\nSent as `response_format: {type: json_schema, strict: true}`, which OpenAI, Gemini and\nAnthropic all enforce — the model cannot return the wrong shape, so there is nothing to\nvalidate afterwards and nothing to retry. Verified against all three.\n\n```yaml\nagent:\n  schema:\n    type: object\n    properties:\n      sku: { type: string }\n      qty: { type: integer }\n    required: [sku, qty]\n```\n\nWith this set, `content` holds the parsed object rather than a string, so a later action\nreads `a|Agent::content.sku|` without a `code:` action in between. Composes with `tools`:\nthe model may still call tools, and the schema applies to the answer it finishes with.\n\nLeave it unset for today's behaviour. `system:` is unaffected either way — describe the\nshape in the prompt if you prefer, or use both together.\n\nNot interpolated: a schema is a contract with the provider, not a place for request data."
+        },
         "max_iterations": {
           "description": "How many model round trips the loop may take. Default 4, hard ceiling 12.\n\nThis is the bound that makes an agent safe to expose: each iteration is a model\ncall plus every tool it asked for, and a model that keeps calling tools would\notherwise run until something else stopped it. Reaching the budget is reported,\nnever silent.",
           "type": [

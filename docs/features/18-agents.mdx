@@ -1,0 +1,122 @@
+---
+sidebar_position: 8
+slug: /features/agents
+displayed_sidebar: featuresSidebar
+---
+
+# Agents
+
+An agent is a model that can call your interfaces as tools, in a loop, until it has an answer.
+It is one action:
+
+```yaml
+- name: Ask
+  agent:
+    url: https://api.openai.com/v1/chat/completions
+    model: gpt-4o-mini
+    headers:
+      Authorization: "Bearer a|ap_var::OPENAI_KEY|"
+    tools: [inventory/lookup, orders/create]
+    input: a|body::question|
+```
+
+`tools:` names interfaces in the same config. Their input schemas are derived from the
+[`assert` tests](/docs/features/inputs) those interfaces already carry, so there is no second
+copy of the schema to keep in step with the route.
+
+## Any provider that speaks the OpenAI shape
+
+Which is, in practice, all of them. `url` is yours to point:
+
+| provider | base URL |
+|---|---|
+| OpenAI | `https://api.openai.com/v1/chat/completions` |
+| Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` |
+| Anthropic | `https://api.anthropic.com/v1/chat/completions` |
+| OpenRouter, Groq, DeepSeek, Mistral, Azure, Ollama | their own compatible endpoint |
+
+Anything else that serves chat-completions works too — a gateway, or a model you host yourself.
+
+:::note
+Anthropic keys that are identity-linked need a workspace header, which goes in `headers:` like
+any other: `anthropic-workspace-id: "wrkspc_…"`. Without it every call returns 400.
+:::
+
+## Pinning the answer's shape
+
+A model asked for JSON in a prompt will *usually* return JSON. `schema:` removes the "usually":
+
+```yaml
+- name: Extract
+  agent:
+    url: https://api.openai.com/v1/chat/completions
+    model: gpt-4o-mini
+    headers:
+      Authorization: "Bearer a|ap_var::OPENAI_KEY|"
+    tools: [inventory/lookup]
+    input: a|body::request|
+    schema:
+      type: object
+      properties:
+        sku: { type: string }
+        qty: { type: integer }
+      required: [sku, qty]
+
+- name: Reserve
+  run_when_succeeded: [Extract]
+  database: main
+  query: INSERT INTO reservations (sku, qty) VALUES ($1, $2)
+  params: [a|Extract::content.sku|, a|Extract::content.qty|]
+```
+
+The schema is sent to the provider, which **enforces** it — the model cannot return a different
+shape, so there is nothing to validate afterwards and nothing to retry. `content` then holds the
+parsed object rather than a string, so no intermediate action is needed to unpack it.
+
+It composes with `tools:`. The model may call as many tools as it needs; the schema applies to
+the answer it finishes with.
+
+If the endpoint ignores the field, the reply will not parse and **the action fails**, naming the
+likely cause. It does not hand back the text: an action asked for a shape and given prose would
+pass that on to whatever runs next, which is the failure the schema exists to prevent.
+
+:::info Requires 3.4.0+
+Earlier engines ignore `schema:`.
+:::
+
+### `system:` still works
+
+`schema:` is optional and additive. Describe the shape in `system:` if you prefer, use both
+together — `system:` for role and instruction, `schema:` for shape — or use neither. Without
+`schema:`, `content` is a string exactly as before and no config has to change.
+
+## Memory
+
+An agent forgets between requests unless told otherwise:
+
+```yaml
+    memory:
+      key: a|body::session_id|
+      window: 20
+```
+
+`key` scopes the conversation — one per user, per session, per ticket — and `window` bounds how
+many turns are replayed.
+
+## Tools from an MCP server
+
+`mcp:` draws tools from a remote server in addition to your own interfaces. They are discovered
+at run time, so the model is offered whatever the server currently publishes. A name that
+collides with one of your tools is refused rather than silently shadowed.
+
+## The loop is bounded
+
+`max_iterations` (default 4, ceiling 12) caps the model round trips. Each iteration is one model
+call plus every tool it asked for, so a model that keeps calling tools would otherwise run until
+something else stopped it. Reaching the budget is reported, never silent.
+
+## See also
+
+- [Inputs and `http:`](/docs/features/inputs) — where tool input schemas come from.
+- [Connecting to any API](/docs/features/connectors) — reaching a provider that has no connector.
+- [MCP tools](/docs/configuration/mcp-tools) — publishing your own interfaces as tools.
