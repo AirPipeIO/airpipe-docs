@@ -1,0 +1,179 @@
+---
+sidebar_position: 7
+slug: /features/connectors
+displayed_sidebar: featuresSidebar
+---
+
+# Connecting to any API
+
+Air Pipe has no connector catalogue, and that is deliberate. There is no Slack node to install, no
+Google integration to enable, no waiting for someone to add the service you need. There is
+[`http:`](/docs/features/inputs), and there are credential helpers for the auth schemes that are
+genuinely hard.
+
+The practical effect: **the API you need is already supported**, including the one released this
+morning and the internal one only your company has.
+
+## Most APIs need nothing but a token
+
+The majority of third-party APIs authenticate with a token in a header or a path segment. That is
+one action:
+
+```yaml
+- name: SendMessage
+  http:
+    method: POST
+    url: "https://api.telegram.org/bota|ap_var::TELEGRAM_BOT_TOKEN|/sendMessage"
+    headers:
+      content-type: application/json
+    body: |
+      { "chat_id": a|Route::0.json.chat_id|, "text": "Hello" }
+```
+
+For `Authorization: Bearer`, use `bearer_auth:` rather than writing the header yourself:
+
+```yaml
+- name: Ask
+  http:
+    method: POST
+    url: https://api.openai.com/v1/chat/completions
+    bearer_auth: a|ap_var::OPENAI_API_KEY|
+```
+
+Keep the credential in a [managed variable or secret](/docs/configuration/managed-variables), not
+in the config text.
+
+## OAuth service accounts, without the ceremony
+
+The auth that genuinely warrants help is Google's, because it needs a signed JWT exchanged for a
+short-lived token. One action does it, and you choose the scopes:
+
+```yaml
+- name: GetToken
+  hide_data_on_success: true
+  google:
+    credential: main
+    create_token:
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+```
+
+After that, every Google API is ordinary REST:
+
+```yaml
+- name: ReadSites
+  run_when_succeeded: [GetToken]
+  http:
+    url: "https://sheets.googleapis.com/v4/spreadsheets/a|ap_var::SHEET_ID|/values/Sites!A2:B"
+    headers:
+      Authorization: a|GetToken|
+```
+
+The same two actions reach **Sheets, Drive, Gmail, Docs, Calendar, BigQuery and Cloud Storage** —
+change the scope and the URL. There is nothing Sheets-specific in the example above except the
+path.
+
+:::warning
+Put `hide_data_on_success: true` on any action that mints a token. Without it the access token is
+returned in the response body.
+:::
+
+## Binary files are not a separate world
+
+Downloading a file and sending it somewhere else is where integration tools usually get
+complicated, because they separate "binary data" from "JSON data" and make you convert between
+them.
+
+Air Pipe does not have two lanes. A response that is not valid UTF-8 comes back as
+`base64_bytes` on the action, so **the download is the decode**:
+
+```yaml
+- name: DownloadVoice
+  http:
+    url: "https://api.telegram.org/file/bota|ap_var::TELEGRAM_BOT_TOKEN|/a|GetFile::body.result.file_path|"
+```
+
+From there it goes straight into a multipart upload:
+
+```yaml
+- name: Transcribe
+  http:
+    method: POST
+    url: https://api.openai.com/v1/audio/transcriptions
+    bearer_auth: a|ap_var::OPENAI_API_KEY|
+    multipart:
+      - name: file
+        b64: a|DownloadVoice::base64_bytes|
+        filename: voice.oga
+        mime: audio/ogg
+      - name: model
+        value: whisper-1
+```
+
+…or into a `data:` URI for a vision model:
+
+```yaml
+"image_url": { "url": "data:image/jpeg;base64,a|DownloadPhoto::base64_bytes|" }
+```
+
+No conversion steps, no temporary files.
+
+## Receiving from a service
+
+An interface **is** a webhook. Give it `method: POST` and hand its URL to the service:
+
+```yaml
+interfaces:
+  telegram/webhook:
+    output: http
+    method: POST
+    actions:
+      - name: Handle
+        input: a|body|
+        # ...
+```
+
+Two things worth knowing about webhooks generally:
+
+- **Answer 200, even when you cannot process the message.** Most services retry a non-2xx
+  delivery, so an error becomes the same message arriving again, indefinitely. Use
+  `depends_on:` rather than `run_when_succeeded:` on the final acknowledgement, so a failure
+  earlier in the config still produces a 200.
+- **Check who sent it.** A webhook URL is a public endpoint. Verify a signature, a shared secret,
+  or a sender id before acting.
+
+## Calling many things at once
+
+To hit an API once per item, use [`lookup:`](/docs/configuration/interfaces/actions/lookups) — concurrency and a per-item
+timeout are fields rather than extra structure:
+
+```yaml
+- name: Probe
+  lookup: a|Sites|
+  lookup_concurrency: 5
+  item_timeout: 15s
+  actions:
+    - name: Hit
+      http:
+        url: a|body::json.url|
+        expect_status: [1xx, 2xx, 3xx, 4xx, 5xx]
+```
+
+That `expect_status` is worth understanding: by default a non-2xx fails the action. When the
+status **is** the information you want — a monitor recording an outage, an API where 404 means
+"absent" — say so, or the action fails on the very case you are trying to observe.
+
+## Worked examples
+
+Two marketplace packs are built entirely from the pieces above, and neither needed a connector:
+
+- **Uptime Monitor** — Google Sheets as the site list, the log and the current status. Read,
+  append and an upsert, on a schedule, with alerting.
+- **Telegram AI Bot** — a webhook receiving text, voice notes and photos, with file download,
+  transcription and vision.
+
+## See also
+
+- [Inputs and `http:`](/docs/features/inputs) — the full request surface: retries, pagination,
+  timeouts, status expectations.
+- [Google Cloud credentials](/docs/configuration/globals/google-cloud) — configuring the service account.
+- [Managed variables and secrets](/docs/configuration/managed-variables) — where credentials live.
