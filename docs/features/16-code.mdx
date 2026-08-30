@@ -1,0 +1,208 @@
+---
+sidebar_position: 6
+slug: /features/code
+displayed_sidebar: featuresSidebar
+---
+
+# JavaScript in a config
+
+Most shaping is better done with transforms, markers and assertions — they are declarative, they
+show up in the generated docs, and the fast path can compile them. But some jobs are genuinely
+easier as a few lines of code: a recursive walk over an unknown shape, a bespoke grouping, a
+string format nobody should have to express as a marker chain.
+
+The `code:` action runs JavaScript over an action's input.
+
+```yaml
+- name: Normalise
+  code: |
+    return items.map(i => ({ json: { id: i.json.id, total: i.json.amount * 1.1 } }));
+```
+
+Whatever you `return` becomes the action's data, readable by later actions the same way any
+other action's is — `a|Normalise::0->json->total|`.
+
+## What the script can see
+
+| binding | is |
+|---|---|
+| `items` | the input, always an array of `{ json, binary }` |
+| `item`, `$json` | the current item, in `each_item` mode |
+| `$input` | `.all()`, `.first()`, `.last()`, `.item` |
+| `$('ActionName')` | any earlier action's result, by name — the same name `a|ActionName|` uses |
+| `$now`, `$today` | the current time, as a `DateTime` |
+| `$workflow`, `$execution`, `$node` | names and ids, for logging |
+
+A bare value is wrapped as `{ json: … }` on the way in, so `i.json` works whatever the previous
+action produced.
+
+The environment is an ordinary modern one: `Buffer`, `setTimeout` and friends, `btoa`/`atob`,
+`TextEncoder`/`TextDecoder`, `FormData`, `console`, `Intl`, `URL`, `URLSearchParams`,
+`AbortController`, the web stream primitives, and Luxon's `DateTime` / `Duration` / `Interval`.
+The language is current — optional chaining, `Array.at`, `findLast`, `Object.groupBy`,
+async/await, generators, BigInt.
+
+## What it deliberately cannot do
+
+There is no filesystem, no socket and no outbound network. That is the design, not an omission:
+the script is a pure function of its input.
+
+Reaching outward is the [`http:` action](/docs/features/inputs) or an interface called as a
+tool, both of which already carry retries, timeouts, metering and your credentials — none of
+which a script should be re-implementing, and none of which it can be trusted to.
+
+Scripts *can* use npm packages, but only ones you declare — see [Modules](#modules) below.
+
+Markers inside `source` are **not** substituted. Splicing request data into a program's text is
+code injection, for the same reason database parameters are bound rather than concatenated.
+Data reaches the script as data, through `items` and the bindings.
+
+## Options
+
+```yaml
+- name: Normalise
+  code:
+    source: |
+      const rate = 1.1;
+      return items.map(i => ({ json: { id: i.json.id, total: i.json.amount * rate } }));
+    mode: all_items          # all_items (default) | each_item
+    timeout_ms: 5000
+    memory_bytes: 33554432
+```
+
+| option | default | |
+|---|---|---|
+| `source` | — | required. Wrapped in an async function, so top-level `await` works |
+| `mode` | `all_items` | `all_items`: one run, `items` is the array. `each_item`: one run per item, results collected into an array |
+| `timeout_ms` | 5000 | wall clock for the script itself |
+| `memory_bytes` | 32 MiB | heap ceiling for one execution |
+| `language` | `js` | only `js` today |
+| `dependencies` | none | npm packages the script may import, as name to version range — see [Modules](#modules) |
+
+Use the standard `input:` field to choose what becomes `items`. With none, it is the previous
+action's data.
+
+```yaml
+- name: Summarise
+  input: a|FetchOrders|
+  code: |
+    return { count: items.length, total: items.reduce((n, i) => n + i.json.amount, 0) };
+```
+
+## Modules
+
+A script can `require` an npm package, provided the config declares it:
+
+```yaml
+- name: Format
+  code:
+    dependencies:
+      date-fns: ^3.6.0
+    source: |
+      const { format } = require("date-fns");
+      return items.map(i => ({ json: { when: format(new Date(i.json.ts), "yyyy-MM-dd") } }));
+```
+
+Declaring is not decoration — it is the boundary. A script can only reach what is in its own
+`dependencies` block, and a `require` of anything else fails:
+
+```
+Cannot find module 'lodash'
+```
+
+Dependencies are declared **per action**, beside the script, rather than once per config. What a
+script may reach is then visible in the same place a reviewer looks for the script itself.
+
+### Which runtime runs a script
+
+Two runtimes, and **the script chooses, not the configuration**:
+
+| the script | runs in | needs |
+|---|---|---|
+| imports nothing | the embedded interpreter | nothing — always available |
+| imports anything | the JavaScript runtime worker | the worker installed on the host |
+
+So the same script always runs in exactly one place, on every instance and in every mode. The
+split exists because the worker carries a full JavaScript engine and is around 100 MB, while the
+scripts that need it are a small minority — bundling it would cost every user for a feature few
+use.
+
+If a script imports something and no worker is installed, the action **fails**:
+
+```
+the script in 'MyConfig::Format' imports a module, which needs the JavaScript runtime.
+It is not installed. Install it with `airpipe runtime install js-deno`, or set
+AIRPIPE__SCRIPT_RUNTIME_JS to a worker binary. Scripts that import nothing keep working
+without it.
+```
+
+It never quietly runs the script without the module. A script that asked for `date-fns` and did
+not get it would fail somewhere further in with a confusing error — or worse, appear to succeed
+having done less than it said.
+
+### Installing the runtime
+
+Self-hosted, one command per host — see
+[Script runtimes](/docs/configuration/airpipe-runtime) for the full command:
+
+```bash
+airpipe runtime install js-deno
+```
+
+Packages are resolved on first use and cached on disk, not fetched while a request is in flight.
+Each distinct set of dependencies gets its own store, so two configs asking for different
+versions of the same package never collide.
+
+Pin exact versions if it matters to you: `^3.6.0` means the code that runs is not necessarily the
+code you reviewed.
+
+:::note Managed platform
+Module support is a self-hosted capability today. On Air Pipe's managed platform the runtime
+worker is not installed, so scripts that import a module are refused. Scripts that import nothing
+run normally.
+:::
+
+## The limits are real
+
+Both bounds are enforced by the engine, not requested politely.
+
+`timeout_ms` is applied by an interrupt inside the interpreter, so a script that never yields —
+`while (true) {}` — is genuinely stopped, rather than left running while something else gives up
+waiting. The clock starts once the environment is ready, so the budget is your script's time and
+not ours.
+
+`memory_bytes` caps the heap for that one execution. An unbounded allocation fails the action;
+it does not touch the process.
+
+Both are capped by your organisation's entitlement, so asking for more than your plan allows
+gets you the ceiling rather than an error — the same config runs everywhere and is simply
+bounded differently. `max_script_ms` and `max_script_memory_bytes` scale with your plan; a
+self-hosted engine reads its own, generous, defaults because it is your CPU.
+
+Each execution gets a fresh runtime. Nothing a script leaves behind is visible to the next one,
+in your organisation or anyone else's.
+
+## Errors
+
+A throw fails that action with the script's own message, so you can tell your bug from ours:
+
+```
+the vendor id was missing
+```
+
+Type errors use the wording every JS developer already knows — `Cannot read properties of
+undefined (reading 'x')` — because that is what Chrome, Node, Deno and Bun all say, and real
+code branches on `e.message`.
+
+Hitting a limit says which one:
+
+```
+the script did not finish within 5000ms
+the script used more than its 32 MiB of memory
+```
+
+## See also
+
+- [Transforms](/docs/features/transforms) — the declarative option, and usually the better one.
+- [Inputs](/docs/features/inputs) — how `input:` and markers choose an action's data.
+- [Vector search](/docs/features/vector-search) — another thing that needed no new action type.

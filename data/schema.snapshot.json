@@ -892,6 +892,17 @@
             }
           ]
         },
+        "code": {
+          "description": "Run JavaScript over this action's input.\n\nThe script gets `items` (or `item` in `each_item` mode), the results of earlier actions\nthrough `$('ActionName')`, and a standard JS environment — `Buffer`, timers, `Intl`,\n`DateTime`, `URL`, the text encoders. It does not get `require`, modules, the filesystem\nor a socket: reaching outward is the `http:` action, or an interface called as a tool,\nso retries, timeouts and metering still apply.\n\nBounded by `timeout_ms` and `memory_bytes`, both capped by the organisation's\nentitlement, so a config cannot raise its own ceiling.\n\n## Example\n```yaml\n- name: Normalise\n  code: |\n    return items.map(i => ({ json: { id: i.json.id, total: i.json.amount * 1.1 } }));\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CodeAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "action": {
           "description": "Action identifier for referencing outputs.\n\n## Example\n```yaml\naction: ValidateUser\n# Reference later: a|ValidateUser::result|\n```",
           "type": [
@@ -4142,6 +4153,115 @@
       "additionalProperties": false,
       "required": [
         "key"
+      ]
+    },
+    "CodeAction": {
+      "description": "Run JavaScript over this action's input.\n\nAccepts either the script on its own, or the script plus options.\n\n## Example\n```yaml\n- name: Normalise\n  code: |\n    return items.map(i => ({ json: { id: i.json.id, total: i.json.amount * 1.1 } }));\n```",
+      "anyOf": [
+        {
+          "description": "Just the script, with every option left at its default.",
+          "type": "string"
+        },
+        {
+          "description": "The script plus options.",
+          "$ref": "#/$defs/CodeConfig"
+        }
+      ]
+    },
+    "CodeConfig": {
+      "description": "The long form of a `code:` action.\n\n## Example\n```yaml\n- name: Normalise\n  code:\n    source: |\n      const rate = 1.1;\n      return items.map(i => ({ json: { id: i.json.id, total: i.json.amount * rate } }));\n    mode: all_items\n    input: a|FetchOrders|\n    timeout_ms: 5000\n    memory_bytes: 33554432\n```",
+      "type": "object",
+      "properties": {
+        "source": {
+          "description": "The script.\n\nIt is wrapped in an async function, so `await` works at the top level and the value you\n`return` becomes the action's output.\n\nMarkers in the script are **not** substituted. Splicing request data into a program's\ntext is code injection — the reason database parameters are bound rather than\nconcatenated — so data reaches the script as data, through `items` and the bindings.",
+          "type": "string"
+        },
+        "mode": {
+          "description": "Whether the script sees every item at once, or runs once per item.\n\nDefaults to `all_items`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CodeMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input": {
+          "description": "What becomes `items`. Any marker resolving to an array or an object.\n\nDefaults to the previous action's data, which is what `input:` does everywhere else.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timeout_ms": {
+          "description": "Wall-clock budget for one execution, in milliseconds.\n\nEnforced by an interrupt handler rather than a timer, so a script that never yields is\nstill stopped. Capped by the organisation's `max_script_ms` entitlement — asking for\nmore than the ceiling gets the ceiling, it is not an error.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "memory_bytes": {
+          "description": "Heap ceiling for one execution, in bytes.\n\nAn allocation past this fails the action rather than the process. Capped by the\norganisation's `max_script_memory_bytes` entitlement.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "language": {
+          "description": "Which language the source is written in. Only `js` today.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CodeLanguage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dependencies": {
+          "description": "Packages this script may import, as name to version range.\n\n```yaml\ncode:\n  dependencies:\n    date-fns: ^3.6.0\n  source: |\n    const { format } = require(\"date-fns\");\n```\n\nA script that imports something runs in the script runtime rather than the embedded\ninterpreter, and can only reach what is declared here — nothing else is fetched, and\nnothing is resolved while a request is in flight.\n\nDeclared per action rather than per config so that what a script may reach is visible\nbeside the script itself, which is also where a reviewer looks for it.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source"
+      ]
+    },
+    "CodeMode": {
+      "description": "How the script sees its input.",
+      "oneOf": [
+        {
+          "description": "The script runs once. `items` is the whole array, and it returns an array.",
+          "type": "string",
+          "const": "all_items"
+        },
+        {
+          "description": "The script runs once per item, with `item` and `$json` bound to that item.",
+          "type": "string",
+          "const": "each_item"
+        }
+      ]
+    },
+    "CodeLanguage": {
+      "description": "The language a `code:` action is written in.",
+      "oneOf": [
+        {
+          "description": "JavaScript.",
+          "type": "string",
+          "const": "js"
+        }
       ]
     },
     "RunCondition": {
