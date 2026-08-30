@@ -53,9 +53,50 @@ which a script should be re-implementing, and none of which it can be trusted to
 
 Scripts *can* use npm packages, but only ones you declare — see [Modules](#modules) below.
 
-Markers inside `source` are **not** substituted. Splicing request data into a program's text is
-code injection, for the same reason database parameters are bound rather than concatenated.
-Data reaches the script as data, through `items` and the bindings.
+**Request data never reaches the script's text.** Splicing it into a program is code injection,
+for the same reason database parameters are bound rather than concatenated — so a request-scoped
+marker inside `source` is left alone, and the data arrives through `items` and the bindings
+instead. Config-level values, which are fixed at deploy time and are not attacker-controlled, do
+substitute:
+
+| marker inside `source` | |
+|---|---|
+| `a|var::my_setting|` | **substituted** — a config global |
+| `a|body::field|`, `a|params::x|`, `a|headers::x|` | left as literal text |
+| `a|uuid|`, `a|timestamp:…|` | left as literal text |
+
+The consequence worth knowing: a per-request decision cannot be made by interpolating into the
+script. Resolve the value in a config field and read it with a binding:
+
+```yaml
+- name: Auth
+  json_output: |-
+    { "allowed_id": "a|ap_var::ALLOWED_USER_ID|" }
+
+- name: Check
+  depends_on: [Auth]
+  code: |
+    const allowed = $('Auth').first().json.allowed_id;
+```
+
+### Reading another action
+
+`$('Name')` reads an earlier action's result — but it is a dependency the config does not see,
+because it lives in the script rather than in a marker. Declare it, or the two actions run
+concurrently and the script reads nothing:
+
+```yaml
+- name: Summarise
+  depends_on: [FetchOrders]      # required — $() alone does not order anything
+  code: |
+    return { n: $('FetchOrders').first().json.length };
+```
+
+Prefer `depends_on` over `run_when_succeeded` here. A script usually reads a branch that may be
+skipped, and `run_when_succeeded` on a skipped action stops the reader running at all, whereas
+`depends_on` only orders them.
+
+The config linter warns about an undeclared binding at load.
 
 ## Options
 
