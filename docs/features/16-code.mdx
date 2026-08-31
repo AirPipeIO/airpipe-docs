@@ -61,9 +61,19 @@ substitute:
 
 | marker inside `source` | |
 |---|---|
-| `a|var::my_setting|` | **substituted** — a config global |
+| `a|var::my_setting|`, `a|ap_var::NAME|`, `a|env::NAME|` | **substituted** — config-level values |
 | `a|body::field|`, `a|params::x|`, `a|headers::x|` | left as literal text |
+| `a|SomeAction::field|` | left as literal text |
 | `a|uuid|`, `a|timestamp:…|` | left as literal text |
+
+`a|env::NAME|` is the exception worth watching: it substitutes self-hosted but **not** in
+managed mode, so a script relying on it works on your machine and silently does not in
+production. Use `ap_var::` for a value that has to work in both.
+
+Getting this wrong is quiet rather than loud — the marker simply stays in the string, so
+`Number("a|SomeAction::status|")` is `NaN` and the script computes something plausible and
+wrong. Since **3.7.0** `config validate` and engine startup warn when a script contains a
+marker that will never be substituted, naming the action and the marker.
 
 The consequence worth knowing: a per-request decision cannot be made by interpolating into the
 script. Resolve the value in a config field and read it with a binding:

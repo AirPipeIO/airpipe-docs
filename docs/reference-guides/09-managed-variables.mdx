@@ -86,3 +86,49 @@ matching role.
 Variable names are not enforced to be unique — lookups match by organization +
 name and take the first result, so avoid reusing a name for different values.
 :::
+### Self-hosted, without an account
+
+`ap_var::` normally resolves against the platform, which needs an organization. A
+self-hosted engine that has never been associated with an account has no organization
+to ask, so before **3.6.0** the marker was skipped and interpolated to the literal text
+`null` — quietly. Since every marketplace pack is written against `ap_var::`, none of
+them could run on an air-gapped or account-less engine, and the failure looked like a
+successful run that happened to send the four characters `n-u-l-l` as your API key.
+
+Since **3.6.0** the same markers resolve from two local sources, tried before the
+platform lookup:
+
+| Source | Form |
+|---|---|
+| Environment | `AIRPIPE__AP_VAR__<NAME>` — one variable per environment variable |
+| File | `AIRPIPE__AP_VAR_FILE` — a path to a YAML or JSON map of `name: value` |
+
+```bash
+# environment
+export AIRPIPE__AP_VAR__OPENAI_API_KEY=sk-...
+airpipe server --config-dir ./configs --api-key <key>
+
+# or a file, which keeps values out of `ps` and shell history
+cat > vars.yml <<'EOF'
+OPENAI_API_KEY: sk-...
+SHEET_ID: 1H4ZK...
+EOF
+AIRPIPE__AP_VAR_FILE=./vars.yml airpipe server --config-dir ./configs --api-key <key>
+```
+
+The environment wins where both define the same name. Names are matched exactly and then
+upper-cased, so a config written as `a|ap_var::sheet_id|` is served by
+`AIRPIPE__AP_VAR__SHEET_ID`. File values are stringified, so `PORT: 8080` and
+`PORT: "8080"` behave identically — a marker always substitutes text.
+
+A file that is named but cannot be read, or that is not a `name: value` map, logs a
+warning and supplies nothing rather than stopping the engine.
+
+:::warning
+Keep the variables file **outside** your `--config-dir`. Every file in that directory is
+loaded as a config, and a variables map is not one, so the engine refuses to start and
+names the first key it did not recognise.
+:::
+
+Managed mode is unaffected — it resolves managed variables as it always has, and never
+consults these local sources.

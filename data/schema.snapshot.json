@@ -4674,6 +4674,17 @@
             }
           ]
         },
+        "json_to_yaml": {
+          "description": "Convert a JSON value to a YAML-formatted string. The inverse of `yaml_to_json`.\n\n## Example\n```yaml\njson_to_yaml: .config    # Path to the value to serialise\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "parse_csv": {
           "description": "Parse a CSV string into an array of header-keyed row objects. Point it at the\nCSV string in the action's data (e.g. the raw request body via\n`input: a|raw_body|`, or fetched text).\n\n## Example\n```yaml\nparse_csv: \"$\"                       # replace the root CSV string with the rows\n# parse_csv: { json_path: \"$\", key: rows }   # put the rows array under `rows`\n```",
           "anyOf": [
