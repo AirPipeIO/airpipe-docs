@@ -42,7 +42,11 @@ const PAGES = [
     title: "Actions & workflow control",
     defs: ["Action", "ActionResponse", "Retry", "LogMessage", "RunCondition",
       "RunOnConfig", "ConditionalInput", "ConditionalInputConfig", "AgentAction", "AgentMcpServer",
-      "AgentMemory"],
+      "AgentMemory",
+      // `code:` is an action like any other, so its types belong here rather than falling
+      // through to "other types" — which is where they were, leaving the feature with a
+      // guide page and no reference entry anyone could find.
+      "CodeAction", "CodeConfig", "CodeMode", "CodeLanguage"],
   },
   {
     file: "04-inputs-http",
