@@ -172,6 +172,28 @@
             "null"
           ]
         },
+        "respond": {
+          "description": "Return the HTTP response WITHOUT waiting for the actions to finish.\n\nThe run continues on the runtime exactly as it would have; only the response is early.\nThe caller gets `{ accepted: true, request_id }` with a 202, so anything it needs from\nthe run has to reach it another way — a `stream:` channel, a `ws_publish`, a row in a\ntable it polls.\n\nDeliberately SEPARATE from `stream:`. An SSE response would stream while holding the\nrequest open, so an interface that streams and one that answers early are different\nchoices and have to stay independently expressible.\n\nWhat changes, and it is not small: the status code is committed before the work runs,\nso `http_code_on_error` and every assert after this point can no longer affect what the\ncaller sees. A failure becomes a log line and whatever the config publishes, not a 4xx.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Respond"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stream": {
+          "description": "Forward a streaming action's output onward as it arrives, instead of only returning\nit once the action finishes.\n\nThe action named by `from` must already be reading a stream (`stream: true` on its\n`http:`); this says where its pieces GO. Without it the deltas are still reassembled\ninto the action's body exactly as before — they are simply not forwarded anywhere.\n\n## Example\n```yaml\nstream:\n  from: AskModel\n  to: channel\n  channel: a|body::session_id|\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StreamOut"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "subscribe_authorizer": {
           "description": "Realtime-channel access control. The name of an interface run to authorize a\nsocket's `ap_subscribe` to a channel: it runs with `{ \"channel\": \"<name>\" }`\nas `a|body` and the socket's token as `a|headers::airpipe-jwt|`, and the\nsubscribe is allowed iff the authorizer returns 2xx (so its `is_valid_jwt` +\nclaim/channel checks gate it). Unset ⇒ any socket may subscribe to any channel\nin its own org. Fail-closed: an anonymous socket (no token) is denied.",
           "type": [
@@ -497,6 +519,70 @@
         }
       },
       "additionalProperties": false
+    },
+    "Respond": {
+      "description": "Air Pipe interface definition. An interface represents an endpoint that can be\ninvoked (via HTTP, schedule, etc.) and executes a chain of actions.\n\n## Example\n```yaml\nmyApiEndpoint:              # Interface name (can be used as route path)\n  summary: Get users        # Short description for documentation\n  description: |            # Long description (optional)\n    Retrieves a list of all\n    users in the organization.\n  method: POST              # HTTP method (for HTTP interfaces)\n  route: /users             # URL path (optional, defaults to interface name)\n  tags:                     # OpenAPI tags for grouping\n    - Users\n    - API\n  output: http              # Output type: http\n\n  templates:                # Interface-specific response templates\n    success_template: |\n      { \"status\": \"ok\" }\n\n  actions:                  # Ordered list of actions to execute\n    - name: ValidateJwt     # Action name (used for references)\n        input: a|headers    # Input source (a|headers, a|body, etc.)\n      - name: FetchData\n        database: main      # Database connection to use, assuming global is defined\n        query: SELECT * FROM users WHERE org_uuid = $1\n        params:\n          - a|CheckBody::organization_uuid|\n\n  assert:                   # Final assertion against action results\n    tests:\n      - value: count()\n        is_equal_to: 1\n\n  response:                 # Response configuration\n    http_code_on_error: 400 # HTTP status code on error\n    http_code_inherit_error: [FetchData]  # Inherit error code from action\n```\nField defaults an interface hands to every action it contains.\n\nThe outcome of an action is DECLARED (`expect_status` / `expect_exit`), never inferred from\nan assert. Declaring it per action is right for a pipeline where each call has its own\ncontract, and tedious for an interface where they share one — a test runner asserting on the\nstatus of thirty routes under test, a health-check fan-out that records whatever it gets. So\nthe interface can say it once and each action may still override it.\n\nResolved at config load (see `IntegrationConfig::compile_expressions`), so the interpreter\nand the compiled fast path both see a plain action-level value and the request path pays\nnothing for it.\n\n## Example\n```yaml\ninterfaces:\n  tests/all:\n    defaults:\n      expect_status: any        # the statuses ARE what this interface tests\n    actions: [...]\n```\nConversation memory for an `agent:` action.\nWhen the HTTP response is sent relative to the work.",
+      "oneOf": [
+        {
+          "description": "Answer once every action has finished. The default, and what every config does today.",
+          "type": "string",
+          "const": "complete"
+        },
+        {
+          "description": "Answer immediately and keep running. See [`Interface::respond`].",
+          "type": "string",
+          "const": "early"
+        }
+      ]
+    },
+    "StreamOut": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "description": "Name of the action whose stream is forwarded. It must be an action in this interface\nthat reads an event stream; anything else forwards nothing.",
+          "type": "string"
+        },
+        "to": {
+          "description": "Where the chunks go. Only `channel` exists today.",
+          "$ref": "#/$defs/StreamTarget",
+          "default": "channel"
+        },
+        "channel": {
+          "description": "Channel key(s) to publish to — a string, an array, or an `a|...` marker resolving to\neither. Same shape `ws_publish` takes. Required when `to: channel`."
+        },
+        "flush_ms": {
+          "description": "Flush the buffer after this many milliseconds. Default 50.\n\nPublishing per token is not viable: a publish fans out to one HTTP call per peer\nholding a subscriber, so a 500-token completion would be 500 x peers. Batching at\n~20/sec reads as smooth in a UI and cuts that by two orders of magnitude.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "flush_chars": {
+          "description": "Flush early once this many characters are buffered, so a fast stream does not sit\nwaiting on the timer. Default 200.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "from"
+      ]
+    },
+    "StreamTarget": {
+      "description": "Where a streaming action's chunks are forwarded.\n\nKept separate from `respond:` on purpose. Streaming to a channel and returning the\nresponse early are independent choices: an SSE response would stream while HOLDING the\nrequest open, so folding \"detach\" into \"stream\" would make that combination unexpressible.",
+      "oneOf": [
+        {
+          "description": "Publish each batch to a realtime channel. Subscribers receive them live; the HTTP\nresponse is unchanged.",
+          "type": "string",
+          "const": "channel"
+        }
+      ]
     },
     "Schedule": {
       "description": "AirPipe schedule configuration. Defines when and how an interface should be\nexecuted automatically via the scheduler.\n\n## Example\n```yaml\nmyScheduledEndpoint:        # Interface name\n  method: POST\n  actions:\n    - name: MyAction\n      http:\n        url: https://api.example.com/trigger\n\n  schedule:                 # Schedule configuration (enables auto-execution)\n    cron: \"0 9 * * *\"       # Required: Cron expression (5 fields: minute-hour-day-month-weekday)\n    enabled: true           # Optional: Enable/disable the schedule (default: false)\n\n    # Retry configuration\n    max_attempts: 3         # Optional: Max retry attempts on failure (default: 1)\n    retry_backoff_seconds: 60    # Optional: Initial backoff in seconds (default: 60)\n    retry_backoff_multiplier: 2.0 # Optional: Backoff multiplier for exponential backoff (default: 2.0)\n    max_backoff_seconds: 3600    # Optional: Maximum backoff cap in seconds (default: 3600)\n```",
@@ -2616,6 +2702,20 @@
             "null"
           ]
         },
+        "stream": {
+          "description": "Read the response as a server-sent event stream and reassemble it, instead of\nwaiting for the whole body.\n\nSet this when the endpoint is asked to stream (`\"stream\": true` in the body for an\nOpenAI-shaped API). A `text/event-stream` response is detected and streamed even\nwithout this flag, so it is only needed to be explicit.\n\nThe reassembled result has the SAME shape a non-streaming call would return —\n`body.choices[0].message.content` for an OpenAI-shaped API — so a config does not\nchange when streaming is turned on.\n\nThe reason to stream is not speed. A provider under load may hold the connection open\nand send nothing (DeepSeek documents exactly this for non-streaming requests, for up\nto ten minutes), which is indistinguishable from a hang. A stream keeps arriving, so\n`idle_timeout` can tell \"still working\" from \"stopped\".\n\n## Example\n```yaml\nstream: true\nidle_timeout: 20s\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "idle_timeout": {
+          "description": "Fail if no bytes arrive for this long, measured from the LAST byte received rather\nthan from the start of the request.\n\nThis is the half of streaming that matters operationally: `timeout` kills a request\nthat is still making progress, while `idle_timeout` kills only one that has actually\nstalled. Use both — `idle_timeout` to catch a hang quickly, `timeout` as the absolute\nceiling so a slow drip cannot run forever.\n\nOnly applies to a streamed response; a buffered read has no per-chunk timing.\n\n## Example\n```yaml\nidle_timeout: 20s\n```",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "pagination": {
           "anyOf": [
             {
@@ -4122,7 +4222,6 @@
       ]
     },
     "AgentMemory": {
-      "description": "Air Pipe interface definition. An interface represents an endpoint that can be\ninvoked (via HTTP, schedule, etc.) and executes a chain of actions.\n\n## Example\n```yaml\nmyApiEndpoint:              # Interface name (can be used as route path)\n  summary: Get users        # Short description for documentation\n  description: |            # Long description (optional)\n    Retrieves a list of all\n    users in the organization.\n  method: POST              # HTTP method (for HTTP interfaces)\n  route: /users             # URL path (optional, defaults to interface name)\n  tags:                     # OpenAPI tags for grouping\n    - Users\n    - API\n  output: http              # Output type: http\n\n  templates:                # Interface-specific response templates\n    success_template: |\n      { \"status\": \"ok\" }\n\n  actions:                  # Ordered list of actions to execute\n    - name: ValidateJwt     # Action name (used for references)\n        input: a|headers    # Input source (a|headers, a|body, etc.)\n      - name: FetchData\n        database: main      # Database connection to use, assuming global is defined\n        query: SELECT * FROM users WHERE org_uuid = $1\n        params:\n          - a|CheckBody::organization_uuid|\n\n  assert:                   # Final assertion against action results\n    tests:\n      - value: count()\n        is_equal_to: 1\n\n  response:                 # Response configuration\n    http_code_on_error: 400 # HTTP status code on error\n    http_code_inherit_error: [FetchData]  # Inherit error code from action\n```\nField defaults an interface hands to every action it contains.\n\nThe outcome of an action is DECLARED (`expect_status` / `expect_exit`), never inferred from\nan assert. Declaring it per action is right for a pipeline where each call has its own\ncontract, and tedious for an interface where they share one — a test runner asserting on the\nstatus of thirty routes under test, a health-check fan-out that records whatever it gets. So\nthe interface can say it once and each action may still override it.\n\nResolved at config load (see `IntegrationConfig::compile_expressions`), so the interpreter\nand the compiled fast path both see a plain action-level value and the request path pays\nnothing for it.\n\n## Example\n```yaml\ninterfaces:\n  tests/all:\n    defaults:\n      expect_status: any        # the statuses ARE what this interface tests\n    actions: [...]\n```\nConversation memory for an `agent:` action.",
       "type": "object",
       "properties": {
         "key": {
@@ -4685,8 +4784,18 @@
             }
           ]
         },
+        "parse_xml": {
+          "description": "Parse a CSV string into an array of header-keyed row objects. Point it at the\nCSV string in the action's data (e.g. the raw request body via\n`input: a|raw_body|`, or fetched text).\n\n## Example\n```yaml\nparse_csv: \"$\"                       # replace the root CSV string with the rows\n# parse_csv: { json_path: \"$\", key: rows }   # put the rows array under `rows`\n```\nParse an XML string into JSON — the sibling of `parse_csv`, `parse_xlsx` and\n`parse_pdf`, for an RSS feed or any XML-returning API.\n\nAn element becomes an object, attributes fold in under `@name`, text sits under\n`#text` when the element also has attributes or children and becomes the value\ndirectly when it does not. Repeated siblings become an array and a single one does\nnot, so normalise with jq rather than assuming: `[.rss.channel.item] | flatten`.\n\n## Example\n```yaml\nparse_xml: \"body\"                          # replace the XML body with the tree\n# parse_xml: { json_path: body, key: feed }  # or put it under `feed`\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "parse_csv": {
-          "description": "Parse a CSV string into an array of header-keyed row objects. Point it at the\nCSV string in the action's data (e.g. the raw request body via\n`input: a|raw_body|`, or fetched text).\n\n## Example\n```yaml\nparse_csv: \"$\"                       # replace the root CSV string with the rows\n# parse_csv: { json_path: \"$\", key: rows }   # put the rows array under `rows`\n```",
           "anyOf": [
             {
               "$ref": "#/$defs/TransformConfig"

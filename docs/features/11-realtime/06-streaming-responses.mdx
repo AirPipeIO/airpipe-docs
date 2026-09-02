@@ -1,0 +1,108 @@
+---
+sidebar_position: 6
+slug: /features/realtime/streaming
+displayed_sidebar: featuresSidebar
+---
+
+# Streaming a model response
+
+A model that takes twenty seconds to answer gives you nothing to show for nineteen of
+them. `stream:` forwards each piece of a streaming action's output to a realtime channel
+as it arrives, so a UI can render tokens while the action is still running.
+
+```yml
+name: ChatApp
+interfaces:
+  # Subscribers attach here.
+  live:
+    ws: "on"
+    actions:
+      - name: Echo
+        input: a|body|
+
+  # The browser posts here.
+  chat:
+    output: http
+    method: POST
+    respond: early                    # 202 immediately, keep working
+    stream:
+      from: AskModel                  # which action's output to forward
+      to: channel
+      channel: a|body::session_id|    # where subscribers watch
+    actions:
+      - name: AskModel
+        http:
+          url: https://api.deepseek.com/chat/completions
+          method: POST
+          stream: true                # read the upstream stream
+          idle_timeout: 30s
+          headers:
+            authorization: "Bearer a|ap_var::DEEPSEEK_KEY|"
+          body: |
+            {
+              "model": "deepseek-chat",
+              "stream": true,
+              "messages": [{ "role": "user", "content": a|body::prompt->double_quote| }]
+            }
+```
+
+Two `stream` keys, doing different jobs. `stream: true` on the `http:` action tells the
+engine to **read** the upstream response as it arrives. `stream:` on the interface says
+where those pieces **go**.
+
+## What a subscriber receives
+
+Frames arrive on the channel like any other push, with the stream envelope under `data`:
+
+```json
+{ "ap_channel": "sess-42", "data": { "seq": 0, "delta": "Once upon", "done": false } }
+{ "ap_channel": "sess-42", "data": { "seq": 1, "delta": " a time", "done": false } }
+{ "ap_channel": "sess-42", "data": { "seq": 2, "delta": "", "done": true } }
+```
+
+- `seq` increases by one per frame, so a client can tell if it missed something.
+- `delta` is a run of characters, not a single token — see batching below.
+- `done` marks the end. A client should treat this as the signal to stop, not silence.
+- `dropped` appears on the final frame only if chunks were lost because a subscriber
+  could not keep up.
+
+Concatenating every `delta` gives exactly the text the action itself produced, so the
+action's own body is unchanged and any assert or transform on it still works.
+
+## Batching
+
+Deltas are **not** published one per token. Each publish fans out to every node holding a
+subscriber, so a five-hundred-token answer would mean five hundred fan-outs. The forwarder
+buffers instead and flushes about every 50ms or 200 characters, whichever comes first —
+roughly twenty frames a second, which reads as smooth. Tune with `flush_ms` and
+`flush_chars` if you need to.
+
+A subscriber that cannot keep up has frames dropped rather than being allowed to stall the
+model call, and the count is reported on the terminal frame.
+
+## Answering early
+
+`respond: early` is separate from streaming and useful on its own. The caller gets:
+
+```json
+{ "accepted": true, "request_id": "0199..." }
+```
+
+with a `202`, and the run continues in the background. Reach for it when the work outlives
+what the caller — or a proxy in front of you — will wait for.
+
+It changes the error contract. The status code is committed before the work runs, so
+`http_code_on_error` and any assert after that point can no longer change what the caller
+sees; a later failure has to reach them over the channel instead. Detached runs are also
+capped per organisation, and a request over the limit is refused with `429` rather than
+queued.
+
+Streaming without `respond: early` works too: the caller holds the request, watches tokens
+arrive on the channel, and gets the complete body when the action finishes.
+
+## Subscribing
+
+Clients subscribe exactly as they would to any channel — see
+[WebSocket channels](/docs/features/realtime/websocket) for the control frames, and
+[Realtime auth](/docs/features/realtime/realtime-auth) for restricting who may join one. Per-organisation
+bounds are in [Realtime limits](/docs/features/realtime/limits).

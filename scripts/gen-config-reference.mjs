@@ -35,7 +35,7 @@ const PAGES = [
     title: "Interfaces",
     defs: ["Interface", "InterfaceResponse", "InterfaceLog", "InterfaceLogOn",
       "InterfaceOutput", "ErrorFallbackStrategy", "McpTool", "McpServer", "Param", "Schedule",
-      "CaptureSetting", "CaptureMode", "CaptureWindow"],
+      "CaptureSetting", "CaptureMode", "CaptureWindow", "StreamOut", "StreamTarget", "Respond"],
   },
   {
     file: "03-actions",
