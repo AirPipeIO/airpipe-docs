@@ -31,7 +31,7 @@ plan can only raise it. They stop any single org from exhausting a node. Self-ho
 | `max_presence_per_conn` | 100 | Presence memberships one connection may hold | `AIRPIPE__RT_MAX_PRESENCE_PER_CONN` |
 | `max_retained` | 1000 | Retained messages an org pins across all channels | `AIRPIPE__RT_MAX_RETAINED` |
 | `max_publish_rate` | 1000 | Publishes per second per connection (token bucket) | `AIRPIPE__RT_MAX_PUBLISH_RATE` |
-| `max_topics` | 100000 | Distinct topics/channels an org may create | `AIRPIPE__RT_MAX_TOPICS` |
+| `max_topics` | 100000 | Distinct topics/channels an org may create — **subscribing to a new channel creates one** | `AIRPIPE__RT_MAX_TOPICS` |
 
 Enforcement is fail-loud: over a cap, the offending operation is rejected (`ap_error` / dropped
 subscribe) or the retain bit is stripped — never a silent degrade of other tenants. On MQTT, an
