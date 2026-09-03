@@ -91,6 +91,13 @@ model call, and the count is reported on the terminal frame.
 with a `202`, and the run continues in the background. Reach for it when the work outlives
 what the caller — or a proxy in front of you — will wait for.
 
+:::caution Self-hosted only for now
+`respond: early` is honoured by the self-hosted engine. On managed AirPipe the key is
+currently ignored and the interface runs **synchronously** — the caller waits for the work and
+receives the normal response rather than a `202`. Nothing errors, so test against the mode you
+deploy to before relying on it.
+:::
+
 It changes the error contract. The status code is committed before the work runs, so
 `http_code_on_error` and any assert after that point can no longer change what the caller
 sees; a later failure has to reach them over the channel instead. Detached runs are also
