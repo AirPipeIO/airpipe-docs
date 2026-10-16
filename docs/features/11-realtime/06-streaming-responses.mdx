@@ -97,7 +97,9 @@ It changes the error contract. The status code is committed before the work runs
 `http_code_on_error` and any assert after that point can no longer change what the caller
 sees; a later failure has to reach them over the channel instead. Detached runs are also
 capped, per organisation and per node, and a request over either limit is refused with `429`
-rather than queued.
+and `Retry-After: 1` rather than queued. On managed AirPipe the per-organisation limit follows
+your plan, from 8 concurrent runs on Free up to 128 (see [limits](https://airpipe.io/limits));
+self-hosted sets it with `AIRPIPE__MAX_DETACHED_RUNS` (default 64).
 
 An early run is billed exactly as it would be in-line: the trigger when the run is accepted,
 and its duration when it finishes. A request refused with `429` is not billed.
