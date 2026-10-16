@@ -91,18 +91,16 @@ model call, and the count is reported on the terminal frame.
 with a `202`, and the run continues in the background. Reach for it when the work outlives
 what the caller — or a proxy in front of you — will wait for.
 
-:::caution Self-hosted only for now
-`respond: early` is honoured by the self-hosted engine. On managed AirPipe the key is
-currently ignored and the interface runs **synchronously** — the caller waits for the work and
-receives the normal response rather than a `202`. Nothing errors, so test against the mode you
-deploy to before relying on it.
-:::
+It works the same on managed AirPipe and self-hosted (engine 3.10.1 and later on managed).
 
 It changes the error contract. The status code is committed before the work runs, so
 `http_code_on_error` and any assert after that point can no longer change what the caller
 sees; a later failure has to reach them over the channel instead. Detached runs are also
-capped per organisation, and a request over the limit is refused with `429` rather than
-queued.
+capped, per organisation and per node, and a request over either limit is refused with `429`
+rather than queued.
+
+An early run is billed exactly as it would be in-line: the trigger when the run is accepted,
+and its duration when it finishes. A request refused with `429` is not billed.
 
 Streaming without `respond: early` works too: the caller holds the request, watches tokens
 arrive on the channel, and gets the complete body when the action finishes.
