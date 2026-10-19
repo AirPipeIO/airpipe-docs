@@ -49,11 +49,21 @@ scrape_configs:
 | Metric | Type | Labels |
 |---|---|---|
 | `airpipe_interface_requests_total` | counter | `config`, `interface` |
-| `airpipe_interface_duration_ms` | histogram | `config`, `interface` |
-| `airpipe_http_action_duration_ms` | histogram | `config`, `interface`, `action` |
-| `axum_http_requests_total` | counter | route/method/status |
-| `axum_http_requests_duration_seconds` | histogram | route/method/status |
-| `axum_http_requests_pending` | gauge | — |
+| `airpipe_interface_duration_ms` | summary | `config`, `interface`, `quantile` |
+| `airpipe_http_action_duration_ms` | summary | `config`, `interface`, `action`, `status`, `quantile` |
+| `axum_http_requests_total` | counter | `endpoint`, `method`, `status` |
+| `axum_http_requests_duration_seconds` | histogram | `endpoint`, `method`, `status`, `le` |
+| `axum_http_requests_pending` | gauge | `endpoint`, `method` |
+
+- **Per-route numbers come from the `airpipe_*` series**, labelled by
+  `interface`. The `axum_*` series see every config route as one `endpoint`,
+  `/{*catchall}`, so use them for totals, status codes and overall latency.
+- **The two `_ms` series are summaries**: quantiles (`0`, `0.5`, `0.9`, `0.95`,
+  `0.99`, `0.999`, `1`) over roughly the last minute, plus `_sum` and `_count`.
+  Read a quantile directly, for example
+  `airpipe_interface_duration_ms{quantile="0.95"}`, rather than with
+  `histogram_quantile`. Summaries from several engines can't be combined into
+  one quantile, so chart them per engine.
 
 ## Custom metrics
 

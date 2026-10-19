@@ -8,7 +8,14 @@ slug: /otel-tracing
 
 Air Pipe emits distributed traces with zero code when run as the self-hosted
 binary. Point it at any OTLP collector and you get spans for every request,
-interface, action and lookup, with W3C trace-context propagation to upstreams.
+interface, action, lookup and outbound HTTP call, with W3C trace-context
+propagation to upstreams.
+
+:::note
+Trace export needs engine **3.11.2** or later. Earlier versions logged
+`failed to initialize OTel tracer — tracing disabled` with
+`Exporter build error: no http client specified` at startup and sent nothing.
+:::
 
 ## Enable it
 
@@ -50,13 +57,33 @@ Resource identity is `service.name=airpipe-api` with the binary's
 
 ## What gets traced
 
-- **HTTP root span** per request — attributes `http.method`, `url.path`,
-  `server.address`, `http.route`, `http.response.status_code`.
-- **Interface span** — with `interface` and `action_count`.
-- **Action spans** — one per action, plus `<action>::lookup` spans for fan-out.
+- **HTTP root span** per request, named `<METHOD> <route>` (for example
+  `GET api/users`), or just `<METHOD>` when no route matches. Attributes
+  `http.method`, `http.route`, `http.response.status_code` and `server.address`
+  (the host running the engine).
+- **Interface span** `<interface>::start`, with `airpipe.interface` and
+  `airpipe.run_uuid` (the same run id the editor's captured traces show, so you
+  can find one from the other).
+- **Action spans**: one per action, named after it, a `<action>:<attempt>` span
+  per attempt, and `<action>::lookup` spans for fan-out.
+- **Outbound HTTP spans** for `http` actions, named by the method (`GET`), with
+  `http.request.method`, `server.address` and `server.port`.
+
+Spans never carry the request path or an outbound URL. Both can hold secrets or
+personal data (an `api_key` in a query string, a token in a path), so spans are
+named by method and route template instead.
 
 Trace context is propagated to `http` actions, so upstream services on the same
-standard continue the trace.
+standard continue the trace. An incoming `traceparent` header is honoured: the
+request's root span joins the caller's trace.
+
+In CLI mode, spans are exported before the process exits.
+
+:::note
+With the fast path on (`AP_FASTPATH=1`), actions it runs have no spans of
+their own. The request, interface and outbound HTTP spans are still exported,
+in one trace.
+:::
 
 ## Quick local test (Jaeger)
 

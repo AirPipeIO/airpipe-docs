@@ -14,23 +14,42 @@ use: `airpipe-agent server`
 ```console
 Air Pipe Engine: Server Mode
 
-Usage: airpipe server [OPTIONS] --api-key <api-key>
+Usage: airpipe server [OPTIONS]
 
 Options:
-      --api-key <api-key>              Platform API Key
-      --dotenv <dotenv>                Specific dotenv file
-      --config <config>                Specific config file
-      --config-dir <config-dir>        Serve config files from target directory
-      --config-ids <config-ids>        Serve hosted configs - use * for all, otherwise supply an array of comma delimited uuids
-      --otel-endpoint <otel-endpoint>  Open Telemetry endpoint [env: OTEL_ENDPOINT=]
-      --log-level <log-level>          Log Levels: info, debug, warning, error, trace, critical [default: info]
-      --address <address>              HTTP bind address [default: 0.0.0.0]
-      --port <port>                    HTTP Port [default: 4111]
-      --metrics-address <addr>         Prometheus /metrics bind: host:port, or 'off' to disable [env: AIRPIPE__METRICS_BIND=] [default: 127.0.0.1:9090]
-  -h, --help                           Print help
+      --api-key <api-key>
+          Platform API Key (defaults to the key stored by `airpipe login`) [env: AIRPIPE_API_KEY=]
+      --dotenv <dotenv>
+          Specific dotenv file [env: AIRPIPE_DOTENV=]
+      --config <config>
+          Specific config file [env: AIRPIPE_CONFIG=]
+      --config-dir <config-dir>
+          Serve config files from target directory [env: AIRPIPE_CONFIG_DIR=]
+      --config-ids <config-ids>
+          Serve hosted configs - use * for all, otherwise supply an array of comma delimited uuids [env: AIRPIPE_CONFIG_IDS=]
+      --otel-endpoint <otel-endpoint>
+          Open Telemetry endpoint [env: AIRPIPE_OTEL_ENDPOINT=]
+      --log-level <log-level>
+          Log Levels: info, debug, warning, error, trace, critical [env: AIRPIPE_LOG_LVL=] [default: info]
+      --address <address>
+          HTTP bind address [default: 0.0.0.0]
+      --port <port>
+          HTTP Port [default: 4111]
+      --udp-port <udp-port>
+          UDP Port [default: 4119]
+      --staging <staging>
+          Cosmetic identifier, for eg. helps to understand billing by environment [env: STAGING=] [default: false] [possible values: true, false]
+      --docs-title <docs-title>
+          Title shown in auto-generated API documentation [env: AIRPIPE_DOCS_TITLE=]
+      --docs-description <docs-description>
+          Description shown in auto-generated API documentation [env: AIRPIPE_DOCS_DESCRIPTION=]
+      --metrics-address <metrics-address>
+          Prometheus /metrics bind (self-hosted): host:port, or 'off' to disable. 'off' also drops per-request instrumentation. Default is loopback so metrics are not exposed on the public API bind; set 0.0.0.0:<port> only behind a firewall. [env: AIRPIPE__METRICS_BIND=] [default: 127.0.0.1:9090]
+  -h, --help
+          Print help
 ```
 
-The `server` command alone does not run the agent as it requires `--api-key` and one of the `config` flags to start the agent.
+The `server` command needs an API key (`--api-key`, `AIRPIPE_API_KEY`, or the key stored by `airpipe login`) and one of the `config` flags to start the agent.
 
 ## Usage
 
@@ -45,7 +64,7 @@ Usage: `airpipe-agent server --api-key <key> --config-dir my/airpipe-configs/`
 ### Config Options
 
 - `--config` Specific config file to be run `--config /path/to/file/config.yml`
-- `--config-dor` Serve all airpipe configurations from the specificed directory `--config-dir /airpipe/configs`
+- `--config-dir` Serve all airpipe configurations from the specificed directory `--config-dir /airpipe/configs`
 - `--config-ids` Serve hosted configs with \* for all or supply an array of comma delimited uuids `--config-ids [123,124,123]`
 
 ### Environment Variables
@@ -81,6 +100,10 @@ Scrape it at `http://<metrics-bind>/metrics` (default `http://127.0.0.1:9090/met
 
 ### OpenTelemetry
 
-AirPipe offers support for OTEL endpoints by specifying the `--otel-endpoint` flag. Useful for connecting existing traces or starting new traces to be shipped off to your OTEL collector.
+Air Pipe ships traces to any OpenTelemetry collector over OTLP HTTP. Set `--otel-endpoint` (env `AIRPIPE_OTEL_ENDPOINT`) to the collector's traces URL, including the `/v1/traces` path: the engine posts to the URL exactly as given.
 
-<!-- Add an example command/picture of OTEL collector -->
+```console
+airpipe server --config-dir my/airpipe-configs/ --otel-endpoint http://localhost:4318/v1/traces
+```
+
+Requires engine 3.11.2 or later. Headers, sampling and what each span carries are in [OpenTelemetry tracing](/docs/otel-tracing).
