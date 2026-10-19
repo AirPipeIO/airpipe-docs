@@ -9,6 +9,11 @@ displayed_sidebar: featuresSidebar
 Air Pipe exposes a Prometheus `/metrics` endpoint and lets actions emit custom
 metrics. For distributed tracing see [OpenTelemetry tracing](/docs/otel-tracing).
 
+:::tip On Air Pipe managed
+Managed configs don't serve `/metrics`. Their request, error and latency metrics are collected
+and stored for you: see [Hosted metrics](/docs/configuration/hosted-metrics).
+:::
+
 ## Enable it
 
 Set `expose_metrics: true` at the config root. `/metrics` is served in self-hosted

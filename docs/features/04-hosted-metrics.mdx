@@ -1,0 +1,201 @@
+---
+sidebar_position: 4.5
+slug: /configuration/hosted-metrics
+displayed_sidebar: featuresSidebar
+title: Hosted metrics
+description: Request, error and latency metrics for every config on Air Pipe managed, stored for you and read with Grafana, PromQL or your own Prometheus.
+---
+
+# Hosted metrics
+
+On Air Pipe managed, every request to your configs is counted for you: how many, how they
+ended, and how long they took, per config and interface. The series are stored for you, and
+you read them the way you read Prometheus. Point Grafana at them, query them with PromQL, or
+have your own Prometheus or agent scrape them.
+
+There is nothing to add to your configs. Self-hosted engines serve their own
+[`/metrics` endpoint](/docs/configuration/metrics) instead.
+
+:::note Paid plans
+Hosted metrics comes with every paid plan. An organization that holds paid credits gets it,
+with at least the Starter limits below. When the paid credits are spent or expire, the series
+stop being written and can no longer be read.
+:::
+
+## How it works
+
+1. A request runs one of your configs on an Air Pipe worker, which counts it.
+2. Every 30 seconds each worker sends its counts to your organization's own metrics store.
+   Production and staging are stored separately, and no other organization can read either.
+3. You read them back at `https://api.airpipe.io/<org>/<env>/_ap/metrics`, where `<env>` is
+   `production` or `staging`. That address answers like a Prometheus server (for Grafana and
+   PromQL) and is also a scrape target (for your own Prometheus).
+
+A run shows up 30 to 60 seconds after it finishes.
+
+## What is collected
+
+| Metric | Type | Labels |
+|---|---|---|
+| `airpipe_interface_requests_total` | counter | `config`, `config_uuid`, `env`, `interface`, `transport`, `status` |
+| `airpipe_interface_duration_seconds` | histogram (`_bucket`, `_sum`, `_count`) | `config`, `config_uuid`, `env`, `interface`, `transport`, `le` |
+| `airpipe_hosted_metrics_series` | gauge | series in use |
+| `airpipe_hosted_metrics_series_limit` | gauge | your series limit |
+| `airpipe_hosted_metrics_dropped_runs_total` | counter | `reason`: `series_limit` or `node_limit` |
+
+- **`config`** is the config's name as you wrote it (variables are not substituted into it),
+  **`interface`** the interface's name or route template, never a raw path, and **`transport`**
+  how it was called: `http`, `mcp`, `ws` (websocket) or `schedule`.
+- **`status`** is the HTTP status class (`1xx` to `5xx`) for HTTP and MCP, and `ok` or `error`
+  for websocket messages and scheduled runs.
+- **Duration buckets** (`le`, in seconds): `0.1`, `0.5`, `1`, `2.5`, `5`, `10`, `20`, `30`,
+  `45`, `+Inf`.
+- Every series also carries **`instance`** (the worker that counted it) and **`region`**. Each
+  worker keeps its own running totals, so add them up with `sum` (or `sum without (instance)`),
+  as in the examples below.
+- An interface with no requests for 15 minutes stops being sent. When it is called again its
+  counters start from zero, which `rate()` and `increase()` handle like any counter reset.
+
+## Limits by plan
+
+| | Starter | Builder | Business | Platform |
+|---|---|---|---|---|
+| Retention | 3 days | 7 days | 10 days | 14 days |
+| Series | 500 | 2,000 | 10,000 | 50,000 |
+| Queries per second | 2 | 5 | 10 | 20 |
+| Burst | 10 | 25 | 50 | 100 |
+| Queries at once | 2 | 4 | 4 | 4 |
+
+- **Series** is the most your organization can have on each worker, production and staging
+  together. One interface uses 12 series for its histogram, plus one for each status class it
+  answers with, so 500 series is about 35 interfaces. A request that would need a new series
+  over the limit is not recorded and is counted in
+  `airpipe_hosted_metrics_dropped_runs_total{reason="series_limit"}`; existing series keep
+  counting.
+- **Retention** applies to every read. A query is evaluated so that nothing it reads, counting
+  range windows, offsets and `@` times, is older than your plan's retention.
+- **Queries per second** is the sustained rate; the **burst** can go at once. A query over the
+  rate waits its turn instead of being refused, for up to 10 seconds, so a dashboard that opens
+  with more panels than the burst still loads, a little slower. Only a queue longer than that
+  is refused with 429. **Queries at once** is per worker, and a query over it also waits, for up
+  to 10 seconds.
+
+Your plan follows the credits you hold; see [airpipe.io/limits](https://airpipe.io/limits).
+
+## Give a key access
+
+Reading hosted metrics needs a credential with the **`metrics:read`** scope.
+
+1. In **Roles**, create a role (for example `Metrics reader`) and give it the
+   `metrics:read` scope.
+2. In **API keys**, create a key with a role-based permission and choose that role.
+3. Use the key as below. It can only read metrics: a key's role decides what it can do.
+
+Signed-in users can also read with their session token (`airpipe-jwt` header): the
+organization's owner, or any user whose role has `metrics:read`.
+
+## Grafana
+
+Add a data source of type **Prometheus**:
+
+| Setting | Value |
+|---|---|
+| Prometheus server URL | `https://api.airpipe.io/<org>/production/_ap/metrics` |
+| Authentication | **Basic authentication**: any user name, your API key as the password. Or leave it off and add an HTTP header `Authorization` with the value `Bearer <your API key>` |
+| HTTP method | `POST` |
+
+Then **Save & test**. Add a second data source with `staging` in the URL to see staging.
+
+The [Hosted metrics Grafana dashboard](/docs/examples/marketplace/hosted-metrics-grafana)
+pack has a ready-made dashboard: requests, errors and latency per config and interface, and
+your series use against the limit.
+
+### Example queries
+
+```promql
+# Requests per second, per interface
+sum by (config, interface) (rate(airpipe_interface_requests_total[5m]))
+
+# Share of requests that failed
+sum(rate(airpipe_interface_requests_total{status=~"5xx|error"}[5m]))
+  / sum(rate(airpipe_interface_requests_total[5m]))
+
+# 95th percentile latency, per interface
+histogram_quantile(0.95,
+  sum by (le, interface) (rate(airpipe_interface_duration_seconds_bucket[5m])))
+
+# Series in use against the limit, on the busiest worker
+max(airpipe_hosted_metrics_series) / max(airpipe_hosted_metrics_series_limit)
+```
+
+`histogram_quantile` estimates from the bucket edges, so a percentile can only be as precise
+as the bucket it falls in.
+
+## Scrape into your own Prometheus
+
+If you already run Prometheus, Grafana Alloy, Datadog or an OpenTelemetry collector, scrape
+the same address instead of querying it:
+
+```yaml
+scrape_configs:
+  - job_name: airpipe
+    scheme: https
+    metrics_path: /<org>/production/_ap/metrics
+    authorization:
+      credentials: <your API key>
+    honor_labels: true
+    scrape_interval: 30s
+```
+
+- A scrape returns the latest value of every series, for all workers together. It is
+  served from the store, not from one worker, so nothing is missed whichever worker answers.
+- **`honor_labels: true`** keeps our `instance` label (the worker that counted) instead of
+  replacing it with the scrape target's.
+- New values arrive every 30 seconds, so scraping more often gets the same answer. A scrape
+  within 30 seconds of the last one is served from a copy and is not charged.
+- To scrape only some series, add `params: { 'match[]': ['airpipe_interface_requests_total'] }`.
+- Use a second job with `staging` in the path for staging.
+
+## Querying directly
+
+The address takes the Prometheus HTTP API (`GET` or form-encoded `POST`):
+
+| Path after `_ap/metrics` | |
+|---|---|
+| *(none)* or `/federate` | scrape: latest value of every series, Prometheus text format |
+| `/api/v1/query` | instant query |
+| `/api/v1/query_range` | range query |
+| `/api/v1/series` | series matching `match[]` |
+| `/api/v1/labels` | label names |
+| `/api/v1/label/<name>/values` | values of one label |
+| `/api/v1/metadata` | metric metadata |
+| `/api/v1/status/buildinfo` | for Grafana's connection test |
+
+```bash
+curl -H "Authorization: Bearer $AIRPIPE_METRICS_KEY" \
+  "https://api.airpipe.io/<org>/production/_ap/metrics/api/v1/query" \
+  --data-urlencode 'query=sum(rate(airpipe_interface_requests_total[5m]))'
+```
+
+PromQL and VictoriaMetrics' MetricsQL both work. Parameters other than `query`, `time`,
+`start`, `end`, `step`, `timeout`, `match[]`, `limit` and `metric` are ignored. A query can
+run for up to 15 seconds.
+
+Errors use the Prometheus error shape, `{"status":"error","errorType":"...","error":"..."}`:
+
+| Status | Meaning |
+|---|---|
+| 400 | the query or a parameter is invalid, or it reads past your retention with `@` |
+| 401 | no credential, or not one for this organization |
+| 402 | no request units left |
+| 403 | the credential's role lacks `metrics:read`, or hosted metrics is not on your plan |
+| 404 | not a hosted metrics path, or an environment other than `production` or `staging` |
+| 429 | over your queries per second, too many at once, or too many failed sign-ins (`Retry-After` says when to try again) |
+
+## Cost
+
+Each query, and each scrape that reaches the store, costs **1/100 of a request unit**, so
+100 of them cost one unit. A dashboard with 8 panels refreshing every minute uses about
+5 units per hour while it is open; scraping every 30 seconds uses about 29 units a day for
+each environment. Usage shows as `_ap/metrics` in your usage by transport. A request whose
+credential, plan or rate is refused is not charged.
