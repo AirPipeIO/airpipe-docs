@@ -30,8 +30,15 @@ the rest when it comes due.
 - name: SendFollowUp
   run_when_succeeded: [Remind]
   email:
+    smtp:
+      server: smtp.example.com
+      port: 587
+      user: a|env::SMTP_USER|
+      pass: a|env::SMTP_PASS|
+    from: hello@example.com
     to: a|body::email|
     subject: How did it go?
+    text: Thanks for your order. How did it go?
 ```
 
 Under `AIRPIPE__MAX_DELAY_SECS` (default 300s) a `delay` simply sleeps — that is ordinary
@@ -116,34 +123,56 @@ it would be a guess in both directions.
 - name: AskApprover
   run_when_succeeded: [Ticket]
   email:
-    to: approvals@example.com
-    subject: Approve this refund
-    body: |
-      Approve: https://api.example.com/_ap/resume/a|org_uuid|/a|Ticket::token|
+    smtp:
+      server: smtp.example.com
+      port: 587
+      user: a|env::SMTP_USER|
+      pass: a|env::SMTP_PASS|
+    from: approvals@example.com
+    to: manager@example.com
+    subject: A refund is waiting for your approval
+    html: '<a href="https://api.airpipe.io/_ap/resume/a|org_uuid|/a|Ticket::token|?approved_by=manager">Review the refund</a>'
 
 - name: Approval
   run_when_succeeded: [AskApprover]
   wait_for_callback:
     token: a|Ticket::token|
-    timeout: "7d"
+    timeout: 7d
 
 - name: Refund
   run_when_succeeded: [Approval]
   http:
-    url: https://api.example.com/refunds
+    url: https://payments.example.com/refunds
     method: POST
-    body: '{"order": "a|body::order_id|", "approved_by": "a|Approval::approved_by|"}'
+    body: '{"approved_by": "a|Approval::approved_by|"}'
 ```
 
-`POST /_ap/resume/<org_uuid>/<token>` resumes the run, and **whatever was posted becomes the
-waiting action's output** — so `a|Approval::approved_by|` above reads a field from the
-approver's own request body.
+The link `/_ap/resume/<org_uuid>/<token>` resumes the run, and **what is sent to it becomes the
+waiting action's output** — so `a|Approval::approved_by|` above reads the `approved_by` the
+link carried.
+
+The link works two ways:
+
+- **Opened in a browser** — a link in an email — it shows a short page with a **Confirm**
+  button. Pressing it sends the link's query parameters (`approved_by=manager` here). Opening
+  the link changes nothing, because mail scanners and chat link previews open links on their
+  own; only the button answers. That is the same pattern as GitHub's or any approval tool's
+  emailed links, which lead to a page rather than acting when opened.
+- **Called by a program**, it takes a `POST` with a JSON body, which becomes the output as is.
+
+Build the link from your engine's address — on managed Air Pipe, `https://api.airpipe.io` —
+and `a|org_uuid|`. To offer approve and reject, send two links that differ only in a
+parameter (`?decision=approve`, `?decision=reject`) and branch on `a|Approval::decision|`.
 
 ### The token is the credential
 
 You mint it, because you are the one who has to put it in a link. Use `a|uuid|`, not something
 predictable like an order number: anyone holding the token can resume the run, exactly as with
 a password-reset link.
+
+Wait on the action that mints it, as the example does with `run_when_succeeded`. A token
+that does not resolve — the action had not run yet, or the field name is wrong — renders as
+`null`, and `wait_for_callback` refuses it rather than parking a run anyone could resume.
 
 The organisation is in the URL and is not a secret — it already appears in every managed
 route. It is there so a token guessed in one organisation cannot reach a run in another, which

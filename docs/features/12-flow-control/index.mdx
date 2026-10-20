@@ -32,25 +32,28 @@ run_when_succeeded:
   actions: [previous, anotherAction]
 ```
 ---
-For `run_on_assertion` this uses uses the identical `assert` system used for validating actions, see [here](/docs/reference/asserts).
+For `run_on_assertion` this uses the identical `assert` system used for validating actions, see [here](/docs/reference/asserts).
+The tests read a prior action (`action:` or `action_value:`) or a request value
+(`custom_value: a|body::type|`). The action being gated has not run yet, so it has no data of
+its own to test. When the condition does not hold, the action is skipped, not failed.
 
 ```yaml
-  - name: GetUser2
-    run_when_finished: [GetUser1] # you should typically ensure the actions that run_on_assertion depends on are finished 
-    run_on_assertion: #<---! this is used for asserting any of the prior actions before starting this one
-      tests:
-        - action: GetUser1
-          value: .name
-          is_equal_to: "Ervin Howell"
-    http: 
-      url: https://jsonplaceholder.typicode.com/users/2
-      headers:
-        content-type: application/json
-    assert: # this is used for asserting the data you fetched from this action itself
-      tests:
-        - value: .body.name
-          is_not_null: true
+- name: Lookup
+  json_output: '{"valid": true}'
+- name: Charge
+  run_on_assertion:
+    tests:
+      - action: Lookup
+        value: valid
+        is_equal_to: true
+  json_output: '{"charged": true}'
 ```
+
+A gate waits for an action declared above it that it reads, so it needs no
+`run_when_finished`. It reads that action whether it succeeded or failed, since a failed
+action keeps its payload. To require success as well, add `run_when_succeeded: [Lookup]`.
+Before Air Pipe 3.16.1 a gate did not wait: without `run_when_finished: [Lookup]` it read
+`Lookup` before it had run and skipped every time.
 
 ## When a branch does not apply
 
