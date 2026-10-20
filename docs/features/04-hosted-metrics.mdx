@@ -50,9 +50,10 @@ A run shows up 30 to 60 seconds after it finishes.
   for websocket messages and scheduled runs.
 - **Duration buckets** (`le`, in seconds): `0.1`, `0.5`, `1`, `2.5`, `5`, `10`, `20`, `30`,
   `45`, `+Inf`.
-- Every series also carries **`instance`** (the worker that counted it) and **`region`**. Each
+- Every series also carries **`instance`** (the worker that counted it) and **`region`** (where
+  that worker runs: a country code and a city, such as `au-syd`, `us-ash` or `in-hyd`). Each
   worker keeps its own running totals, so add them up with `sum` (or `sum without (instance)`),
-  as in the examples below.
+  as in the examples below. `sum by (region)` shows where your requests are served.
 - An interface with no requests for 15 minutes stops being sent. When it is called again its
   counters start from zero, which `rate()` and `increase()` handle like any counter reset.
 
