@@ -45,6 +45,101 @@ Pair MCP tools with [network access control](/docs/configuration/access-control)
 and JWT verification so agent-callable endpoints stay authorized.
 :::
 
+## What a call returns
+
+An HTTP caller gets every step's data, errors and timings. An MCP tool call gets
+**the answer** (engine ≥ **3.17.0**):
+
+- **On success**, the `data` of the last step that ran. Steps with
+  `hide_data_on_success` are skipped, so a token check or an input check never
+  becomes the answer. A `response_on_success` body is sent as written. An empty
+  result stays `[]`.
+- **On failure**, `isError: true` and what failed:
+
+```json
+{
+  "error": "Task not found",
+  "status": 404,
+  "step": "GetTask",
+  "errors": ["query failed: 42P01: relation \"tasks\" does not exist"]
+}
+```
+
+`error` is the failing step's `error_message`. `errors` are its failed checks, kept
+whole because they often hold the real cause. `detail` is added when the failing
+step is an `http` call: the upstream's response body, which usually says what was
+wrong with the request. A step that never ran because an earlier one failed is not
+reported; the step it waited on is.
+
+When several steps ran and failed, the first one leads, and its status is the
+call's. Every other one follows in `other_failures` with its own `error`, `errors`
+and `detail` (engine ≥ **3.17.1**):
+
+```json
+{
+  "error": "out of stock",
+  "status": 409,
+  "step": "CheckStock",
+  "errors": ["in_stock::is_equal_to: expected true, got false"],
+  "other_failures": [
+    {
+      "step": "CheckCredit",
+      "error": "credit limit reached",
+      "errors": [
+        "credit_ok::is_equal_to: expected true, got false",
+        "limit::is_greater_than: expected target 500 not greater than 1000"
+      ]
+    },
+    {
+      "step": "CheckAddress",
+      "error": "http status 422 (expected 2xx or 304)",
+      "detail": { "msg": "postcode 0000 does not exist" }
+    }
+  ]
+}
+``` `hide_errors` and `hide_data_on_error` are
+honored. The failed step's own data is never included, since for a token check
+that data is the caller's token.
+
+### Typed results
+
+Declare the result's schema with `produces.schema`. The tool then advertises it as
+`outputSchema` and returns `structuredContent` alongside the text:
+
+```yaml
+interfaces:
+  taskTitles:
+    mcp:
+      enabled: true
+      tool_name: task_titles
+    produces:
+      schema:
+        type: array
+        items:
+          type: object
+          properties:
+            id: { type: integer }
+            title: { type: string }
+```
+
+MCP requires an object at the root, so a schema that is not an object (like this
+array) is wrapped: the tool advertises `{"result": <your schema>}` and returns
+`{"result": [...]}`. A `produces.example` on its own documents the endpoint but
+advertises no `outputSchema`. Clients reject every result that does not match an
+advertised schema, and a schema guessed from one example is too strict to rely on.
+
+### The whole envelope
+
+Set `result: full` to send what an HTTP caller gets. No `outputSchema` is
+advertised, since the envelope matches none:
+
+```yaml
+mcp:
+  enabled: true
+  tool_name: get_order
+  result: full   # send every step's data, errors and timings, as HTTP does
+```
+
 ## Server identity
 
 Every MCP client calls `initialize` before it lists or calls anything, and that
