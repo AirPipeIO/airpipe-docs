@@ -132,7 +132,7 @@ instead of in the output.
 | Filter | Does |
 |---|---|
 | `to_string` | render as text |
-| `single_quote` / `double_quote` | quote for SQL / JSON |
+| `single_quote` / `double_quote` | wrap the value in quotes. Not for SQL: [pass SQL values as `params`](#values-in-sql) |
 | `json_esc` / `json_escape` | escape for embedding inside a JSON string |
 | `json_stringify` (alias `tojson`) | serialise as a JSON document |
 | `raw` / `literal` | keep any `a\|...\|` in the value literal instead of resolving it |
@@ -143,7 +143,7 @@ instead of in the output.
 
 Wrap a marker to coerce its rendering: `single_quote(...)`, `double_quote(...)`,
 `json_esc(...)`, `json_stringify(...)`. These are useful when injecting values
-into SQL or JSON bodies. A wrapper applies wherever the marker appears — on its
+into JSON bodies and other text. A wrapper applies wherever the marker appears — on its
 own, or inside a longer string such as an HTTP body field.
 
 `json_stringify` follows `JSON.stringify` semantics: an object or array is
@@ -163,6 +163,37 @@ sends an object. The text filters (`json_stringify`/`tojson`, `json_escape`,
 `to_string`) are the exception: they exist to produce text, so their result stays
 a string rather than being re-read as JSON.
 :::
+
+## Values in SQL
+
+Don't put markers in a database action's `query` text. Write a placeholder (`$1`, `$2`, …
+on Postgres) and list the values under `params:`, in order. The database receives them as
+values, never as SQL, so a name like `Mary O'Brien` is stored as written and nothing a
+caller sends can change the statement:
+
+```yaml
+- name: Save
+  database: main
+  query: |-
+    INSERT INTO users (login, name, repo_count)
+    VALUES ($1::text, $2::text, $3::int)
+    RETURNING login, name, repo_count
+  params:
+    - a|body::login|
+    - a|body::name->default('')|
+    - a|body::repo_count->default(0)|
+```
+
+Filters work inside `params` as anywhere else. Give each placeholder a cast (`$1::text`,
+`$3::int`) so Postgres knows its type. A query-string value is always text, and text binds
+to an `::int` placeholder only once a filter such as `->default(25)` has made it a number;
+`LIMIT $1::text::int` takes text and numbers alike. Either way a value that isn't a number
+(`?limit=two`) fails the action instead of reaching the statement.
+
+Quoting filters are not a substitute. With the value pasted into the text,
+`VALUES (a|body::name->single_quote|)` fails on `Mary O'Brien` with
+`42601: syntax error at or near "Brien"`, and an unquoted number such as
+`LIMIT a|params::limit|` lets `?limit=1 OFFSET 2` add SQL to the statement.
 
 ## Pipes inside a marker
 
