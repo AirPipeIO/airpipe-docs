@@ -76,7 +76,7 @@
       }
     },
     "on_error": {
-      "description": "Run an interface whenever a run of this config fails.\n\nThe engine already knows every failure — it decides the status code and records\nthe run — so this turns that into an alert, a ticket or a dead-letter write\nwithout a second system polling for it.\n\n## Example\n```yaml\non_error:\n  interface: NotifyOps\n  status: [500, 502, 503]\n  max_per_minute: 6\n```",
+      "description": "Run an interface whenever a run of this config fails.\n\nThe engine already knows every failure — it decides the status code and records\nthe run — so this turns that into an alert, a ticket or a dead-letter write\nwithout a second system polling for it.\n\nIt fires for a run answered in-line, for a `respond: early` run whose work fails after\nthe 202, and for the resumed half of a run that waited. A lookup item's failure is its\nparent's to report, so items do not fire it themselves.\n\n## Example\n```yaml\non_error:\n  interface: NotifyOps\n  status: [500, 502, 503]\n  max_per_minute: 6\ninterfaces:\n  NotifyOps:\n    output: http\n    method: POST\n    actions:\n      - name: Post\n        http:\n          url: https://hooks.example.com/alerts\n          method: POST\n          body: '{\"text\": \"a|body::interface| failed with a|body::http_code| (run a|body::run_uuid|)\"}'\n```",
       "anyOf": [
         {
           "$ref": "#/$defs/OnError"
@@ -4142,10 +4142,10 @@
           }
         },
         "schema": {
-          "description": "Pin the model's final answer to a JSON Schema.\n\nSent as `response_format: {type: json_schema, strict: true}`, which OpenAI, Gemini and\nAnthropic all enforce — the model cannot return the wrong shape, so there is nothing to\nvalidate afterwards and nothing to retry. Verified against all three.\n\n```yaml\nagent:\n  schema:\n    type: object\n    properties:\n      sku: { type: string }\n      qty: { type: integer }\n    required: [sku, qty]\n```\n\nWith this set, `content` holds the parsed object rather than a string, so a later action\nreads `a|Agent::content.sku|` without a `code:` action in between. Composes with `tools`:\nthe model may still call tools, and the schema applies to the answer it finishes with.\n\nLeave it unset for today's behaviour. `system:` is unaffected either way — describe the\nshape in the prompt if you prefer, or use both together.\n\nNot interpolated: a schema is a contract with the provider, not a place for request data."
+          "description": "Pin the model's final answer to a JSON Schema.\n\nSent as `response_format: {type: json_schema, strict: true}`, which OpenAI, Gemini and\nAnthropic all enforce. The answer is also checked against the schema when it comes\nback, because an OpenAI-compatible endpoint can accept the field without enforcing it:\nan answer of the wrong shape, a refusal, or a reply the provider withheld fails the\naction, naming what was wrong.\n\n```yaml\nagent:\n  schema:\n    type: object\n    properties:\n      sku: { type: string }\n      qty: { type: integer }\n    required: [sku, qty]\n```\n\nWith this set, `content` holds the parsed object rather than a string, so a later action\nreads `a|Agent::content.sku|` without a `code:` action in between. Composes with `tools`:\nthe model may still call tools, and the schema applies to the answer it finishes with.\n\nLeave it unset for today's behaviour. `system:` is unaffected either way — describe the\nshape in the prompt if you prefer, or use both together.\n\nNot interpolated: a schema is a contract with the provider, not a place for request data."
         },
         "max_iterations": {
-          "description": "How many model round trips the loop may take. Default 4, hard ceiling 12.\n\nThis is the bound that makes an agent safe to expose: each iteration is a model\ncall plus every tool it asked for, and a model that keeps calling tools would\notherwise run until something else stopped it. Reaching the budget is reported,\nnever silent.",
+          "description": "How many model round trips the loop may take. Default 4, hard ceiling 12.\n\nThis is the bound that makes an agent safe to expose: each iteration is a model\ncall plus every tool it asked for, and a model that keeps calling tools would\notherwise run until something else stopped it. Reaching the budget fails the action,\nkeeping what was done (`iterations`, `tool_calls`, `finished: false`).",
           "type": [
             "integer",
             "null"
@@ -4154,7 +4154,7 @@
           "minimum": 0
         },
         "memory": {
-          "description": "Remember this conversation across requests.\n\nWithout it an agent starts every request with an empty history: it cannot answer \"and\nwhat about tomorrow?\" because it never saw yesterday's question. With it, the last\nexchanges for a session are replayed into the next call.\n\n## Example\n```yaml\nmemory:\n  key: a|body::session_id|   # what makes one conversation distinct from another\n  window: 10                 # how many past messages to replay\n  ttl: 24h                   # how long a silent conversation survives\n```",
+          "description": "Remember this conversation across requests.\n\nWithout it an agent starts every request with an empty history: it cannot answer \"and\nwhat about tomorrow?\" because it never saw yesterday's question. With it, the last\nexchanges for a session are replayed into the next call.\n\n## Example\n```yaml\nmemory:\n  key: a|body::session_id|   # what makes one conversation distinct from another\n  window: 10                 # how many past messages to replay\n  ttl: 24h                   # how long a silent conversation survives\n```\n\nIf the state store cannot be read, the action fails before the model is called; if\nthe exchange cannot be saved, it fails keeping the answer. Either way the next turn\nwould not see this one, so the run does not pretend it would.",
           "anyOf": [
             {
               "$ref": "#/$defs/AgentMemory"
@@ -4206,7 +4206,7 @@
           }
         },
         "only": {
-          "description": "Offer only these of the server's tools. Absent means all of them.\n\nWorth setting deliberately: a remote server decides what it publishes, so without a\nlist the model's abilities change when somebody else edits their config.",
+          "description": "Offer only these of the server's tools. Absent means all of them.\n\nWorth setting deliberately: a remote server decides what it publishes, so without a\nlist the model's abilities change when somebody else edits their config. A name the\nserver does not publish fails the action, as an unknown local tool does.",
           "type": [
             "array",
             "null"
@@ -5960,9 +5960,11 @@
       ]
     },
     "InterfaceResponse": {
+      "description": "How an interface turns its actions' outcomes into the response.\n\n**Which step decides the status.** By default the LAST action does: if it succeeded, or was\nskipped by a gate, the request answers success however earlier steps went. That is what\nlets a `run_when_failed` branch recover a failure. It also means a failure followed by a\nstep that still runs (`depends_on`) or is skipped (`run_on_assertion`) answers 200 -- set\n`http_code_fallback_strategy: any_action` when every failed step should fail the request.\n\n## Example\n```yaml\nresponse:\n  http_code_fallback_strategy: any_action   # any failed step fails the request\n  http_code_inherit_error: [Charge]         # answer with Charge's own error status\n  http_code_on_error: 502                   # otherwise this\n```",
       "type": "object",
       "properties": {
         "http_code_on_error": {
+          "description": "The status to answer with when the request failed. `http_code_inherit_error` takes\nprecedence when one of its actions carries an error status.",
           "type": [
             "integer",
             "null"
@@ -5972,6 +5974,7 @@
           "maximum": 65535
         },
         "http_code_inherit_error": {
+          "description": "Actions whose own error status the request answers with when it failed: an assert's\n`http_code_on_error`, or the status a failed http action got back.",
           "type": [
             "array",
             "null"
@@ -5981,6 +5984,7 @@
           }
         },
         "headers": {
+          "description": "Headers added to the response.",
           "type": [
             "object",
             "null"
@@ -5988,12 +5992,14 @@
           "additionalProperties": true
         },
         "custom_body": {
+          "description": "A body to answer with instead of the actions' output.",
           "type": [
             "string",
             "null"
           ]
         },
         "http_code_fallback": {
+          "description": "The status for a failed request when no action carries one and nothing above set one.\nDefaults to 500.",
           "type": [
             "integer",
             "null"
@@ -6003,6 +6009,7 @@
           "maximum": 65535
         },
         "http_code_fallback_strategy": {
+          "description": "Which failures fail the request.\n\n- `last_action` (default): only the last action's. If it succeeded or was skipped,\n  earlier failures do not change the status.\n- `any_action`: any failed action fails the request.\n- `last_action_with_error`: the same as `any_action`.\n\nA skipped action is never a failure under any of them.",
           "anyOf": [
             {
               "$ref": "#/$defs/ErrorFallbackStrategy"
@@ -6025,11 +6032,22 @@
       "additionalProperties": false
     },
     "ErrorFallbackStrategy": {
-      "type": "string",
-      "enum": [
-        "last_action",
-        "last_action_with_error",
-        "any_action"
+      "oneOf": [
+        {
+          "description": "Only the last action's failure fails the request. The default.",
+          "type": "string",
+          "const": "last_action"
+        },
+        {
+          "description": "Any failed action fails the request (the same as `any_action`).",
+          "type": "string",
+          "const": "last_action_with_error"
+        },
+        {
+          "description": "Any failed action fails the request.",
+          "type": "string",
+          "const": "any_action"
+        }
       ]
     },
     "InterfaceLog": {
@@ -6821,7 +6839,7 @@
       "type": "object",
       "properties": {
         "interface": {
-          "description": "Name of an interface in this config to run. It receives a JSON body describing\nwhat failed:\n\n```json\n{\n  \"config\": \"orders-api\",\n  \"interface\": \"CreateOrder\",\n  \"http_code\": 500,\n  \"run_uuid\": \"0199...\",\n  \"at\": \"2026-08-22T04:15:00Z\",\n  \"data\": { }\n}\n```\n\nso a handler reads `a|body->interface|`, `a|body->http_code|` and the rest.",
+          "description": "Name of an interface in this config to run. It receives a JSON body describing\nwhat failed:\n\n```json\n{\n  \"config\": \"orders-api\",\n  \"interface\": \"CreateOrder\",\n  \"http_code\": 500,\n  \"run_uuid\": \"0199...\",\n  \"at\": \"2026-08-22T04:15:00Z\",\n  \"data\": { }\n}\n```\n\nso a handler reads `a|body::interface|`, `a|body::http_code|` and the rest. (`->` starts\na filter, so `a|body->interface|` does not parse and the handler fails.)\n\n`run_uuid` is the id the caller was given: the `request_id` of a `respond: early` 202,\nor the `run_uuid` of a run that parked on a long wait.",
           "type": "string"
         },
         "status": {
