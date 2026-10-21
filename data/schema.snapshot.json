@@ -6434,7 +6434,7 @@
       "additionalProperties": false
     },
     "McpTool": {
-      "description": "Opt-in MCP tool exposure for an interface. See [`Interface::mcp`].\n\nThe MCP server auto-generates the tool's `inputSchema` from the interface's\n`assert` tests (the same schema that powers the OpenAPI docs), so no separate\nschema needs to be authored here.",
+      "description": "Opt-in MCP tool exposure for an interface. See [`Interface::mcp`].\n\nThe MCP server auto-generates the tool's `inputSchema` from the interface's\n`assert` tests (the same schema that powers the OpenAPI docs), so no separate\nschema needs to be authored here.\n\n**What a call returns.** The answer, not the step-by-step record an HTTP caller gets: the\n`data` of the last step that ran (skipping steps that hide their data on success), or the\nbody of a `response_on_success`. A failed call is `isError: true` with\n`{error, status, step, errors}` for the step that failed, plus `detail` -- the upstream's\nresponse body -- when that step is an `http` call. When several steps ran and failed, the\nfirst leads and each other one is listed in `other_failures` with its own `error`, `errors`\nand `detail`. `outputSchema` is advertised only when\nthe interface declares `produces.schema`; the tool then also returns `structuredContent`, and\na schema that is not an object is wrapped as `{\"result\": ...}`, since MCP requires an object.\n\n## Example\n```yaml\nmcp:\n  enabled: true\n  tool_name: get_order\n  result: full   # send every step's data, errors and timings, as HTTP does\n```",
       "type": "object",
       "properties": {
         "enabled": {
@@ -6469,9 +6469,35 @@
             "string",
             "null"
           ]
+        },
+        "result": {
+          "description": "What a call returns: `answer` (the default) is the final step's data on success and what\nfailed on error; `full` is the whole envelope, every step's data, errors and timings, as an\nHTTP caller gets it. `full` advertises no `outputSchema`, since the envelope matches none.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/McpResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
+    },
+    "McpResult": {
+      "description": "What an MCP tool call returns. See [`McpTool::result`].",
+      "oneOf": [
+        {
+          "description": "The answer on success; the failed step's error, status and checks on failure.",
+          "type": "string",
+          "const": "answer"
+        },
+        {
+          "description": "The whole envelope, as HTTP returns it.",
+          "type": "string",
+          "const": "full"
+        }
+      ]
     },
     "GlobalConfig": {
       "type": "object",
