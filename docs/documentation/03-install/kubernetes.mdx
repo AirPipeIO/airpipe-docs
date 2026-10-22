@@ -333,6 +333,13 @@ fails. Set `AIRPIPE_STATE_DIR` to a writable path, and for production supply a
 pre-enrolled identity via `AIRPIPE_AGENT_UUID` and `AIRPIPE_AGENT_KEY`, which is
 the documented approach for container runtimes.
 
+Every replica can share that one identity: each running agent signs its own
+process into its reports, so replicas and restarts are counted separately. This
+needs Air Pipe **3.18.0** or later. Earlier versions kept one report sequence per
+identity, so replicas sharing it had most of their reports refused as replays,
+and the usage in them was never counted. Upgrade before you scale out on a
+shared identity.
+
 **NetworkPolicy is default-deny.** Once any policy selects your pods, every
 ingress port it does not explicitly allow is dropped. Keep the metrics rule and
 the application-port rule in **one** policy — split across two, deleting either
