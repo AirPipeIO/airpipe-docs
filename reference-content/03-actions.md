@@ -70,9 +70,9 @@ Two narrowings worth knowing:
 
 ### Retrying anything that is not an HTTP call
 
-A database, command, email or state action has no status code to classify, so **every**
-failure of one is retryable — a query error, a failed `assert`, a non-zero `expect_exit`.
-That is unchanged, and it is what makes the common shapes work:
+A database, command, email or state action has no status code to classify, so by default
+**every** failure of one is retryable — a query error, a failed `assert`, a non-zero
+`expect_exit`. That is what makes the common shapes work:
 
 ```yml
 # retry until the row shows up
@@ -89,10 +89,39 @@ That is unchanged, and it is what makes the common shapes work:
 
 Two things follow from that:
 
-- `on` / `except` match statuses and transport failures, so on a non-http action they match
-  nothing and the filter is inert. The config-load lint warns if you set one there. To
-  narrow *what counts as a failure* on these actions, use `assert` (or `expect_exit` for a
-  command) — that is the knob with meaning here.
+- On a **database** action, `on` / `except` take `unavailable` — the database could not be
+  reached: refused, timed out, restarting or failing over — and `any`. `on: [unavailable]`
+  rides out a restart or failover, and still fails at once on a broken query or a failed
+  check (see [When the step itself fails](./12-asserts.md#when-the-step-itself-fails)):
+
+  ```yml
+  orders/get-patiently:
+    output: http
+    method: POST
+    actions:
+      - name: GetOrder
+        database: main
+        query: SELECT id, status FROM orders WHERE id = $1
+        params: [a|body::id|]
+        retry:
+          attempts: 5
+          delay: 500
+          exponential_backoff: true
+          on: [unavailable]
+        assert:
+          http_code_on_error: 404
+          error_message: Order not found
+          tests:
+            - value: count()
+              is_equal_to: 1
+  ```
+
+  A missing order answers `404` straight away; a database that stays down answers `503` once
+  the attempts run out.
+- On any other non-http action, `on` / `except` match nothing and the filter is inert. The
+  config-load lint warns if you set one there (and on a database action, about any entry other
+  than `unavailable` or `any`). To narrow *what counts as a failure* on these actions, use
+  `assert` (or `expect_exit` for a command) — that is the knob with meaning here.
 - `delay` is an upper bound, not a fixed wait, because jitter applies to every action type:
   `delay: 500` sleeps somewhere in `[0, 500)`. Set `jitter: none` if you need the exact
   curve (a test asserting on elapsed time, say).

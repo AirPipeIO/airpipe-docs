@@ -21,6 +21,15 @@ interfaces:
         query: SELECT * FROM users
 ```
 
+Pass request values to a query with `params` (`params: [a|body::email|]`), not `input:`. An
+`input:` read from the request (`a|body|`, `a|params|`, ...) is used *instead* of running the
+query: the action answers with the request and the query never runs. Validation refuses a
+database action with both, and config load warns about it.
+
+When the database cannot be reached or rejects the query, the action answers `503` or `500`,
+even if its own `assert` would answer something else — see
+[When the step itself fails](./12-asserts.md#when-the-step-itself-fails).
+
 ## Document stores {#document_operation}
 
 NoSQL / document stores use a `document_operation` block instead of `query` —

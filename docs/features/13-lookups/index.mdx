@@ -204,3 +204,39 @@ interfaces:
                 - value: count()
                   is_equal_to: 0
 ```
+
+## When some items fail
+
+By default a lookup answers with every item's result and fails only when **all** of them
+failed, so an import that wrote 98 rows of 100 answers `200`. Set `on_item_error: fail` to fail
+the step when any item fails. Its status is the first failed item's — a `409` for a duplicate
+row, `503` for a database that could not be reached or an item that timed out — its
+`error` counts the failures and quotes the first, and its data is still the full result. Items
+that already ran are not undone.
+
+```yml
+  orders/import:
+    output: http
+    method: POST
+    actions:
+      - name: Import
+        lookup: a|body|
+        on_item_error: fail
+        lookup_partition: true
+        actions:
+          - name: InsertOrder
+            database: main
+            query: INSERT INTO orders (id, status) VALUES ($1, $2)
+            params: [a|body::id|, a|body::status|]
+            assert:
+              http_code_on_error: 409
+              error_message: Order already exists
+              tests:
+                - value: count()
+                  is_equal_to: 0
+```
+
+Posting `[{"id": 2, "status": "new"}, {"id": 1, "status": "new"}]` when order `1` exists
+answers `409`, with `error` `lookup 'Import': 1 of 2 item(s) failed; the first: ...`.
+`lookup_partition: true` splits the data into `succeeded` (order `2`) and `failed` (order `1`,
+with its error), so the caller knows which rows to fix.

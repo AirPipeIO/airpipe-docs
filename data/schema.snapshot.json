@@ -774,6 +774,17 @@
             "null"
           ]
         },
+        "on_item_error": {
+          "description": "What a lookup does when some of its items fail. `continue` (the default) answers with\nevery item's result and fails only when all of them failed, so an import that wrote 98\nrows of 100 answers 200. `fail` fails the step when any item fails: its status is the\nfirst failed item's (a 409 for a duplicate row, 503 for an unavailable database or an\nitem that timed out), its `error` counts the failures and quotes the first, and its\ndata is still the full result (with `lookup_partition`, the `succeeded` / `failed`\nsplit). Items that already ran are not undone.\n\n## Example\n```yaml\non_item_error: fail\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OnItemError"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "lookup_inherit_jq": {
           "description": "JQ transformations to apply to lookup results.\n\n## Example\n```yaml\nlookup_inherit_jq:\n  token: .result.token\n```",
           "type": [
@@ -2215,7 +2226,7 @@
           ]
         },
         "on": {
-          "description": "Which failures are worth repeating. Accepts codes (`429`), classes (`5xx`),\n`any`, and the transport classes `timeout` / `connect`.\n\nUnset uses the default set — `408, 429, 500, 502, 503, 504` plus transport\nfailures — which is the intersection of what Polly, the AWS and Azure SDKs and\nurllib3 all treat as transient. A 400 or a 401 will never succeed on a second\nattempt, so repeating it only wastes the upstream's capacity and your own.",
+          "description": "Which failures are worth repeating. Accepts codes (`429`), classes (`5xx`),\n`any`, and the transport classes `timeout` / `connect`. On a database step, `unavailable`\n(the database refused or dropped the connection, timed out, or is failing over) or `any`;\nunset, a database step retries every failure.\n\nUnset uses the default set — `408, 429, 500, 502, 503, 504` plus transport\nfailures — which is the intersection of what Polly, the AWS and Azure SDKs and\nurllib3 all treat as transient. A 400 or a 401 will never succeed on a second\nattempt, so repeating it only wastes the upstream's capacity and your own.",
           "type": [
             "array",
             "null"
@@ -2278,6 +2289,21 @@
           "description": "Sleep exactly the computed backoff. Predictable, and synchronises clients.",
           "type": "string",
           "const": "none"
+        }
+      ]
+    },
+    "OnItemError": {
+      "description": "See [`Action::on_item_error`].",
+      "oneOf": [
+        {
+          "description": "Answer with every item's result; fail only when every item failed.",
+          "type": "string",
+          "const": "continue"
+        },
+        {
+          "description": "Fail the step when any item fails.",
+          "type": "string",
+          "const": "fail"
         }
       ]
     },
@@ -4430,7 +4456,7 @@
           ]
         },
         "http_code_on_error": {
-          "description": "HTTP status code to return when any test fails. Individual test-level\n`http_code_on_error` takes precedence when set.",
+          "description": "HTTP status code to return when any test fails. Individual test-level\n`http_code_on_error` takes precedence when set.\n\nOn an action's own `assert`, this is for the data the action produced. If the action\nitself failed, the tests do not run and the action answers with what failed instead: 503\nwhen the database or an upstream could not be reached or timed out, 500 when the database\nrejected the query; its `error` says which. A failure caused by the request's data --\na duplicate key, a value a column rejects -- is still judged by the tests.",
           "type": [
             "integer",
             "null"
