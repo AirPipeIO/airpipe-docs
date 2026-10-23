@@ -26,3 +26,28 @@ No further setup required once you have registered and verified your account. Ea
 
 ## Binaries
 http://download.airpipe.io
+
+## Upgrading
+
+A self-hosted engine does not update itself. The app lists each one that reports with your
+API keys, and the version it runs, at [Self-hosted agents](https://app.airpipe.io/agents),
+and flags any older than the current release
+([latest.version](https://download.airpipe.io/latest.version)). Replicas that share one
+identity are listed as its processes, so a replica left on an old version shows too.
+
+- **Linux, installed with `setup.sh`:** install the latest binary in place, then restart
+  the service. (`--update` replaces the binary only; your configs and service are kept.)
+
+  ```bash
+  curl -s https://download.airpipe.io/setup.sh | sudo bash -s -- --update
+  sudo systemctl restart airpipe
+  ```
+
+- **Mac:** run the same `--update` command, then restart the engine the way you start it.
+
+- **Docker:** pull the new tag (`airpipeio/agent:latest`, or a version such as
+  `airpipeio/agent:3.21.0`) and recreate the container.
+- **Kubernetes:** set the image tag in the deployment; the rollout replaces the pods one at
+  a time.
+- **Any other install:** download the binary for your platform from
+  `https://download.airpipe.io/<version>/<os>/<arch>/airpipe` and replace the old one.
