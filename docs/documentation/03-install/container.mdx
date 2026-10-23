@@ -12,7 +12,7 @@ There is a published multi-architecture image, so most deployments need no
 Dockerfile at all:
 
 ```
-airpipeio/agent:1.42.1
+airpipeio/agent:latest
 ```
 
 `linux/amd64` and `linux/arm64`, Alpine-based, running as a non-root user (uid
@@ -24,11 +24,13 @@ docker run -d \
   -p 4111:4111 \
   -e AIRPIPE_API_KEY="$AIRPIPE_API_KEY" \
   -v "$(pwd)/configs:/app/configs:ro" \
-  airpipeio/agent:1.42.1
+  airpipeio/agent:latest
 ```
 
-Pin the version rather than tracking `latest`, so a container restarting
-unattended cannot quietly pick up a different engine.
+In production, pin a release rather than tracking `latest` (every release is published as its
+own tag, such as `airpipeio/agent:3.22.1`; see the
+[tags](https://hub.docker.com/r/airpipeio/agent/tags)), so a container restarting unattended
+cannot quietly pick up a different engine.
 
 Running more than one replica? See [Kubernetes](/docs/install/kubernetes) — scheduled
 jobs, realtime fan-out and state all behave differently once there are peers, and
