@@ -63,3 +63,68 @@ With order `1` in the table, `{"id": 1}` answers `200` and `{"id": 99}` answers 
 `Order not found`. With the database down, both answer `503` `database unavailable`.
 Before 3.19.0 that was a `404` as well, telling the caller the order did not exist; on a token
 lookup it was a `401`, signing the caller out.
+
+## Missing fields
+
+A check that cannot read its field fails: there is nothing there to match. With no
+`authorization` header, this answers `401` `Sign in first`:
+
+```yml
+  me:
+    output: http
+    method: GET
+    actions:
+      - name: CheckAuth
+        input: a|headers|
+        hide_data_on_error: true # don't send the request's headers back
+        assert:
+          http_code_on_error: 401
+          error_message: Sign in first
+          tests:
+            - value: authorization
+              starts_with: "Bearer "
+```
+
+The negated checks (`not_contains`, `not_starts_with`, `not_regex`, …) pass a missing field,
+because it really does not contain the text; so does `is_not_equal_to`. Before 3.20.0 the text
+checks (`starts_with`, `contains`, `regex`, `like`, …) passed a missing field too, and this
+guard let the request through.
+
+A field that may be left out says so with `is_not_null: false`. When it is missing, the test's
+other checks are not run; when it is present, they are:
+
+```yml
+  files/rename:
+    output: http
+    method: POST
+    actions:
+      - name: CheckBody
+        input: a|body|
+        assert:
+          http_code_on_error: 400
+          tests:
+            - value: filename
+              is_not_null: false
+              ends_with: [".yml", ".yaml"]
+```
+
+`{}` and `{"filename": "app.yml"}` answer `200`; `{"filename": "app.exe"}` answers `400`.
+
+## Text checks take text
+
+`starts_with`, `ends_with` and their `not_` forms compare text, and so do `contains` and
+`not_contains` against a string or a number. Write a number operand in quotes: YAML reads an
+unquoted `3.10` as the number `3.1`, which would match `"3.15"`. Rather than guess, the
+engine refuses an unquoted number: validation rejects it, and at run time the test fails with
+`starts_with: 2026 is a number, and starts_with compares text — write it in quotes ("2026"), or add ->to_string to the marker it comes from.`
+An operand taken from a marker (`starts_with: a|body::prefix|`) is checked once it resolves:
+a number from the data needs `->to_string`, and a marker that resolves to nothing fails the
+check.
+
+```yml
+- value: version
+  starts_with: "3.10"
+```
+
+Against an array, `contains` checks membership and a number is a fair operand: `contains: 5`
+passes for `[1, 5]`. To check a number against a set of numbers, use `is_in`.

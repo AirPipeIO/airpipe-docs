@@ -50,6 +50,9 @@ a|<root>::<path>->filter1->filter2|
 **Action outputs:** any root that is not a built-in is treated as an **action
 name** — `a|FetchUser::email|` reads the `email` field from the `FetchUser`
 action's output. Use `jq::` for richer extraction: `a|FetchUser::jq::.items[0].id|`.
+A path the program does not find is `null`, as in jq. A program that does not parse, or
+fails on the data it gets (`.v.x` where `v` is a number), fails the step with the jq error,
+and validation rejects one that does not parse. Before 3.20.0 both rendered `null`.
 
 ## Filters
 
@@ -60,6 +63,14 @@ result, so they read left to right.
 # Uppercase a param, defaulting when absent
 url: "https://api.example.com/a|params::region->upper->default(US)|"
 ```
+
+A value that isn't there stays missing through the text filters, so a `default(...)`
+after them supplies the fallback: with no `region` param that URL ends in `/US`. With no
+`default`, a marker that is a field's whole value gives JSON `null` (SQL `NULL` as a
+param), and inside a longer string it reads `null`. `length` gives `0`; the number, date
+and array filters fail the step. Before 3.20.0 the text filters worked on the word `null`
+instead: `->upper` gave `NULL`, `->hash` the same digest for every missing value, and the
+`default` above never fired.
 
 ### Text
 

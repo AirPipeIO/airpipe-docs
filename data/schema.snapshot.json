@@ -1282,7 +1282,7 @@
           ]
         },
         "custom_value": {
-          "description": "Override the target value with a custom literal string.\n\n## Example\n```yaml\ncustom_value: \"some_static_value\"\nis_equal_to: \"some_static_value\"\n```",
+          "description": "Override the target value with a custom literal string. A marker in it that resolves\nto nothing makes the value null, so `is_not_null` and `is_not_empty` catch it.\n\n## Example\n```yaml\ncustom_value: \"some_static_value\"\nis_equal_to: \"some_static_value\"\n```",
           "type": [
             "string",
             "null"
@@ -1362,11 +1362,11 @@
           "description": "Assert the value is greater than or equal to the threshold.\nSame type-dependent behaviour as `is_less_than`, including needing\n`data_type` for a string."
         },
         "starts_with": {
-          "description": "Assert the string value starts with the given prefix.\n\n## Example\n```yaml\nvalue: url\nstarts_with: \"https://\"\n```"
+          "description": "Assert the string value starts with the given prefix, or with any one of a list. The\nprefix is text: an unquoted number (`starts_with: 2026`) is refused, so quote it.\n\n## Example\n```yaml\nvalue: url\nstarts_with: \"https://\"\n```"
         },
         "not_starts_with": true,
         "ends_with": {
-          "description": "Assert the string value ends with the given suffix.\n\n## Example\n```yaml\nvalue: filename\nends_with: \".pdf\"\n```"
+          "description": "Assert the string value ends with the given suffix, or with any one of a list. The\nsuffix is text: an unquoted number is refused, so quote it.\n\n## Example\n```yaml\nvalue: filename\nends_with: \".pdf\"\n```"
         },
         "not_ends_with": true,
         "contains_text": {
@@ -1448,7 +1448,7 @@
           ]
         },
         "is_not_null": {
-          "description": "Assert the value is not null.\n\n## Example\n```yaml\nvalue: user_id\nis_not_null: true\n```",
+          "description": "Assert the value is not null. `false` marks the field optional: when it is missing, the\ntest's other checks are not run, and when it is present they are. Without it, a missing\nfield fails the test's checks (except the negated ones, such as `not_contains`).\n\n## Example\n```yaml\nvalue: user_id\nis_not_null: true\n```",
           "type": [
             "boolean",
             "null"
