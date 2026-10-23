@@ -29,7 +29,11 @@ http://download.airpipe.io
 
 ## Upgrading
 
-A self-hosted engine does not update itself. The app lists each one that reports with your
+A self-hosted engine does not update itself, but from 3.22.0 it says when it is behind the
+current release: `airpipe server` logs the warning `a newer Air Pipe is available` at startup
+and once a day, `airpipe cli` logs it at most once a day, and `airpipe --version` prints it on
+stderr. It reads [latest.version](https://download.airpipe.io/latest.version) to know, and
+says nothing if it cannot. The app also lists each engine that reports with your
 API keys, and the version it runs, at [Self-hosted agents](https://app.airpipe.io/agents),
 and flags any older than the current release
 ([latest.version](https://download.airpipe.io/latest.version)). Replicas that share one
