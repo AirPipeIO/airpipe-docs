@@ -33,7 +33,10 @@ A self-hosted engine does not update itself. The app lists each one that reports
 API keys, and the version it runs, at [Self-hosted agents](https://app.airpipe.io/agents),
 and flags any older than the current release
 ([latest.version](https://download.airpipe.io/latest.version)). Replicas that share one
-identity are listed as its processes, so a replica left on an old version shows too.
+identity are listed as its processes, so a replica left on an old version shows too. An
+agent stays listed for 30 days after its last report. One that has not reported for 90 days,
+or enrolled and never reported in 7, is deleted the next time one of your agents enrols; if
+it starts again, it enrols again by itself.
 
 - **Linux, installed with `setup.sh`:** install the latest binary in place, then restart
   the service. (`--update` replaces the binary only; your configs and service are kept.)

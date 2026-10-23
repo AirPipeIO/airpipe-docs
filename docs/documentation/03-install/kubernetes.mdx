@@ -331,7 +331,9 @@ filesystem, so without help the agent enrols a **new identity on every pod
 start**. Nothing looks broken — enrollment succeeds, and only the persist step
 fails. Set `AIRPIPE_STATE_DIR` to a writable path, and for production supply a
 pre-enrolled identity via `AIRPIPE_AGENT_UUID` and `AIRPIPE_AGENT_KEY`, which is
-the documented approach for container runtimes.
+the documented approach for container runtimes. Without one, each pod is listed at
+[Self-hosted agents](https://app.airpipe.io/agents) for 30 days after it stops, and
+its identity is deleted after 90.
 
 Every replica can share that one identity: each running agent signs its own
 process into its reports, so replicas and restarts are counted separately. This
