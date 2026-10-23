@@ -43,7 +43,12 @@ identity are listed as its processes, so a replica left on an old version shows 
   sudo systemctl restart airpipe
   ```
 
-- **Mac:** run the same `--update` command, then restart the engine the way you start it.
+- **Mac, installed with `setup.sh`:** the same, then restart the service.
+
+  ```bash
+  curl -s https://download.airpipe.io/setup.sh | sudo bash -s -- --update
+  sudo launchctl kickstart -k system/com.airpipe
+  ```
 
 - **Docker:** pull the new tag (`airpipeio/agent:latest`, or a version such as
   `airpipeio/agent:3.21.0`) and recreate the container.

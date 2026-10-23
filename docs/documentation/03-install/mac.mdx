@@ -16,6 +16,22 @@ On new Apple devices, gatekeeper will block the binary from running by default.
 
 After you attempt to run it once simply with `./airpipe` you will need to allow it by going to `Privacy & Security` scroll towards the bottom, and there will be a prompt to allow the binary.
 
+### Run it as a service
+
+Installs the binary to `/usr/local/bin` and a launchd service that starts it at boot and
+restarts it if it stops. Configs go in `/etc/airpipe/configs`; the agent's identity is kept in
+`/var/lib/airpipe`, and its log is `/var/log/airpipe/airpipe-service.log`.
+
+```sh
+  curl -s https://download.airpipe.io/setup.sh | sudo bash -s -- \
+    --api-key enter-your-api-key-12345
+
+  sudo launchctl bootstrap system /Library/LaunchDaemons/com.airpipe.plist
+```
+
+Restart it with `sudo launchctl kickstart -k system/com.airpipe`, and stop it with
+`sudo launchctl bootout system/com.airpipe`. macOS builds are for Apple Silicon only.
+
 ### Download the binary to the current directory
 ```sh
   curl -s https://download.airpipe.io/setup.sh | sudo bash -s -- \
@@ -43,7 +59,7 @@ macOS ships `shasum` rather than `sha256sum`:
   # Resolve the current version
   VERSION=$(curl -sf https://download.airpipe.io/latest.version)
 
-  # Apple Silicon — for Intel Macs use x86_64 instead
+  # Apple Silicon (there is no Intel macOS build)
   BASE="https://download.airpipe.io/${VERSION}/darwin/aarch64"
 
   curl -fLO "${BASE}/airpipe"
