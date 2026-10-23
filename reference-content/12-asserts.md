@@ -32,11 +32,11 @@ it produced nothing to judge: the tests do not run, and the action answers with 
 | What failed | Status | `error` |
 |---|---|---|
 | The database could not be reached: refused, timed out, pool exhausted, restarting or failing over | `503` | `database unavailable` |
-| The database rejected the query: a syntax error, a missing table or column, a permission or login failure | `500` | `the database rejected the query` |
+| The database rejected the query: a syntax error, a missing table or column (in MongoDB, an unknown pipeline stage or command), a permission or login failure | `500` | `the database rejected the query` |
 | An upstream (`http:`) was unreachable | `503` | `upstream unreachable` |
 | An upstream timed out | `503` | `upstream timed out` |
 
-The driver's own message is kept in `errors`. Upstream failures answer `503` rather than `502` /
+This holds for Postgres, MySQL, SQL Server, SQLite and MongoDB (MongoDB from 3.22.1). The driver's own message is kept in `errors`. Upstream failures answer `503` rather than `502` /
 `504` so the body reaches the caller: proxies and CDNs commonly replace the body of a `502` or
 `504` with their own error page. A failure caused by the request's data — a
 duplicate key, a value a column rejects — is still judged by the tests, so a check that
