@@ -28,10 +28,53 @@ a browser.
 The interface authenticates the user **in-pipeline** (an `is_valid_jwt` assert), and channel access is
 gated by `subscribe_authorizer` — so the ACL is *your* pipeline logic on *your* claims.
 
+## What a socket may do on a channel {#channel-access}
+
+| Socket | No `subscribe_authorizer` | With a `subscribe_authorizer` |
+|---|---|---|
+| **Backend** (org API key) | Any channel in the org | Publish and presence list: any channel. Subscribe and presence enter: what the authorizer allows |
+| **End user** (a token) | Nothing | What the authorizer allows |
+| **Anyone** on a `public: true` interface | Subscribe only | What the authorizer allows (it needs a token, so a socket without one gets nothing) |
+
+The authorizer runs once for each channel a socket subscribes to, publishes to, enters or lists, with
+the socket's token as `a|headers::airpipe-jwt|` and this body:
+
+```json
+{ "channel": "room:42", "action": "subscribe" }
+```
+
+`action` is `subscribe`, `publish`, `presence_enter` or `presence_get`, so one authorizer can let a user
+read a channel without letting them write to it:
+
+```yml
+authorize-channel:
+  actions:
+    - name: Verify
+      input: a|headers|
+      assert:
+        http_code_on_error: 403
+        tests:
+          - value: airpipe-jwt
+            is_valid_jwt: a|ap_var::JWT_SECRET|
+    - name: ReadOnly           # end users may only listen; your backend publishes
+      run_when_succeeded: { actions: [Verify], http_code_on_error: 403 }
+      input: a|body|
+      assert:
+        http_code_on_error: 403
+        tests:
+          - value: action
+            is_equal_to: subscribe
+```
+
+A refused operation answers `{"ap_error": "subscribe denied" | "publish denied" | "presence denied", …}`
+and nothing reaches the channel. This applies on managed (hosted) orgs; a self-hosted engine treats
+every socket as your own backend.
+
 ## Open / public {#public}
 
 `public: true` lets a client connect with **no credential at all** — the Ably/Pusher "public channel"
-model. Safe on shared infra: the [per-org abuse floors](/docs/features/realtime/limits) still bound a
+model. Such a socket may subscribe; publishing stays with your backend (the org API key or a
+`ws_publish` action). Safe on shared infra: the [per-org abuse floors](/docs/features/realtime/limits) still bound a
 public interface, and (managed) the connection stays scoped to your org.
 
 ```yml
