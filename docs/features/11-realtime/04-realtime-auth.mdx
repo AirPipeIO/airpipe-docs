@@ -44,7 +44,10 @@ the socket's token as `a|headers::airpipe-jwt|` and this body:
 ```
 
 `action` is `subscribe`, `publish`, `presence_enter` or `presence_get`, so one authorizer can let a user
-read a channel without letting them write to it:
+read a channel without letting them write to it. It also runs once when an end user's socket opens,
+with `"action": "connect"` and `"channel": null`: a token it refuses is refused right there (`401`) and
+never takes one of your organization's connection slots. So an authorizer must let `connect` through for
+the tokens it accepts:
 
 ```yml
 authorize-channel:
@@ -63,7 +66,7 @@ authorize-channel:
         http_code_on_error: 403
         tests:
           - value: action
-            is_equal_to: subscribe
+            is_in: [connect, subscribe, presence_get]
 ```
 
 A refused operation answers `{"ap_error": "subscribe denied" | "publish denied" | "presence denied", …}`
