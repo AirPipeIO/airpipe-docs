@@ -6,6 +6,25 @@ slug: /install/mac
 
 # Mac
 
+### Install the `airpipe` command
+
+```sh
+  curl -fsSL https://download.airpipe.io/install.sh | sh
+```
+
+Installs the latest release for this machine (Apple Silicon) after checking its SHA-256, into
+`/usr/local/bin`, or `~/.local/bin` when that would need a password it cannot ask for. It
+installs no service and needs no API key: sign in with `airpipe login`, then run
+`airpipe server --config-dir ./configs`. A binary installed this way runs straight away: the Gatekeeper prompt below is for one
+downloaded through a browser. To install a particular version, or somewhere
+else:
+
+```sh
+  curl -fsSL https://download.airpipe.io/install.sh | AIRPIPE_VERSION=3.23.1 AIRPIPE_INSTALL_DIR=~/bin sh
+```
+
+To run Air Pipe as a service that starts at boot, use `setup.sh` below instead.
+
 ### Retrieve API Key
 
 Log in and create an API key at https://app.airpipe.io/apikeys. It is shown once, when you create it, so copy it then (lost it? create a new one and delete the old)
@@ -75,7 +94,7 @@ download is incomplete or has been tampered with — delete it and fetch again.
 You still need an API key to start it:
 
 ```sh
-  ./airpipe --api-key enter-your-api-key-12345
+  ./airpipe server --api-key enter-your-api-key-12345 --config-dir ./configs
 ```
 
 Gatekeeper will block it on first run — see [Permissions & Security](#permissions--security) above.
