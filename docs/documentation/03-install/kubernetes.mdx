@@ -25,13 +25,15 @@ Ready. Check the current release at
 ## The image
 
 ```
-airpipeio/agent:3.23.1
+airpipeio/agent:latest
 ```
 
 Multi-architecture (`linux/amd64` and `linux/arm64`), Alpine-based, runs as a
-non-root user (uid `10001`) with a read-only root filesystem. Pin a version
-rather than tracking `latest`, so a pod restarting at 3am cannot quietly pick up
-a different engine.
+non-root user (uid `10001`) with a read-only root filesystem. `latest` follows each
+release, and the examples below use it. Consider pinning your version instead
+(such as `airpipeio/agent:3.23.1`; see the
+[tags](https://hub.docker.com/r/airpipeio/agent/tags)), so a pod restarting at 3am
+cannot quietly pick up a different engine.
 
 | Port | Purpose |
 |---|---|
@@ -98,7 +100,9 @@ spec:
             matchLabels: { app.kubernetes.io/name: airpipe }
       containers:
         - name: airpipe
-          image: airpipeio/agent:3.23.1
+          # latest follows each release; consider pinning your version instead
+          # (e.g. airpipeio/agent:3.23.1) so a pod restart can't change the engine.
+          image: airpipeio/agent:latest
           args: [server, --address, 0.0.0.0, --port, "4111", --config-dir, /app/configs]
           env:
             # POD_IP must come first — the mesh self-address below interpolates
@@ -367,7 +371,8 @@ returns every pod IP:
 ```yaml title="docker-compose.yml (excerpt)"
 services:
   airpipe:
-    image: airpipeio/agent:3.23.1
+    # latest follows each release; consider pinning your version instead
+    image: airpipeio/agent:latest
     environment:
       AIRPIPE__CLUSTERED: "true"
       AIRPIPE__WS_MESH_TOKEN: ${AIRPIPE_MESH_TOKEN:?set it}
